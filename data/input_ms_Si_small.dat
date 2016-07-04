@@ -1,0 +1,48 @@
+'new'                               ! entrance_option 'reentrance' or 'new'
+1d10                                ! Time_shutdown (sec)
+0                                   ! entrance_iter
+'Si'                                ! SYSname
+'./data/'                                ! directory
+'PZ', 1.00d0                              ! functional 'PZ','PBE','TBmBJ','TPSS','VS98'
+'KY'                                ! ps_format 'KY','ABINIT','FHI'
+'n'                   ! PSmask_option 'y' or 'n'
+0.8d0  1.8d0  15.d0                ! alpha_mask, gamma_mask, eta_mask
+10.26d0 1.d0 1.d0 1.d0              ! aL,ax,ay,az
+8 'diamond'                         ! Sym,crystal_structure
+4 16 16 16 12 12 12                    ! Nd,NLx,NLy,NLz,NQx,NQy,NQz
+'1D'                               ! FDTDdim 
+'periodic'                         ! TwoD_shape 
+2 1                              ! NX_m,NY_m ! sato
+250 2500                            ! HX_m,HY_m ! sato
+2   1                               ! NKsplit,NXYsplit ! sato
+-2000 256                           ! NXvacL_m,NXvacR_m ! sato
+4  0.5d0                            ! NEwald,aEwald (parameter for Ewald sum.)
+-1.0                                ! switch_temperature,KbTev(eV)
+32  32                              ! NB,Nelec (# of bands, # of electrons)
+'N'                                 ! FSset_option 'Y' or 'N'
+1                                   ! Ncg ('5' is recommended)
+8 0.75                              ! Nmemory_MB,alpha_MB
+75 25                               ! NFSset_start,NFSset_every
+1                                 ! Nscf (# of ground state iteration)
+'N'                                ! MD_option 'Y' or 'N'
+'No'                                ! AD_RHO 'TD', 'GS' or 'No'
+100  0.08                         ! Nt,dt real-time parameter
+0.005                               ! dAc (initial distortion in response)
+2000  0.001                         ! Nomega,domega :response
+'Asin2cos'                          ! AE_shape 'Asin2cos' or 'Esin2sin'
+1d12  10.672  1.55  .0          ! IWcm2_1, tpulsefs_1(fs), omegaev_1(eV), phi_CEP_1(2pi) :laser
+0. 0. 1.                            ! Epdir_1 (Cartesian component of Ac)
+0d11  16.0  1.55  .0                ! IWcm2_2, tpulsefs_2(fs), omegaev_2(eV), phi_CEP_2(2pi) :laser
+0. 0. 1.                            ! Epdir_2 (Cartesian component of Ac)
+19.0                                ! T1_T2fs(fs)
+8  1                                ! NI,NE
+14                                  ! Zatom(j),j=1,NE
+2                                   ! Lref(j),j=1,NE
+1    .0       .0       .0      1    ! label, Rx, Ry, Rz, Kion
+2    .25      .25      .25     1    ! ion coordinate in unit of aL
+3    .5       .0       .5      1
+4    .0       .5       .5      1
+5    .5       .5       .0      1
+6    .75      .25      .75     1
+7    .25      .75      .75     1
+8    .75      .75      .25     1

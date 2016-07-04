@@ -1,0 +1,25 @@
+# log files.
+*.out
+*.optrpt
+*.log
+*.dat
+
+# execution files.
+ARTED
+*.cpu
+*.mic
+
+# objects.
+*.mod
+
+# build temp dir.
+.build_temp*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake

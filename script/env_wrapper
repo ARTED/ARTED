@@ -1,0 +1,40 @@
+#! /bin/bash
+#
+#  Ab-initio Real-Time Electron Dynamics Simulator, ARTED
+#  Copyright (C) 2016  ARTED developers
+#
+#  This file is part of env_wrapper.
+#
+#  env_wrapper is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  env_wrapper is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with env_wrapper.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#
+# Wrapper that helps launching Intel MPI jobs using MICs in native and symmetric modes.
+#
+BINARY=$1
+shift
+
+MACHINE=`uname -m`
+MIC_POSTFIX=.mic
+CPU_POSTFIX=.cpu
+
+ulimit -s unlimited
+
+if [[ "x${MACHINE}" == "xk1om" ]] ; then
+  # for Knights Corner
+  ${BINARY}${MIC_POSTFIX} $*
+else
+  # for CPU
+  numactl --localalloc ${BINARY}${CPU_POSTFIX} $*
+fi

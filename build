@@ -1,0 +1,113 @@
+#! /usr/bin/env python
+#
+#  Ab-initio Real-Time Electron Dynamics Simulator, ARTED
+#  Copyright (C) 2016  ARTED developers
+#
+#  This file is part of build.
+#
+#  build is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  build is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with build.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#
+# Wrapper script for build to various platforms and optimizations.
+#
+from optparse import OptionParser
+import os
+import shutil
+
+BUILD_TEMPDIR_NAME = '.build_temp'
+
+def on_or_off(v) :
+  if v:
+    return 'on'
+  else:
+    return 'off'
+
+def zero_or_one(v) :
+  if v:
+    return '1'
+  else:
+    return '0'
+
+usage  = "usage: %prog [options] target-system target-architectures..."
+parser = OptionParser(usage)
+
+parser.add_option('-n', '--dry-run',       action='store_true',  default=False, dest='dry_run',           help='don\'t actually run.')
+parser.add_option('-v', '--verbose',       action='store_true',  default=False, dest='verbose',           help='show verbose messages.')
+parser.add_option('-r', '--rebuild',       action='store_true',  default=False, dest='rebuild',           help='force rebuild.')
+parser.add_option('-t', '--target',                              default='ms',  dest='target',            help='build target (ms or sc, default ms)')
+parser.add_option('-d', '--debug',         action='store_true',  default=False, dest='debug',             help='debug build mode.')
+parser.add_option('--opt-stencil',         action='store_true',  default=True,  dest='stencil_optimized', help='use optimized stencil code. (default)')
+parser.add_option('--original-stencil',    action='store_false',                dest='stencil_optimized', help='use original stencil code.')
+parser.add_option('--opt-current',         action='store_true',  default=True,  dest='current_optimized', help='current_RT is optimized. (default)')
+parser.add_option('--no-opt-current',      action='store_false',                dest='current_optimized', help='current_RT is not optimized.')
+parser.add_option('--stencil-with-c',      action='store_true',  default=True,  dest='stencil_with_c',    help='use C code of stencil. (default)')
+parser.add_option('--stencil-with-f90',    action='store_false',                dest='stencil_with_c',    help='use F90 code of stencil.')
+parser.add_option('--explicit-vec',        action='store_true',  default=True,  dest='explicit_vec',      help='stencil use explicit vectorization with intrinsics. (default)')
+parser.add_option('--compiler-vec',        action='store_false',                dest='explicit_vec',      help='stencil use automatic vectorization by the compiler.')
+parser.add_option('--domain-power-of-two', action='store_true',  default=False, dest='domain_two',        help='3-D domain size is power of two.')
+parser.add_option('--loop-blocking',       action='store_true',  default=False, dest='loop_blocking',     help='loop blocking applied to stencil computation.')
+parser.add_option('--papi',                action='store_true',  default=False, dest='papi',              help='use PAPI profiling (SC only).')
+parser.add_option('--tlog',                action='store_true',  default=False, dest='tlog',              help='use TLOG profiling.')
+parser.add_option('--threads-profiler',    action='store_true',  default=False, dest='profile_threads',   help='profile each OpenMP threads')
+
+(options, args) = parser.parse_args()
+
+### check args
+if len(args) < 2:
+  parser.print_help()
+  exit(-1)
+
+### check build target
+if options.target != 'sc' and options.target != 'ms':
+  print 'invalid target : {0}'.format(options.target)
+  print ''
+  parser.print_help()
+  exit(-1)
+
+target_system = args.pop(0)
+
+dict = {}
+dict['BUILD_TARGET']           = options.target.lower()
+dict['CMAKE_VERBOSE_MAKEFILE'] = zero_or_one(options.verbose)
+dict['USE_TLOG']               = on_or_off(options.tlog)
+dict['USE_PAPI']               = on_or_off(options.papi)
+dict['DEBUG']                  = on_or_off(options.debug)
+dict['OPT_STENCIL']            = on_or_off(options.stencil_optimized)
+dict['OPT_CURRENT']            = on_or_off(options.current_optimized)
+dict['STENCIL_WITH_C']         = on_or_off(options.stencil_with_c)
+dict['LOOP_BLOCKING']          = on_or_off(options.loop_blocking)
+dict['DOMAIN_POWER_OF_TWO']    = on_or_off(options.domain_two)
+dict['EXPLICIT_VEC']           = on_or_off(options.explicit_vec)
+dict['PROFILE_THREADS']        = on_or_off(options.profile_threads)
+
+define = ''
+for k,v in dict.items():
+  define = '{0} -D {1}={2}'.format(define, k, v)
+
+for build_target_arch in args:
+  ### parallel build threads
+  build_num_threads=8
+
+  toolchain   = '{0}-{1}'.format(target_system,build_target_arch)
+  define_arch = '-D CMAKE_TOOLCHAIN_FILE={0} {1}'.format(toolchain,define)
+  build_dir   = '{0}_{1}_{2}_{3}'.format(BUILD_TEMPDIR_NAME,options.target,target_system,build_target_arch)
+
+  if options.rebuild and os.path.exists(build_dir):
+    shutil.rmtree(build_dir)
+  if not os.path.exists(build_dir):
+    os.mkdir(build_dir)
+
+  if os.system('cd {0} && cmake {1} ../'.format(build_dir,define_arch)) == 0:
+    os.system('cd {0} && cmake ../ && make -j {1}'.format(build_dir,build_num_threads))
