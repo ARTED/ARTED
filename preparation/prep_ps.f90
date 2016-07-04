@@ -30,7 +30,14 @@ Subroutine prep_ps_periodic(property)
   real(8) :: G2sq,s,Vpsl_l(NL),G2,Gd,Gr,x,y,z,r,ratio1,ratio2
   real(8) :: Ylm,dYlm,uVr(0:Lmax),duVr(0:Lmax)
   complex(8) :: Vion_G(NG_s:NG_e)
-
+  !spline interpolation
+  real(8) :: xx
+  real(8) :: udVtbl_a(Nrmax,0:Lmax),dudVtbl_a(Nrmax,0:Lmax)
+  real(8) :: udVtbl_b(Nrmax,0:Lmax),dudVtbl_b(Nrmax,0:Lmax)
+  real(8) :: udVtbl_c(Nrmax,0:Lmax),dudVtbl_c(Nrmax,0:Lmax)
+  real(8) :: udVtbl_d(Nrmax,0:Lmax),dudVtbl_d(Nrmax,0:Lmax)
+  real(8),allocatable :: xn(:),yn(:),an(:),bn(:),cn(:),dn(:)  
+  real(8) :: vloc_av
   if(property == 'not_initial') then
     deallocate(a_tbl,uV,duV,iuV,Jxyz,Jxx,Jyy,Jzz)
     deallocate(ekr) ! sato
@@ -39,20 +46,22 @@ Subroutine prep_ps_periodic(property)
 
 ! local potential
 !$omp parallel
-!$omp do private(ik,n,G2sq,s,r,i) collapse(2)
+!$omp do private(ik,n,G2sq,s,r,i,vloc_av) collapse(2)
   do ik=1,NE
     do n=NG_s,NG_e
       G2sq=sqrt(Gx(n)**2+Gy(n)**2+Gz(n)**2)
       s=0.d0
       if (n == nGzero) then
         do i=2,NRloc(ik)
-          r=rad(i,ik)
-          s=s+4*Pi*r**2*(vloctbl(i,ik)+Zps(ik)/r)*(rad(i,ik)-rad(i-1,ik))
+           r=0.5d0*(rad(i,ik)+rad(i-1,ik))
+           vloc_av = 0.5d0*(vloctbl(i,ik)+vloctbl(i-1,ik))
+           s=s+4*Pi*(r**2*vloc_av+r*Zps(ik))*(rad(i,ik)-rad(i-1,ik))
         enddo
       else
         do i=2,NRloc(ik)
-          r=rad(i,ik)
-          s=s+4*Pi*r**2*sin(G2sq*r)/(G2sq*r)*(vloctbl(i,ik)+Zps(ik)/r)*(rad(i,ik)-rad(i-1,ik))
+          r=0.5d0*(rad(i,ik)+rad(i-1,ik))
+          vloc_av = 0.5d0*(vloctbl(i,ik)+vloctbl(i-1,ik))
+          s=s+4*Pi*sin(G2sq*r)/(G2sq)*(r*vloc_av+Zps(ik))*(rad(i,ik)-rad(i-1,ik))
         enddo
       endif
       dVloc_G(n,ik)=s
