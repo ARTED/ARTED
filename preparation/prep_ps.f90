@@ -201,6 +201,27 @@ Subroutine prep_ps_periodic(property)
 
   do a=1,NI
     ik=Kion(a)
+
+    allocate(xn(0:NRps(ik)-1),yn(0:NRps(ik)-1),an(0:NRps(ik)-2) &
+         ,bn(0:NRps(ik)-2),cn(0:NRps(ik)-2),dn(0:NRps(ik)-2))
+    
+    xn(0:NRps(ik)-1) = radnl(1:NRps(ik),ik)
+    do l=0,Mlps(ik)
+       yn(0:NRps(ik)-1) = udVtbl(1:NRps(ik),l,ik)
+       call spline(NRps(ik),xn,yn,an,bn,cn,dn)
+       udVtbl_a(1:NRps(ik)-1,l) = an(0:NRps(ik)-2)
+       udVtbl_b(1:NRps(ik)-1,l) = bn(0:NRps(ik)-2)
+       udVtbl_c(1:NRps(ik)-1,l) = cn(0:NRps(ik)-2)
+       udVtbl_d(1:NRps(ik)-1,l) = dn(0:NRps(ik)-2)
+
+       yn(0:NRps(ik)-1) = dudVtbl(1:NRps(ik),l,ik)
+       call spline(NRps(ik),xn,yn,an,bn,cn,dn)
+       dudVtbl_a(1:NRps(ik)-1,l) = an(0:NRps(ik)-2)
+       dudVtbl_b(1:NRps(ik)-1,l) = bn(0:NRps(ik)-2)
+       dudVtbl_c(1:NRps(ik)-1,l) = cn(0:NRps(ik)-2)
+       dudVtbl_d(1:NRps(ik)-1,l) = dn(0:NRps(ik)-2)        
+    end do
+    
     do j=1,Mps(a)
       x=Lx(Jxyz(j,a))*Hx-(Rion(1,a)+Jxx(j,a)*aLx)
       y=Ly(Jxyz(j,a))*Hy-(Rion(2,a)+Jyy(j,a)*aLy)
@@ -211,11 +232,12 @@ Subroutine prep_ps_periodic(property)
       enddo
       intr=ir-1
       if (intr.lt.0.or.intr.ge.NRps(ik))stop 'bad intr at prep_ps'
-      ratio1=(r-radnl(intr,ik))/(radnl(intr+1,ik)-radnl(intr,ik))
-      ratio2=1-ratio1
+      xx = r - radnl(intr,ik) 
       do l=0,Mlps(ik)
-        uVr(l)=ratio1*udVtbl(intr+1,l,ik)+ratio2*udVtbl(intr,l,ik)
-        duVr(l)=ratio1*dudVtbl(intr+1,l,ik)+ratio2*dudVtbl(intr,l,ik)
+         uVr(l) = udVtbl_a(intr,l)*xx**3 + udVtbl_b(intr,l)*xx**2 &
+                 +udVtbl_c(intr,l)*xx    + udVtbl_d(intr,l)
+         duVr(l)=dudVtbl_a(intr,l)*xx**3 +dudVtbl_b(intr,l)*xx**2 &
+                +dudVtbl_c(intr,l)*xx    +dudVtbl_d(intr,l)         
       enddo
       lm=0
       do l=0,Mlps(ik)
@@ -237,8 +259,97 @@ Subroutine prep_ps_periodic(property)
         iuV(lma_tbl(lm,a))=inorm(l,ik)
       enddo
     enddo
+    deallocate(xn,yn,an,bn,cn,dn)
   enddo
 
   return
 End Subroutine prep_ps_periodic
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+subroutine spline(Np,xn,yn,an,bn,cn,dn)
+  integer,intent(in) :: Np
+  real(8),intent(in) :: xn(0:Np-1),yn(0:Np-1)
+  real(8),intent(out) :: an(0:Np-2),bn(0:Np-2),cn(0:Np-2),dn(0:Np-2)
+  integer :: i,j,k,Npm2
+  real(8) :: dxn(0:Np-1),dyn(0:Np-1),u(1:Np-2),v(1:Np-2),Amat(1:Np-2,1:Np-2)
+  real(8) :: Amat_t(1:Np-2,1:Np-2),Amat_chk(1:Np-2,1:Np-2)
+  real(8) :: ss 
+! for lapack
+  integer :: LWORK
+  integer, allocatable :: IPIV(:) ! dimension N
+  real(8), allocatable :: WORK(:) ! dimension LWORK
+
+  Npm2 = Np-2
+  LWORK = Npm2*Npm2*6
+  allocate(IPIV(Npm2),WORK(LWORK))
+
+
+  do i = 0,Np-2
+    dxn(i) = xn(i+1) - xn(i)
+    dyn(i) = yn(i+1) - yn(i)
+  end do
+
+  do i = 1,Npm2
+    v(i) = 6d0*(dyn(i)/dxn(i) - dyn(i-1)/dxn(i-1))
+  end do
+
+
+  Amat = 0d0
+  Amat(1,1) = 2d0*(dxn(1) + dxn(0))
+  Amat(1,2) = dxn(1)
+  do i = 2,Npm2-1
+    Amat(i,i+1) = dxn(i)
+    Amat(i,i) = 2d0*(dxn(i)+dxn(i-1))
+    Amat(i,i-1) = dxn(i-1)
+  end do
+  Amat(Npm2,Npm2) = 2d0*(dxn(Npm2)+dxn(Npm2-1))
+  Amat(Npm2,Npm2-1) = dxn(Npm2-1)
+
+! inverse matrix problem
+  Amat_t = Amat
+
+
+  call DGETRF(Npm2, Npm2, Amat_t, Npm2, IPIV, info)  ! factorize
+  call DGETRI(Npm2, Amat_t, Npm2, IPIV, WORK, LWORK, info)  ! inverse
+
+!  check inverse matrix problem
+!  do i = 1,Npm2
+!    do j = 1,Npm2
+!      ss = 0d0
+!      do k = 1,Npm2
+!        ss = ss + Amat(i,k)*Amat_t(k,j)
+!      end do
+!      Amat_chk(i,j) = ss
+!    end do
+!  end do
+!
+!  do i = 1,Npm2
+!    write(*,'(999e16.6e3)')(Amat_chk(i,j),j=1,Npm2)
+!  end do
+!
+!  stop
+
+  do i = 1,Npm2
+    u(i) = sum(Amat_t(i,:)*v(:))
+!    write(*,*)u(i),v(i)
+  end do
+!  stop
+
+
+! for b
+  bn(0) = 0d0
+  bn(1:Np-2) = 0.5d0*u(1:Np-2)
+! for a
+  do i = 0,Npm2-1
+    an(i) = (u(i+1) -2d0*bn(i))/(6d0*dxn(i))
+  end do
+  an(Npm2) = (0d0 -2d0*bn(Npm2))/(6d0*dxn(Npm2))
+! for d
+  dn(0:Npm2) = yn(0:Npm2)
+! for c
+  do i = 0,Npm2-1
+    cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*u(i))/6d0
+  end do
+  cn(Npm2) = dyn(Npm2)/dxn(Npm2) - dxn(Npm2)*(0d0+2d0*u(Npm2))/6d0
+
+  return
+end subroutine spline
