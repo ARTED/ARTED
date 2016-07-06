@@ -359,7 +359,7 @@ end Subroutine
 Subroutine current_GS_omp_KB_impl(zutmp,jxs,jys,jzs)
   use Global_Variables
   implicit none
-  complex(8),intent(in) :: zutmp(0:NL-1,NBoccmax,NK_s:NK_e)
+  complex(8),intent(in) :: zutmp(0:NL-1,NB,NK_s:NK_e)
   real(8),intent(out)   :: jxs,jys,jzs
 
   integer :: ikb,ib,ik,i,j,ix,iy,iz,ia
