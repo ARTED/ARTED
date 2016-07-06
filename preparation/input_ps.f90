@@ -96,7 +96,8 @@ Subroutine input_pseudopotential_YS
         anorm(l,ik) = 0.d0
         do i=1,Mr-1
           r1 = rad(i+1,ik)-rad(i,ik)
-          anorm(l,ik) = anorm(l,ik) + (upp(i,l)**2*(vpp(i,l)-vpp(i,Lref(ik)))+upp(i+1,l)**2*(vpp(i+1,l)-vpp(i+1,Lref(ik))))*r1
+          anorm(l,ik) = anorm(l,ik)  &
+               + (upp(i,l)**2*(vpp(i,l)-vpp(i,Lref(ik)))+upp(i-1,l)**2*(vpp(i-1,l)-vpp(i-1,Lref(ik))))*r1
         end do
         anorm(l,ik) = 0.5d0*anorm(l,ik)
         inorm(l,ik)=+1
