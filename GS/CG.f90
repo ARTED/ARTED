@@ -108,8 +108,8 @@ Subroutine CG_omp(iter_cg_max)
     s=1.0d0/sqrt(sum(abs(xk_omp(:,thr_id))**2)*Hxyz)
     zu_GS(1:NL,ib,ik)=xk_omp(1:NL,thr_id)*s
     call hpsi_omp_KB(ik,zu_GS(:,ib,ik),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
-    xkHxk=sum(conjg(tpsi_omp(:,thr_id))*htpsi_omp(:,thr_id))*Hxyz
-    esp_var_l(ib,ik)=sqrt(sum(abs(htpsi_omp(:,thr_id)-xkHxk*tpsi_omp(:,thr_id))**2)*Hxyz)*occ(ib,ik)
+    xkHxk=sum(conjg(zu_GS(1:NL,ib,ik))*htpsi_omp(:,thr_id))*Hxyz
+    esp_var_l(ib,ik)=sqrt(sum(abs(htpsi_omp(:,thr_id)-xkHxk*zu_GS(1:NL,ib,ik))**2)*Hxyz)*occ(ib,ik)
   enddo
   enddo
 
