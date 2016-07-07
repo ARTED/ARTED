@@ -23,7 +23,7 @@ endmacro (add_definitions_unless)
 
 
 ### Set target
-set_unless_def(BUILD_TARGET  "ms")
+set_unless_def(BUILD_TARGET  "sc")
 
 if (${BUILD_TARGET} STREQUAL "ms")
   add_definitions(-DARTED_MS)
