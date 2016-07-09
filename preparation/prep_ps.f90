@@ -126,7 +126,7 @@ Subroutine prep_ps_periodic(property)
         x=Lx(i)*Hx-(Rion(1,a)+ix*aLx)
         y=Ly(i)*Hy-(Rion(2,a)+iy*aLy)
         z=Lz(i)*Hz-(Rion(3,a)+iz*aLz)
-        r=sqrt(x*x+y*y+z*z)
+        r=sqrt(x**2+y**2+z**2)
         if (r<Rps(ik)) then
           j=j+1
         endif
@@ -154,7 +154,7 @@ Subroutine prep_ps_periodic(property)
         x=Lx(i)*Hx-(Rion(1,a)+ix*aLx)
         y=Ly(i)*Hy-(Rion(2,a)+iy*aLy)
         z=Lz(i)*Hz-(Rion(3,a)+iz*aLz)
-        r=sqrt(x*x+y*y+z*z)
+        r=sqrt(x**2+y**2+z**2)
         if (r<Rps(ik)) then
           j=j+1
           if (j<=Nps) then
@@ -245,9 +245,15 @@ Subroutine prep_ps_periodic(property)
         do m=-l,l
           lm=lm+1
           uV(j,lma_tbl(lm,a))=uVr(l)*Ylm(x,y,z,l,m)
-          duV(j,lma_tbl(lm,a),1)=duVr(l)*(x/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,1)
-          duV(j,lma_tbl(lm,a),2)=duVr(l)*(y/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,2)
-          duV(j,lma_tbl(lm,a),3)=duVr(l)*(z/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,3)
+          if(r>1d-6)then
+             duV(j,lma_tbl(lm,a),1)=duVr(l)*(x/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,1)
+             duV(j,lma_tbl(lm,a),2)=duVr(l)*(y/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,2)
+             duV(j,lma_tbl(lm,a),3)=duVr(l)*(z/r)*Ylm(x,y,z,l,m)+uVr(l)*dYlm(x,y,z,l,m,3)
+          else
+             duV(j,lma_tbl(lm,a),1)=uVr(l)*dYlm(x,y,z,l,m,1)
+             duV(j,lma_tbl(lm,a),2)=uVr(l)*dYlm(x,y,z,l,m,2)
+             duV(j,lma_tbl(lm,a),3)=uVr(l)*dYlm(x,y,z,l,m,3)
+          end if
         enddo
       enddo
     enddo
