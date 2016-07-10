@@ -38,7 +38,7 @@ subroutine hpsi1_RT_stencil(A,B,C,D,E,F)
 #endif
   integer    :: ix,iy,iz
   complex(8) :: v, w
-#if defined(__KNC__) || defined(__AVX512F__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
   complex(8) :: t(8)
 #endif
 
@@ -95,7 +95,7 @@ subroutine hpsi1_RT_stencil(A,B,C,D,E,F)
 !dir$ assume_aligned E(0,iy,ix):MEM_ALIGN
 !dir$ assume_aligned F(0,iy,ix):MEM_ALIGN
 
-#if defined(__KNC__) || defined(__AVX512F__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
     t(1) = E(IDZ( 1))
     t(2) = E(IDZ( 2))
     t(3) = E(IDZ( 3))

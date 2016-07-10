@@ -36,7 +36,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
 #endif
   integer    :: ix,iy,iz
   complex(8) :: v,w,z
-#if defined(__KNC__) || defined(__AVX512F__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
   complex(8) :: t(8)
 #endif
 
@@ -88,7 +88,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
   do iz=0,NLz-1
     z = A * E(iz,iy,ix)
 
-#if defined(__KNC__) || defined(__AVX512F__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
     t(1) = E(IDZ( 1))
     t(2) = E(IDZ( 2))
     t(3) = E(IDZ( 3))
