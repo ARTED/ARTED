@@ -19,7 +19,7 @@
 !
 Module Global_Variables
 !ARTED version
-  character(50),parameter :: ARTED_ver='ARTED_ms.1.5.0 (based on ms.2014.08.10.2)'
+  character(50),parameter :: ARTED_ver='ARTED_ms.1.5.1 (based on ms.2014.08.10.2)'
 
 ! constants
   real(8),parameter :: Pi=3.141592653589793d0
