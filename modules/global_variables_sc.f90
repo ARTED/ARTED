@@ -124,6 +124,7 @@ Module Global_Variables
   character(50) :: file_force_dR,file_j_ac
   character(50) :: file_DoS,file_band
   character(50) :: file_dns,file_ovlp,file_nex
+  character(50) :: file_kw ! non-uniform k-grid 
   character(2) :: ext_field
   character(2) :: Longi_Trans
   character(1) :: FSset_option,MD_option
