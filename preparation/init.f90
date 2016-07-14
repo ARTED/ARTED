@@ -85,56 +85,14 @@ Subroutine init
     end do
   end do
 
-  Select case(Sym)
-  case(1)
-    n=0
-    do ix=1,NKx
-    do iy=1,NKy
-    do iz=1,NKz
-      n=n+1
-      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
-      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
-      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
-      wk(n)=1.d0
-    enddo
-    enddo
-    enddo
-  case(4)
-    n=0
-    do ix=1,NKx/2
-    do iy=1,NKy/2
-    do iz=1,NKz
-      n=n+1
-      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
-      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
-      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
-      wk(n)=4.d0
-    enddo
-    enddo
-    enddo
-  case(8)
-! assume NKx == NKy
-    n=0
-    do ix=1,NKx/2
-    do iy=1,ix
-    do iz=1,NKz
-      n=n+1
-      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
-      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
-      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
-      wk(n)=8.d0
-      if(ix == iy) wk(n)=4.d0
-    enddo
-    enddo
-    enddo
-  end select
-
-! yabana
-  kAc0=kAc
-! yabana
+  if (0 < NKx .and. 0<NKy .and. 0<NKz) then
+    call init_uniform_k_grid()
+  else
+    call init_non_uniform_k_grid() ! Load k-points from SYSNAME_k.dat
+  endif
 
   do ib=1,NB
-    occ(ib,1:NK)=2.d0/(NKx*NKy*NKz)*wk(1:NK)
+    occ(ib,1:NK)=2.d0/(NKxyz)*wk(1:NK)
   enddo
   if (NBoccmax < NB) occ(NBoccmax+1:NB,:)=0.d0
   Ne_tot=sum(occ)
@@ -160,7 +118,7 @@ Subroutine init
 !      |+0 +1 +0|      |+0 -1 +0|      |+0 -1 +0|
 !  R_1=|+1 +0 +0|  R_2=|-1 +0 +0|  R_3=|+1 +0 +0|
 !      |+0 +0 +1|      |+0 +0 +1|      |+0 +0 +1|
-! 
+!
 !      |+1/4|     |+1/2|
 !    t=|+1/4|   a=|+1/2|
 !      |+1/4|     |+ 0 |
@@ -213,7 +171,7 @@ Subroutine init
 !      |+0 +1 +0|      |+0 -1 +0|      |+0 -1 +0|
 !  R_1=|+1 +0 +0|  R_2=|-1 +0 +0|  R_3=|+1 +0 +0|
 !      |+0 +0 +1|      |+0 +0 +1|      |+0 +0 +1|
-! 
+!
 !      |+1/4|     |+1/2|
 !    t=|+1/4|   a=|+1/2|
 !      |+1/4|     |+ 0 |
@@ -247,4 +205,90 @@ Subroutine init
 
   return
 End Subroutine Init
+
+
+subroutine init_uniform_k_grid()
+  use Global_Variables
+  implicit none
+  integer :: n,ix,iy,iz
+  Select case(Sym)
+  case(1)
+    n=0
+    do ix=1,NKx
+    do iy=1,NKy
+    do iz=1,NKz
+      n=n+1
+      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
+      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
+      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
+      wk(n)=1.d0
+    enddo
+    enddo
+    enddo
+  case(4)
+    n=0
+    do ix=1,NKx/2
+    do iy=1,NKy/2
+    do iz=1,NKz
+      n=n+1
+      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
+      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
+      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
+      wk(n)=4.d0
+    enddo
+    enddo
+    enddo
+  case(8)
+! assume NKx == NKy
+    n=0
+    do ix=1,NKx/2
+    do iy=1,ix
+    do iz=1,NKz
+      n=n+1
+      kAc(n,1)=-bLx/2+(ix-0.5d0)*bLx/NKx
+      kAc(n,2)=-bLy/2+(iy-0.5d0)*bLy/NKy
+      kAc(n,3)=-bLz/2+(iz-0.5d0)*bLz/NKz
+      wk(n)=8.d0
+      if(ix == iy) wk(n)=4.d0
+    enddo
+    enddo
+    enddo
+  end select
+  kAc0=kAc  ! Store initial k-point coordinates
+end subroutine
+
+
+
+subroutine init_non_uniform_k_grid()
+  use Global_Variables
+  implicit none
+  integer :: i,j,ik
+  integer :: nk_dummy, nkxyz_dummy
+  real(8) :: temp(4)
+  
+  if (myrank == 0) then
+    ! Read coordinates from "SYSNAME_k.dat"
+    write(*,*) "Load k-point distribution"
+    open(410, file=file_kw, status="old")
+    read(410, *) nk_dummy, nkxyz_dummy
+    do i=1, NK
+      read(410, *) ik, (temp(j), j=1, 4)
+      kAc(ik, 1) = temp(1) * bLx
+      kAc(ik, 2) = temp(2) * bLy
+      kAc(ik, 3) = temp(3) * bLz
+      wk(ik) = temp(4)
+      write(*, *) ik, (kAc(ik, j), j=1, 3), wk(ik)
+    enddo
+    close(410)
+  endif
+  call MPI_BCAST(kAc,3*NK,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(wk,NK,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  if (int(sum(wk)) /= NKxyz) then
+    call err_finalize('NKxyz must be the summention of WK')
+  endif
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  kAc0=kAc  ! Store initial k-point coordinates
+end subroutine
+
+
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130

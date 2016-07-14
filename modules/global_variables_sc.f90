@@ -36,7 +36,7 @@ Module Global_Variables
 
 ! grid
   integer :: NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
-  integer :: NKxyz 
+  integer :: NKxyz
   real(8) :: aL,ax,ay,az,aLx,aLy,aLz,aLxyz
   real(8) :: bLx,bLy,bLz,Hx,Hy,Hz,Hxyz
   integer,allocatable :: Lx(:),Ly(:),Lz(:),Lxyz(:,:,:)
@@ -70,7 +70,7 @@ Module Global_Variables
 
 ! physical quantities
   real(8) :: Eall,Eall0,jav(3),Tion
-  real(8) :: Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
+  real(8) :: Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag
   real(8),allocatable :: javt(:,:)
   real(8),allocatable :: Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)!yabana
   real(8),allocatable :: tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
@@ -80,7 +80,7 @@ Module Global_Variables
   real(8),allocatable :: rho_in(:,:),rho_out(:,:) !MB method
   complex(8),allocatable :: rhoe_G(:),rhoion_G(:)
   real(8),allocatable :: force(:,:),esp(:,:),force_ion(:,:)
-  real(8),allocatable :: Floc(:,:),Fnl(:,:),Fion(:,:)               
+  real(8),allocatable :: Floc(:,:),Fnl(:,:),Fion(:,:)
   real(8),allocatable :: ovlp_occ_l(:,:),ovlp_occ(:,:)
   integer :: Nelec !FS set
   integer,allocatable :: NBocc(:) !FS set
@@ -119,7 +119,7 @@ Module Global_Variables
   integer :: Nscf,Nt,Nomega
   integer :: Nmemory_MB=8                   !Modified-Broyden (MB) method
   real(8) :: alpha_MB=0.75
-  integer :: NFSset_start=75,NFSset_every=25 !Fermi Surface (FS) set 
+  integer :: NFSset_start=75,NFSset_every=25 !Fermi Surface (FS) set
 
 ! file names, flags, etc
   character(50) :: SYSname,directory
@@ -128,6 +128,7 @@ Module Global_Variables
   character(50) :: file_force_dR,file_j_ac
   character(50) :: file_DoS,file_band
   character(50) :: file_dns,file_ovlp,file_nex
+  character(50) :: file_kw ! non-uniform k-grid 
   character(2) :: ext_field
   character(2) :: Longi_Trans
   character(1) :: FSset_option,MD_option
@@ -148,11 +149,11 @@ Module Global_Variables
   real(8) :: Time_shutdown
   real(8) :: Time_start,Time_now
   integer :: iter_now,entrance_iter
-  character(10) :: entrance_option    !initial or reentrance        
+  character(10) :: entrance_option    !initial or reentrance
   character(10) :: position_option
 
 ! sato
-  complex(8),allocatable :: ekr(:,:)  
+  complex(8),allocatable :: ekr(:,:)
 
 ! omp
   integer :: NUMBER_THREADS
@@ -172,7 +173,7 @@ Module Global_Variables
 ! Finite temperature
   real(8) :: KbTev
 
-! For reentrance 
+! For reentrance
   character(50) :: cMyrank,file_reentrance
 
 #if defined(__KNC__) || defined(__AVX512F__)

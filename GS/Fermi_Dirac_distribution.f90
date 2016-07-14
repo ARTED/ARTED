@@ -27,7 +27,7 @@ Subroutine Fermi_Dirac_distribution
   real(8) s,st
   integer :: ik,ib
   real(8) :: timer1,timer2
-  
+
   timer1=MPI_WTIME()
   beta_FD=1d0/(KbTev/(2d0*Ry))
   allocate(occ_l(NB,NK),esp_l(NB,NK),esp_temp(NB,NK))
@@ -41,11 +41,11 @@ Subroutine Fermi_Dirac_distribution
     write(*,*)'min esp =',chem_min
   end if
   chemical_potential=0.5d0*(chem_max+chem_min)
-  do 
+  do
 
     do ik=NK_s,NK_e
       do ib=1,NB
-        occ_l(ib,ik)=2.d0/(NKx*NKy*NKz)*wk(ik) &
+        occ_l(ib,ik)=2.d0/(NKxyz)*wk(ik) &
           &/(exp(beta_FD*(esp(ib,ik)-chemical_potential))+1d0)
       end do
     end do

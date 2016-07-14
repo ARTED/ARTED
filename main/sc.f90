@@ -31,7 +31,7 @@ Program main
   integer :: iter,ik,ib,ia,i,ixyz
   character(3) :: Rion_update
   character(10) :: functional_t
-!$ integer :: omp_get_max_threads  
+!$ integer :: omp_get_max_threads
 
   call MPI_init(ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,Nprocs,ierr)
@@ -111,7 +111,7 @@ Program main
     if( kbTev < 0d0 )then ! sato
       if (FSset_option == 'Y') then
         if (iter/NFSset_every*NFSset_every == iter .and. iter >= NFSset_start) then
-          do ik=1,NK 
+          do ik=1,NK
             esp_vb_min(ik)=minval(esp(1:NBocc(ik),ik))
             esp_vb_max(ik)=maxval(esp(1:NBocc(ik),ik))
             esp_cb_min(ik)=minval(esp(NBocc(ik)+1:NB,ik))
@@ -148,7 +148,7 @@ Program main
 
 !    call psi_rho_omp !sym
     call psi_rho_GS
-    call Density_Update(iter) 
+    call Density_Update(iter)
     call Hartree
 ! yabana
     functional_t = functional
@@ -233,7 +233,7 @@ Program main
   if (Myrank == 0) then
     write(*,*) '-----------------------------------------------'
     write(*,*) '----some information for Band map--------------'
-    do ik=1,NK 
+    do ik=1,NK
       esp_vb_min(ik)=minval(esp(1:NBocc(ik),ik))
       esp_vb_max(ik)=maxval(esp(1:NBocc(ik),ik))
       esp_cb_min(ik)=minval(esp(NBocc(ik)+1:NB,ik))
@@ -282,9 +282,9 @@ Program main
     open(7,file=file_epst,position = position_option)
     open(8,file=file_dns,position = position_option)
     open(9,file=file_force_dR,position = position_option)
-    if (AD_RHO /= 'No') then 
-      open(404,file=file_ovlp,position = position_option) 
-      open(408,file=file_nex,position = position_option) 
+    if (AD_RHO /= 'No') then
+      open(404,file=file_ovlp,position = position_option)
+      open(408,file=file_nex,position = position_option)
     end if
   endif
 
@@ -319,14 +319,14 @@ Program main
 
     call timelog_begin(LOG_OTHER)
 
-    if (Longi_Trans == 'Lo') then 
+    if (Longi_Trans == 'Lo') then
       Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
       if (Sym /= 1) then
         Ac_ind(iter+1,1)=0.d0
         Ac_ind(iter+1,2)=0.d0
       end if
       Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
-    else if (Longi_Trans == 'Tr') then 
+    else if (Longi_Trans == 'Tr') then
       Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
     end if
 
@@ -405,7 +405,7 @@ Program main
         enddo
         write(408,'(1x,3e16.6E3)') iter*dt,sum(ovlp_occ(NBoccmax+1:NB,:)),sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
         write(*,*) 'number of excited electron',sum(ovlp_occ(NBoccmax+1:NB,:)),sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
-        write(*,*) 'var_tot,var_max=',sum(esp_var(:,:))/(NK*Nelec/2),maxval(esp_var(:,:)) 
+        write(*,*) 'var_tot,var_max=',sum(esp_var(:,:))/(NK*Nelec/2),maxval(esp_var(:,:))
       end if
     end if
 
@@ -426,7 +426,7 @@ Program main
       if (Myrank == 0 .and. iter/100*100 == iter) then
         write(*,*) 'Total time =',(Time_now-Time_start)
       end if
-      if ((Time_now - Time_start)>Time_shutdown) then 
+      if ((Time_now - Time_start)>Time_shutdown) then
         call MPI_BARRIER(MPI_COMM_WORLD,ierr)
         write(*,*) Myrank,'iter =',iter
         iter_now=iter
@@ -473,7 +473,7 @@ Program main
     close(9)
     if (AD_RHO /= 'No') then
       close(404)
-      close(408)                                                      
+      close(408)
     end if
   endif
 
@@ -527,7 +527,7 @@ Subroutine Read_data
     call prep_Reentrance_Read
     return
   else if(entrance_option == 'new') then
-  else 
+  else
     call err_finalize('entrance_option /= new or reentrance')
   end if
 
@@ -569,10 +569,11 @@ Subroutine Read_data
     file_dns=trim(directory)//trim(SYSname)//'_dns.out'
     file_ovlp=trim(directory)//trim(SYSname)//'_ovlp.out'
     file_nex=trim(directory)//trim(SYSname)//'_nex.out'
+    file_kw=trim(directory)//trim(SYSname)//'_kw.dat' ! k-points
     write(*,*) 'aL,ax,ay,az=',aL,ax,ay,az
     write(*,*) 'Sym=',Sym,'crystal structure=',crystal_structure !sym
     write(*,*) 'Nd,NLx,NLy,NLz,NKx,NKy,NKz=',Nd,NLx,NLy,NLz,NKx,NKy,NKz
-    write(*,*) 'NEwald, aEwald =',NEwald, aEwald 
+    write(*,*) 'NEwald, aEwald =',NEwald, aEwald
     write(*,*) 'KbTev=',KbTev ! sato
   end if
 
@@ -594,12 +595,13 @@ Subroutine Read_data
   call MPI_BCAST(file_epst,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_epse,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_force_dR,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_j_ac,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)  
+  call MPI_BCAST(file_j_ac,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_DoS,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_band,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_dns,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_ovlp,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_nex,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(file_kw,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr) ! non-uniform k-grid
   call MPI_BCAST(aL,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ax,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ay,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
@@ -659,16 +661,32 @@ Subroutine Read_data
   Hxyz=Hx*Hy*Hz
   NL=NLx*NLy*NLz
   NG=NL
-  NKxyz=NKx*NKy*NKz
 
-  select case(Sym)
-  case(1)
-    NK=NKx*NKy*NKz
-  case(4)
-    NK=(NKx/2)*(NKy/2)*NKz
-  case(8)
-    NK=NKz*(NKx/2)*((NKx/2)+1)/2
-  end select
+  ! Added by M.Uemoto on 2016-07-07
+  if (0<NKx .and. 0<NKy .and. 0<NKy) then
+    ! Use uniform rectangular k-grid
+    NKxyz=NKx*NKy*NKz
+    select case(Sym)
+    case(1)
+      NK=NKx*NKy*NKz
+    case(4)
+      NK=(NKx/2)*(NKy/2)*NKz
+    case(8)
+      NK=NKz*(NKx/2)*((NKx/2)+1)/2
+    end select
+  else
+    ! Use non-uniform k-points
+    if (myrank == 0) then
+      write(*,*) "Use non-uniform k-points distribution"
+      write(*,*) "file_kw=", file_kw
+      open(410, file=file_kw, status="old")
+      read(410, *) NK, NKxyz
+      close(410)
+      write(*,*) "NK=", NK, "NKxyz=", NKxyz      
+    endif
+    call MPI_BCAST(NK,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(NKxyz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  endif
 
   NK_ave=NK/Nprocs; NK_remainder=NK-NK_ave*Nprocs
   NG_ave=NG/Nprocs; NG_remainder=NG-NG_ave*Nprocs
@@ -700,7 +718,7 @@ Subroutine Read_data
       NG_e=NG_ave*(Myrank+1)
     else
       NG_s=NG-(NG_ave+1)*((Nprocs-1)-Myrank)-NG_ave
-      NG_e=NG-(NG_ave+1)*((Nprocs-1)-Myrank) 
+      NG_e=NG-(NG_ave+1)*((Nprocs-1)-Myrank)
     end if
   end if
   if(Myrank == Nprocs-1 .and. NG_e /= NG) call err_finalize('prep. NG_e error')
@@ -745,7 +763,7 @@ Subroutine Read_data
   endif
   if( kbTev < 0d0 )then ! sato
     NBoccmax=Nelec/2
-  else 
+  else
     NBoccmax=NB
   end if
 
@@ -870,7 +888,7 @@ Subroutine Read_data
   allocate(rad(Nrmax,NE),vloctbl(Nrmax,NE),dvloctbl(Nrmax,NE))
   allocate(radnl(Nrmax,NE))
   allocate(udVtbl(Nrmax,0:Lmax,NE),dudVtbl(Nrmax,0:Lmax,NE))
-  allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))                         
+  allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))
 
   if (Myrank == 0) then
     read(*,*) (Zatom(j),j=1,NE)
@@ -921,7 +939,7 @@ subroutine prep_Reentrance_Read
   open(500,file=file_reentrance,form='unformatted')
 
   read(500) iter_now,entrance_iter
-  ! need to exclude from reading data: 
+  ! need to exclude from reading data:
   ! Time_shutdown, Time_start, Time_now,iter_now,entrance_iter,entrance_option
 
 !======== read section ===========================
@@ -943,9 +961,9 @@ subroutine prep_Reentrance_Read
 !  real(8),parameter :: CU=0.002d0,DU=-0.0116d0
 !yabana
 
-! grid 
+! grid
   read(500) NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
-  read(500) NKxyz 
+  read(500) NKxyz
   read(500) aL,ax,ay,az,aLx,aLy,aLz,aLxyz
   read(500) bLx,bLy,bLz,Hx,Hy,Hz,Hxyz
 
@@ -963,7 +981,7 @@ subroutine prep_Reentrance_Read
 
 ! physical quantities
   read(500) Eall,Eall0,jav(3),Tion
-  read(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
+  read(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag
 
 !yabana
   read(500) Nelec !FS set
@@ -984,7 +1002,7 @@ subroutine prep_Reentrance_Read
   read(500) Nscf,Nt,Nomega
   read(500) Nmemory_MB                   !Modified-Broyden (MB) method
   read(500) alpha_MB
-  read(500) NFSset_start,NFSset_every !Fermi Surface (FS) set 
+  read(500) NFSset_start,NFSset_every !Fermi Surface (FS) set
 
 ! file names, flags, etc
   read(500) SYSname,directory
@@ -1013,7 +1031,7 @@ subroutine prep_Reentrance_Read
 !  read(500) Time_shutdown
 !  read(500) Time_start,Time_now
 !  read(500) iter_now,entrance_iter
-!  read(500) entrance_option    !initial or reentrance        
+!  read(500) entrance_option    !initial or reentrance
   read(500) position_option
 
 
@@ -1027,7 +1045,7 @@ subroutine prep_Reentrance_Read
 ! Finite temperature
   read(500) KbTev
 
-! For reentrance 
+! For reentrance
   read(500) cMyrank,file_reentrance
 
 
@@ -1065,7 +1083,7 @@ subroutine prep_Reentrance_Read
   allocate(Zatom(NE),Kion(NI))
   allocate(Rion(3,NI),Mass(NE),Rion_eq(3,NI),dRion(3,NI,-1:Nt+1))
   allocate(occ(NB,NK),wk(NK))
-  
+
   read(500) Zatom(:),Kion(:)
   read(500) Rion(:,:),Mass(:),Rion_eq(:,:),dRion(:,:,:)
   read(500) occ(:,:),wk(:)
@@ -1078,7 +1096,7 @@ subroutine prep_Reentrance_Read
   allocate(rho(NL),rho_gs(NL))
   allocate(rhoe_G(NG_s:NG_e),rhoion_G(NG_s:NG_e))
   allocate(force(3,NI),esp(NB,NK),force_ion(3,NI))
-  allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))                         
+  allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))
   allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
 
   read(500) javt(:,:)
@@ -1089,7 +1107,7 @@ subroutine prep_Reentrance_Read
 !  real(8),allocatable :: rho_in(:,:),rho_out(:,:) !MB method
   read(500) rhoe_G(:),rhoion_G(:)
   read(500) force(:,:),esp(:,:),force_ion(:,:)
-  read(500) Floc(:,:),Fnl(:,:),Fion(:,:)               
+  read(500) Floc(:,:),Fnl(:,:),Fion(:,:)
   read(500) ovlp_occ_l(:,:),ovlp_occ(:,:)
 
 
@@ -1148,7 +1166,7 @@ subroutine prep_Reentrance_Read
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
 
 ! sato
-  read(500) ekr(:,:)  
+  read(500) ekr(:,:)
 ! omp
 !  integer :: NUMBER_THREADS
   read(500) ekr_omp(:,:,:)
@@ -1170,7 +1188,7 @@ subroutine prep_Reentrance_Read
   call opt_vars_initialize_p1
   call opt_vars_initialize_p2
 
-!== read data ===!  
+!== read data ===!
 
   close(500)
 
@@ -1207,13 +1225,13 @@ subroutine prep_Reentrance_write
 
   write(500) iter_now,iter_now !iter_now=entrance_iter
 
-  
-!======== write section ===========================
-!== write data ===!  
 
-! grid 
+!======== write section ===========================
+!== write data ===!
+
+! grid
   write(500) NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
-  write(500) NKxyz 
+  write(500) NKxyz
   write(500) aL,ax,ay,az,aLx,aLy,aLz,aLxyz
   write(500) bLx,bLy,bLz,Hx,Hy,Hz,Hxyz
 
@@ -1231,7 +1249,7 @@ subroutine prep_Reentrance_write
 
 ! physical quantities
   write(500) Eall,Eall0,jav(3),Tion
-  write(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
+  write(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag
 
 !yabana
   write(500) Nelec !FS set
@@ -1252,7 +1270,7 @@ subroutine prep_Reentrance_write
   write(500) Nscf,Nt,Nomega
   write(500) Nmemory_MB                   !Modified-Broyden (MB) method
   write(500) alpha_MB
-  write(500) NFSset_start,NFSset_every !Fermi Surface (FS) set 
+  write(500) NFSset_start,NFSset_every !Fermi Surface (FS) set
 
 ! file names, flags, etc
   write(500) SYSname,directory
@@ -1281,7 +1299,7 @@ subroutine prep_Reentrance_write
 !  write(500) Time_shutdown
 !  write(500) Time_start,Time_now
 !  write(500) iter_now,entrance_iter
-!  write(500) entrance_option    !initial or reentrance        
+!  write(500) entrance_option    !initial or reentrance
   write(500) position_option
 
 
@@ -1295,7 +1313,7 @@ subroutine prep_Reentrance_write
 ! Finite temperature
   write(500) KbTev
 
-! For reentrance 
+! For reentrance
   write(500) cMyrank,file_reentrance
 
 
@@ -1329,7 +1347,7 @@ subroutine prep_Reentrance_write
 !  real(8),allocatable :: rho_in(:,:),rho_out(:,:) !MB method
   write(500) rhoe_G(:),rhoion_G(:)
   write(500) force(:,:),esp(:,:),force_ion(:,:)
-  write(500) Floc(:,:),Fnl(:,:),Fion(:,:)               
+  write(500) Floc(:,:),Fnl(:,:),Fion(:,:)
   write(500) ovlp_occ_l(:,:),ovlp_occ(:,:)
 
 
@@ -1356,7 +1374,7 @@ subroutine prep_Reentrance_write
   write(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
 ! sato
-  write(500) ekr(:,:)  
+  write(500) ekr(:,:)
 ! omp
 !  integer :: NUMBER_THWRITES
   write(500) ekr_omp(:,:,:)
@@ -1372,7 +1390,7 @@ subroutine prep_Reentrance_write
 
   call timelog_reentrance_write(500)
 
-!== write data ===!  
+!== write data ===!
 
   close(500)
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
