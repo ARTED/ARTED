@@ -19,6 +19,12 @@ Center for Computational Sciences, University of Tsukuba.
 
 ## Build Example
 
+    $ ./build
+    or
+    $ mkdir build_dir
+    $ cd build_dir
+    $ cmake .. && make
+
 ### for COMA at CCS, University of Tsukuba
     $ cd <ARTED Root Directory>
     $ module load intel intelmpi mkl

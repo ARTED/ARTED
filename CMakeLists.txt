@@ -21,6 +21,19 @@ macro (add_definitions_unless ENV_VAL DEF_VAL)
   endif ()
 endmacro (add_definitions_unless)
 
+function (check_mpi_compiler COMPILER_NAME RESULT)
+  get_filename_component(COMPILER_NAME ${COMPILER_NAME} NAME)
+  string(LENGTH ${COMPILER_NAME} NAME_LEN)
+  if (${NAME_LEN} LESS 3)
+    set(RET false)
+  else ()
+    string(SUBSTRING ${COMPILER_NAME} 0 3 COMPILER_HEADER)
+    string(TOLOWER ${COMPILER_HEADER} COMPILER_HEADER)
+    string(COMPARE EQUAL ${COMPILER_HEADER} "mpi" RET)
+  endif ()
+  set(${RESULT} ${RET} PARENT_SCOPE)
+endfunction (check_mpi_compiler)
+
 
 ### Set target
 set_unless_def(BUILD_TARGET  "sc")
@@ -41,11 +54,54 @@ endif ()
 ### Project settings
 project(ARTED Fortran C)
 
-message(STATUS "Target platform ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+if (${CMAKE_CROSSCOMPILING})
+  message(STATUS "Target platform ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+else ()
+  message(STATUS "Target platform is Native (${CMAKE_HOST_SYSTEM})")
+
+  set(TARGET_SUFFIX ".cpu")
+
+  check_mpi_compiler(${CMAKE_Fortran_COMPILER} IS_MPI_COMPILER)
+  if (${IS_MPI_COMPILER})
+    set(MPI_Fortran_COMPILER ${CMAKE_Fortran_COMPILER})
+  endif ()
+
+  check_mpi_compiler(${CMAKE_C_COMPILER} IS_MPI_COMPILER)
+  if (${IS_MPI_COMPILER})
+    set(MPI_C_COMPILER ${CMAKE_C_COMPILER})
+  endif ()
+
+  find_package(MPI REQUIRED)
+
+  if (NOT DEFINED MPI_Fortran_FOUND)
+    message(FATAL_ERROR "MPI Fortran compilers not found.")
+  endif()
+
+  if (NOT DEFINED MPI_C_FOUND)
+    message(FATAL_ERROR "MPI C compilers not found.")
+  endif()
+
+  set(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
+  set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+
+  set(CMAKE_Fortran_FLAGS_DEBUG   "-O2 -g")
+  set(CMAKE_Fortran_FLAGS_RELEASE "-O3")
+  set(Fortran_FLAGS_General       "-cpp ${MPI_Fortran_COMPILE_FLAGS}")
+
+  set(CMAKE_C_FLAGS_DEBUG         "-O2 -g")
+  set(CMAKE_C_FLAGS_RELEASE       "-O3")
+  set(C_FLAGS_General             "${MPI_C_COMPILE_FLAGS}")
+
+  find_package(OpenMP REQUIRED)
+  find_package(LAPACK REQUIRED)
+
+  set(OPENMP_FLAGS ${OpenMP_C_FLAGS})
+  set(LAPACK_FLAGS ${LAPACK_LINKER_FLAGS} ${LAPACK_LIBRARIES})
+endif ()
 
 set(TARGET_NAME         "ARTED_${BUILD_TARGET}${TARGET_SUFFIX}")
-set(CMAKE_Fortran_FLAGS "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS}")
-set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS}")
+set(CMAKE_Fortran_FLAGS "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_Fortran_FLAGS}")
+set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_C_FLAGS}")
 set(EXTERNAL_LIBS       "${LAPACK_FLAGS}")
 
 set(MODULE_LIB  modules)
