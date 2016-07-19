@@ -27,7 +27,7 @@ Subroutine prep_ps_periodic(property)
   character(11) :: property
   integer :: ik,n,i,a,j,ix,iy,iz,lma,l,m,lm,ir,intr
   integer :: lma_tbl((Lmax+1)**2,NI)
-  real(8) :: G2sq,s,Vpsl_l(NL),G2,Gd,Gr,x,y,z,r,ratio1,ratio2
+  real(8) :: G2sq,s,Vpsl_l(NL),G2,Gd,Gr,x,y,z,r
   real(8) :: Ylm,dYlm,uVr(0:Lmax),duVr(0:Lmax)
   complex(8) :: Vion_G(NG_s:NG_e)
   !spline interpolation
@@ -275,14 +275,17 @@ subroutine spline(Np,xn,yn,an,bn,cn,dn)
   integer,intent(in) :: Np
   real(8),intent(in) :: xn(0:Np-1),yn(0:Np-1)
   real(8),intent(out) :: an(0:Np-2),bn(0:Np-2),cn(0:Np-2),dn(0:Np-2)
-  integer :: i,j,k,Npm2
+  integer :: i,Npm2,info
   real(8) :: dxn(0:Np-1),dyn(0:Np-1),u(1:Np-2),v(1:Np-2),Amat(1:Np-2,1:Np-2)
-  real(8) :: Amat_t(1:Np-2,1:Np-2),Amat_chk(1:Np-2,1:Np-2)
-  real(8) :: ss 
+  real(8) :: Amat_t(1:Np-2,1:Np-2)
 ! for lapack
   integer :: LWORK
   integer, allocatable :: IPIV(:) ! dimension N
   real(8), allocatable :: WORK(:) ! dimension LWORK
+! for check inverse matrix problem
+!  integer :: j,k
+!  real(8) :: Amat_chk(1:Np-2,1:Np-2)
+!  real(8) :: ss
 
   Npm2 = Np-2
   LWORK = Npm2*Npm2*6
