@@ -1,6 +1,9 @@
+# recommended version : 3.0.2
 cmake_minimum_required(VERSION 2.8)
 
-# for toolchain
+set(DEFAULT_BUILD_TARGET "sc")
+set(DEFAULT_BUILD_TYPE   Release)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/platform)
 
 macro (set_unless_def ENV_VAL DEFAULT_VAL)
@@ -21,11 +24,13 @@ macro (add_definitions_unless ENV_VAL DEF_VAL)
   endif ()
 endmacro (add_definitions_unless)
 
+# in:  COMPILER_NAME
+# out: RESULT (TRUE or FALSE)
 function (check_mpi_compiler COMPILER_NAME RESULT)
   get_filename_component(COMPILER_NAME ${COMPILER_NAME} NAME)
   string(LENGTH ${COMPILER_NAME} NAME_LEN)
   if (${NAME_LEN} LESS 3)
-    set(RET false)
+    set(RET FALSE)
   else ()
     string(SUBSTRING ${COMPILER_NAME} 0 3 COMPILER_HEADER)
     string(TOLOWER ${COMPILER_HEADER} COMPILER_HEADER)
@@ -36,7 +41,7 @@ endfunction (check_mpi_compiler)
 
 
 ### Set target
-set_unless_def(BUILD_TARGET  "sc")
+set_unless_def(BUILD_TARGET ${DEFAULT_BUILD_TARGET})
 
 if (${BUILD_TARGET} STREQUAL "ms")
   add_definitions(-DARTED_MS)
@@ -47,7 +52,7 @@ else ()
 endif ()
 
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE ${DEFAULT_BUILD_TYPE})
 endif ()
 
 
@@ -55,8 +60,10 @@ endif ()
 project(ARTED Fortran C)
 
 if (${CMAKE_CROSSCOMPILING})
+  # cross compile mode, use toolchain file.
   message(STATUS "Target platform ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 else ()
+  # compiler environment detects automatically.
   message(STATUS "Target platform is Native (${CMAKE_HOST_SYSTEM})")
 
   set(TARGET_SUFFIX ".cpu")
@@ -99,6 +106,7 @@ else ()
   set(LAPACK_FLAGS ${LAPACK_LINKER_FLAGS} ${LAPACK_LIBRARIES})
 endif ()
 
+set(BINARY_DIR          "bin")
 set(TARGET_NAME         "ARTED_${BUILD_TARGET}${TARGET_SUFFIX}")
 set(CMAKE_Fortran_FLAGS "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_Fortran_FLAGS}")
 set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_C_FLAGS}")
@@ -113,21 +121,13 @@ set(STENCIL_LIB stencil)
 set(FDTD_LIB    FDTD)
 
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR})
-set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/bin")
-
-# Bugfix cmake 2.6.x: -i_dynamic flag is deperecated when using Intel Compiler
-if (CMAKE_Fortran_COMPILER_ID)
-  if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "")
-  endif ()
-endif ()
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/${BINARY_DIR}")
 
 
 ### Set optimize options
 option(USE_TLOG            "Use TLOG library"               OFF)
 option(USE_PAPI            "Use Performance API"            OFF)
 option(DEBUG               "Enable debug"                   OFF)
-option(OLD_VERSION         "Use old code"                   OFF)
 option(OPT_CURRENT         "Optimize current code with RT"  ON)
 option(OPT_STENCIL         "Optimize stencil code"          ON)
 option(STENCIL_WITH_C      "Use C code at stencil"          ON)
@@ -166,14 +166,14 @@ if (OPT_STENCIL)
   if (ENABLE_STENCIL_WITH_C)
     add_definitions_if(STENCIL_WITH_C -DARTED_STENCIL_WITH_C)
   elseif (STENCIL_WITH_C)
-    message(WARNING ": Stencil code with C-lang: target platform is not supported.")
+    message(WARNING "Stencil code with C-language: target platform is not supported.")
     set(STENCIL_WITH_C OFF)
   endif ()
 
   if (ENABLE_EXPLICIT_VECTORIZATION)
     add_definitions_if(EXPLICIT_VEC -DARTED_EXPLICIT_VECTORIZATION)
   elseif (EXPLICIT_VEC)
-    message(WARNING ": Explicit vectorization: target platform is not supported.")
+    message(WARNING "Explicit vectorization: target platform is not supported.")
     set(EXPLICIT_VEC OFF)
   endif ()
 else ()
