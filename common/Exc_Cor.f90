@@ -1,21 +1,17 @@
 !
-!  Ab-initio Real-Time Electron Dynamics Simulator, ARTED
-!  Copyright (C) 2016  ARTED developers
+!  Copyright 2016 ARTED developers
 !
-!  This file is part of Exc_Cor.f90.
+!  Licensed under the Apache License, Version 2.0 (the "License");
+!  you may not use this file except in compliance with the License.
+!  You may obtain a copy of the License at
 !
-!  Exc_Cor.f90 is free software: you can redistribute it and/or modify
-!  it under the terms of the GNU General Public License as published by
-!  the Free Software Foundation, either version 3 of the License, or
-!  (at your option) any later version.
+!      http://www.apache.org/licenses/LICENSE-2.0
 !
-!  Exc_Cor.f90 is distributed in the hope that it will be useful,
-!  but WITHOUT ANY WARRANTY; without even the implied warranty of
-!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!  GNU General Public License for more details.
-!
-!  You should have received a copy of the GNU General Public License
-!  along with Exc_Cor.f90.  If not, see <http://www.gnu.org/licenses/>.
+!  Unless required by applicable law or agreed to in writing, software
+!  distributed under the License is distributed on an "AS IS" BASIS,
+!  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+!  See the License for the specific language governing permissions and
+!  limitations under the License.
 !
 !This file is "Exc_Cor.f90"
 Subroutine Exc_Cor(GS_RT)
@@ -1020,36 +1016,34 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 
 !sato
 ! Symmetry
-  if(crystal_structure == 'diamond')then
-    select case(Sym)
-    case(4)
-
-      tau_s(:)=tau_s(:)*0.25d0
-      j_s(:,:)=j_s(:,:)*0.25d0
+  select case(crystal_structure)
+  case("diamond")
+     if(Sym == 4)then
+        tau_s(:)=tau_s(:)*0.25d0
+        j_s(:,:)=j_s(:,:)*0.25d0
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 ! 1.T_3
-!$omp parallel do  private(ss)  
-      do i=1,NL
-        tau_s_l(itable_sym(1,i))=tau_s(i)+tau_s(itable_sym(1,i))
-        j_s_l(itable_sym(1,i),1)=-j_s(i,2)+j_s(itable_sym(1,i),1)
-        j_s_l(itable_sym(1,i),2)=j_s(i,1)+j_s(itable_sym(1,i),2)
-        j_s_l(itable_sym(1,i),3)=j_s(i,3)+j_s(itable_sym(1,i),3)
-      end do
+!$omp parallel do  private(ss,i)  
+        do i=1,NL
+           tau_s_l(itable_sym(1,i))=tau_s(i)+tau_s(itable_sym(1,i))
+           j_s_l(itable_sym(1,i),1)=-j_s(i,2)+j_s(itable_sym(1,i),1)
+           j_s_l(itable_sym(1,i),2)=j_s(i,1)+j_s(itable_sym(1,i),2)
+           j_s_l(itable_sym(1,i),3)=j_s(i,3)+j_s(itable_sym(1,i),3)
+        end do
 ! 2.T3*T3
-!$omp parallel do  private(ss)  
-      do i=1,NL
-        tau_s(itable_sym(2,i))=tau_s_l(i)+tau_s_l(itable_sym(2,i))
-        j_s(itable_sym(2,i),1)=-j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
-        j_s(itable_sym(2,i),2)=-j_s_l(i,2)+j_s_l(itable_sym(2,i),2)
-        j_s(itable_sym(2,i),3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
-      end do
-    case(1)
-    case default
-    call err_finalize('Bad crystal structure')
-    end select
-  else
-    call err_finalize('Bad crystal structure')
-  end if
+!$omp parallel do  private(ss,i)  
+        do i=1,NL
+           tau_s(itable_sym(2,i))=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(itable_sym(2,i),1)=-j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
+           j_s(itable_sym(2,i),2)=-j_s_l(i,2)+j_s_l(itable_sym(2,i),2)
+           j_s(itable_sym(2,i),3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
+        end do
+     else if(Sym /= 1)then
+        call err_finalize('Bad crystal structure')
+     end if
+  case default
+     if(Sym /= 1)call err_finalize('Bad crystal structure')
+  end select
 !sato
 
   return

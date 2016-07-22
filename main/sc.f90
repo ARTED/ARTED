@@ -1,21 +1,17 @@
 !
-!  Ab-initio Real-Time Electron Dynamics Simulator, ARTED
-!  Copyright (C) 2016  ARTED developers
+!  Copyright 2016 ARTED developers
 !
-!  This file is part of sc.f90.
+!  Licensed under the Apache License, Version 2.0 (the "License");
+!  you may not use this file except in compliance with the License.
+!  You may obtain a copy of the License at
 !
-!  sc.f90 is free software: you can redistribute it and/or modify
-!  it under the terms of the GNU General Public License as published by
-!  the Free Software Foundation, either version 3 of the License, or
-!  (at your option) any later version.
+!      http://www.apache.org/licenses/LICENSE-2.0
 !
-!  sc.f90 is distributed in the hope that it will be useful,
-!  but WITHOUT ANY WARRANTY; without even the implied warranty of
-!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!  GNU General Public License for more details.
-!
-!  You should have received a copy of the GNU General Public License
-!  along with sc.f90.  If not, see <http://www.gnu.org/licenses/>.
+!  Unless required by applicable law or agreed to in writing, software
+!  distributed under the License is distributed on an "AS IS" BASIS,
+!  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+!  See the License for the specific language governing permissions and
+!  limitations under the License.
 !
 !This file is "main.f90"
 !This file contains main program and four subroutines.
@@ -616,20 +612,40 @@ Subroutine Read_data
   call MPI_BCAST(NEwald,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(aEwald,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(KbTev,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr) ! sato
-  if(Sym == 8 .and. NKx /= NKy) call err_finalize('NKx /= NKy')
+
 
 !sym ---
-  if((Sym /= 1) &
-    &.and.(crystal_structure/='diamond')) call err_finalize('Bad crystal structure')
-  if((crystal_structure=='diamond').and.(Sym == 8))then
-    if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
-    if(NLx /= NLy)call err_finalize('Bad grid point')
-  end if
+  select case(crystal_structure)
+  case("diamond")
+     if(functional == "PZ")then
+        if(Sym == 8)then
+           if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
+           if(NLx /= NLy)call err_finalize('Bad grid point')
+           if(NKx /= NKy) call err_finalize('NKx /= NKy')
+        else if(Sym ==4 )then
+           if(NLx /= NLy)call err_finalize('Bad grid point')
+           if(NKx /= NKy) call err_finalize('NKx /= NKy')
+        else if(Sym /= 1)then
+           call err_finalize('Bad crystal structure')
+        end if
+     else if(functional == "TBmBJ")then
+        if(Sym == 4)then
+           if(NLx /= NLy)call err_finalize('Bad grid point')
+           if(NKx /= NKy) call err_finalize('NKx /= NKy')
+        else if(Sym /= 1)then
+           call err_finalize('Bad crystal structure')
+        end if
+     else
+        if(Sym /= 1)call err_finalize('Bad crystal structure')
+     end if
+  case default
+     if(Sym /= 1)call err_finalize('Bad symmetry')
+  end select
 !sym ---
 
-
-  if(NKx/2*2 /= NKx .or. NKy/2*2 /= NKy .or. NKz/2*2 /= NKz) call err_finalize('NKx,NKy,NKz /= even')
-  if(NLx/2*2 /= NLx .or. NLy/2*2 /= NLy .or. NLz/2*2 /= NLz) call err_finalize('NLx,NLy,NLz /= even')
+  if(mod(NKx,2)+mod(NKy,2)+mod(NKz,2) /= 0) call err_finalize('NKx,NKy,NKz /= even')
+  if(mod(NLx,2)+mod(NLy,2)+mod(NLz,2) /= 0) call err_finalize('NLx,NLy,NLz /= even')
+  
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
   aLx=ax*aL;    aLy=ay*aL;    aLz=az*aL

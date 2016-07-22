@@ -1,22 +1,18 @@
 #! /usr/bin/env python
 #
-#  Ab-initio Real-Time Electron Dynamics Simulator, ARTED
-#  Copyright (C) 2016  ARTED developers
+#   Copyright 2016 ARTED developers
 #
-#  This file is part of build.
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
 #
-#  build is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
-#  build is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with build.  If not, see <http://www.gnu.org/licenses/>.
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 #
 
 #
@@ -26,6 +22,7 @@ from optparse import OptionParser
 import os
 import shutil
 
+MAKE_NUM_THREADS   = 8
 BUILD_TEMPDIR_NAME = '.build_temp'
 
 def on_or_off(v) :
@@ -40,13 +37,22 @@ def zero_or_one(v) :
   else:
     return '0'
 
-usage  = "usage: %prog [options] target-system target-architectures..."
+def build(build_dir, define_arch) :
+  if options.rebuild and os.path.exists(build_dir):
+    shutil.rmtree(build_dir)
+  if not os.path.exists(build_dir):
+    os.mkdir(build_dir)
+  if os.system('cd {0} && cmake {1} ../'.format(build_dir,define_arch)) == 0:
+    os.system('cd {0} && cmake ../ && make -j {1}'.format(build_dir,MAKE_NUM_THREADS))
+
+
+usage  = "usage: %prog [options] [target-system target-architectures...]"
 parser = OptionParser(usage)
 
 parser.add_option('-n', '--dry-run',       action='store_true',  default=False, dest='dry_run',           help='don\'t actually run.')
 parser.add_option('-v', '--verbose',       action='store_true',  default=False, dest='verbose',           help='show verbose messages.')
 parser.add_option('-r', '--rebuild',       action='store_true',  default=False, dest='rebuild',           help='force rebuild.')
-parser.add_option('-t', '--target',                              default='ms',  dest='target',            help='build target (ms or sc, default ms)')
+parser.add_option('-t', '--target',                              default='sc',  dest='target',            help='build target (ms or sc, default ms)')
 parser.add_option('-d', '--debug',         action='store_true',  default=False, dest='debug',             help='debug build mode.')
 parser.add_option('--opt-stencil',         action='store_true',  default=True,  dest='stencil_optimized', help='use optimized stencil code. (default)')
 parser.add_option('--original-stencil',    action='store_false',                dest='stencil_optimized', help='use original stencil code.')
@@ -65,7 +71,7 @@ parser.add_option('--threads-profiler',    action='store_true',  default=False, 
 (options, args) = parser.parse_args()
 
 ### check args
-if len(args) < 2:
+if len(args) == 1:
   parser.print_help()
   exit(-1)
 
@@ -76,7 +82,10 @@ if options.target != 'sc' and options.target != 'ms':
   parser.print_help()
   exit(-1)
 
-target_system = args.pop(0)
+if len(args) >= 2:
+  target_system = args.pop(0)
+else:
+  target_system = ''
 
 dict = {}
 dict['BUILD_TARGET']           = options.target.lower()
@@ -96,18 +105,12 @@ define = ''
 for k,v in dict.items():
   define = '{0} -D {1}={2}'.format(define, k, v)
 
-for build_target_arch in args:
-  ### parallel build threads
-  build_num_threads=8
-
-  toolchain   = '{0}-{1}'.format(target_system,build_target_arch)
-  define_arch = '-D CMAKE_TOOLCHAIN_FILE={0} {1}'.format(toolchain,define)
-  build_dir   = '{0}_{1}_{2}_{3}'.format(BUILD_TEMPDIR_NAME,options.target,target_system,build_target_arch)
-
-  if options.rebuild and os.path.exists(build_dir):
-    shutil.rmtree(build_dir)
-  if not os.path.exists(build_dir):
-    os.mkdir(build_dir)
-
-  if os.system('cd {0} && cmake {1} ../'.format(build_dir,define_arch)) == 0:
-    os.system('cd {0} && cmake ../ && make -j {1}'.format(build_dir,build_num_threads))
+if not target_system:
+  build_dir = '{0}_{1}_native'.format(BUILD_TEMPDIR_NAME,options.target)
+  build(build_dir, define)
+else:
+  for build_target_arch in args:
+    toolchain   = '{0}-{1}'.format(target_system,build_target_arch)
+    define_arch = '-D CMAKE_TOOLCHAIN_FILE={0} {1}'.format(toolchain,define)
+    build_dir   = '{0}_{1}_{2}_{3}'.format(BUILD_TEMPDIR_NAME,options.target,target_system,build_target_arch)
+    build(build_dir, define_arch)
