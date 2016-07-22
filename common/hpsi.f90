@@ -108,7 +108,7 @@ subroutine hpsi_omp_KB(ik,tpsi,ttpsi,htpsi)
   complex(8),intent(out) :: ttpsi(NL),htpsi(NL)
 
   select case(functional)
-    case('PZ','PBE','TBmBJ')
+    case('PZ', 'PZM','PBE','TBmBJ')
       call hpsi1(ik,tpsi,ttpsi,htpsi)
     case('TPSS','VS98')
       call err_finalize('hpsi_omp_KB: TPSS/VS98 ver. not implemented.')
