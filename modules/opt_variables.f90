@@ -36,10 +36,6 @@ module opt_variables
   integer,allocatable :: zifdx(:,:),zifdy(:,:),zifdz(:,:)
 #endif
 
-#ifndef ARTED_STENCIL_OPTIMIZED
-  integer,allocatable :: zifdt(:,:)
-#endif
-
   integer,allocatable :: hpsi_called(:)
 
 #if defined(__KNC__) || defined(__AVX512F__)
@@ -57,10 +53,6 @@ module opt_variables
 
 #ifdef ARTED_STENCIL_ORIGIN
 !dir$ attributes align:MEM_ALIGNED :: zifdx,zifdy,zifdz
-#endif
-
-#ifndef ARTED_STENCIL_OPTIMIZED
-!dir$ attributes align:MEM_ALIGNED :: zifdt
 #endif
 
 contains
@@ -144,17 +136,6 @@ contains
     zifdx(-4:4,0:NL-1) = ifdx(-4:4,1:NL) - 1
     zifdy(-4:4,0:NL-1) = ifdy(-4:4,1:NL) - 1
     zifdz(-4:4,0:NL-1) = ifdz(-4:4,1:NL) - 1
-#endif
-
-#ifndef ARTED_STENCIL_OPTIMIZED
-    allocate(zifdt(24,0:NL-1))
-
-    zifdt( 1: 4, 0:NL-1) = ifdx( 1: 4, 1:NL) - 1
-    zifdt( 5: 8, 0:NL-1) = ifdy( 1: 4, 1:NL) - 1
-    zifdt( 9:12, 0:NL-1) = ifdz( 1: 4, 1:NL) - 1
-    zifdt(13:16, 0:NL-1) = ifdx(-1:-4:-1, 1:NL) - 1
-    zifdt(17:20, 0:NL-1) = ifdy(-1:-4:-1, 1:NL) - 1
-    zifdt(21:24, 0:NL-1) = ifdz(-1:-4:-1, 1:NL) - 1
 #endif
 
     allocate(zJxyz(Nps,NI))

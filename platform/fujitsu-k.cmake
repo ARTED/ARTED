@@ -2,6 +2,7 @@
 set(TARGET_SUFFIX               ".cpu")
 
 set(ARCH                        "")
+set(SIMD_SET                    "HPC_ACE")
 set(OPENMP_FLAGS                "-Kopenmp")
 set(LAPACK_FLAGS                "-SSL2")
 set(ADDITIONAL_MACRO            "")

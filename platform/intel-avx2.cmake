@@ -2,6 +2,7 @@
 set(TARGET_SUFFIX               ".cpu")
 
 set(ARCH                        "-xCORE-AVX2")
+set(SIMD_SET                    "AVX2")
 set(OPENMP_FLAGS                "-qopenmp")
 set(LAPACK_FLAGS                "-mkl=parallel")
 set(ADDITIONAL_MACRO            "")

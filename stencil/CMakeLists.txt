@@ -6,26 +6,26 @@ set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${C_FLAGS_ST
 
 ### Soruces for current and total_energy
 set(SOURCES_COMPILER_VEC
-    F90/current_compiler_vec.f90
-    F90/total_energy_compiler_vec.f90
+    F90/current.f90
+    F90/total_energy.f90
     )
 set(SOURCES_EXPLICIT_VEC
-    C/current_explicit_vec.c
-    C/total_energy_explicit_vec.c
+    C/${SIMD_SET}/current.c
+    C/${SIMD_SET}/total_energy.c
     )
 
 ### Sources for hpsi
 set(SOURCE_HPSI_ORIGINAL
-    F90/hpsi_compiler_vec_original.f90
+    F90/hpsi_original.f90
     )
 set(SOURCE_HPSI_F90_COMPILER_VEC
-    F90/hpsi_compiler_vec.f90
+    F90/hpsi.f90
     )
 set(SOURCE_HPSI_C_COMPILER_VEC
-    C/hpsi_compiler_vec.c
+    C/hpsi.c
     )
 set(SOURCE_HPSI_EXPLICIT_VEC
-    C/hpsi_explicit_vec.c
+    C/${SIMD_SET}/hpsi.c
     )
 
 
