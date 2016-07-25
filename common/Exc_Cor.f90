@@ -21,6 +21,7 @@ Subroutine Exc_Cor(GS_RT)
   character(2) :: GS_RT
   call timelog_begin(LOG_EXC_COR)
   if(functional == 'PZ') call Exc_Cor_PZ
+  if(functional == 'PZM') call Exc_Cor_PZM
   if(functional == 'PBE') call Exc_Cor_PBE(GS_RT)
   if(functional == 'TBmBJ') call Exc_Cor_TBmBJ(GS_RT)
   if(functional == 'TPSS') call Exc_Cor_TPSS(GS_RT)
@@ -47,6 +48,25 @@ Subroutine Exc_Cor_PZ()
   enddo
   return
 End Subroutine Exc_Cor_PZ
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+Subroutine Exc_Cor_PZM()
+  use Global_Variables
+  implicit none
+  real(8) :: rho_s(NL)
+  integer :: i
+  real(8) :: trho,e_xc,de_xc_drho
+
+!  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
+  rho_s=rho*0.5d0
+!!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
+  do i=1,NL
+    trho=2*rho_s(i)
+    call PZMxc(trho,e_xc,de_xc_drho)
+    Eexc(i)=e_xc*trho
+    Vexc(i)=e_xc+trho*de_xc_drho
+  enddo
+  return
+End Subroutine Exc_Cor_PZM
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Exc_Cor_PBE(GS_RT)
   use Global_Variables
@@ -442,6 +462,32 @@ Subroutine PZxc(trho,exc,dexc_drho)
   endif
   return
 End Subroutine PZxc
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+Subroutine PZMxc(trho,exc,dexc_drho)
+  implicit none
+  real(8),parameter :: Pi=4d0*atan(1d0)
+  real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
+  real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
+  real(8),parameter :: CU=0.2019151940622859d-2, DU=-0.1163206637891297d-1
+  real(8),parameter :: const = 0.75*(3d0/(2d0*pi))**(2d0/3d0)
+  real(8) :: exc,dexc_drho
+  real(8) :: trho,ttrho,rs,rssq,rsln
+
+  ttrho=trho+1d-10
+  rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
+  exc=-const/rs
+  dexc_drho=exc/(3d0*ttrho)
+  if (rs>1d0) then
+    rssq=sqrt(rs)
+    exc=exc+gammaU/(1d0+beta1U*rssq+beta2U*rs)
+    dexc_drho=dexc_drho+gammaU*(0.5d0*beta1U*rssq+beta2U*rs)/(3d0*ttrho)/(1d0+beta1U*rssq+beta2U*rs)**2
+  else
+    rsln=log(rs)
+    exc=exc+AU*rsln+BU+CU*rs*rsln+DU*rs
+    dexc_drho=dexc_drho-rs/(3d0*ttrho)*(AU/rs+CU*(rsln+1d0)+DU)
+  endif
+  return
+End Subroutine PZMxc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
   SUBROUTINE HSEFx(rho,ss,omega,FxHSE,drho_FxHSE,ds_FxHSE)
   implicit none
@@ -1020,24 +1066,69 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   case("diamond")
      if(Sym == 4)then
         tau_s(:)=tau_s(:)*0.25d0
-        j_s(:,:)=j_s(:,:)*0.25d0
+        j_s(:,1:2)= 0d0
+        j_s(:,3)=j_s(:,3)*0.25d0
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 ! 1.T_3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
-           tau_s_l(itable_sym(1,i))=tau_s(i)+tau_s(itable_sym(1,i))
-           j_s_l(itable_sym(1,i),1)=-j_s(i,2)+j_s(itable_sym(1,i),1)
-           j_s_l(itable_sym(1,i),2)=j_s(i,1)+j_s(itable_sym(1,i),2)
-           j_s_l(itable_sym(1,i),3)=j_s(i,3)+j_s(itable_sym(1,i),3)
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(1,i))
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(1,i),3)
         end do
 ! 2.T3*T3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
-           tau_s(itable_sym(2,i))=tau_s_l(i)+tau_s_l(itable_sym(2,i))
-           j_s(itable_sym(2,i),1)=-j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
-           j_s(itable_sym(2,i),2)=-j_s_l(i,2)+j_s_l(itable_sym(2,i),2)
-           j_s(itable_sym(2,i),3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
         end do
+
+     else if(Sym == 8)then
+        tau_s(:)=tau_s(:)/32d0
+        j_s(:,1:2)= 0d0
+        j_s(:,3)=j_s(:,3)/32d0
+
+! 1.T_4
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
+        end do        
+
+! 2.T_3*T_3
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(5,i))
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(5,i),3)
+        end do        
+        
+! 3.T_3
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(3,i))
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(3,i),3)
+        end do
+
+! 4.T_1
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(1,i))
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(1,i),3)
+        end do        
+
+! 5.T_2
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(2,i))
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(2,i),3)
+        end do        
+
+! 6. I
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)
+           j_s(i,3)=j_s_l(i,3)
+        end do        
+        
      else if(Sym /= 1)then
         call err_finalize('Bad crystal structure')
      end if

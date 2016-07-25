@@ -86,7 +86,7 @@ Program main
   call Hartree
 ! yabana
   functional_t = functional
-  if(functional_t == 'TBmBJ') functional = 'PZ'
+  if(functional_t == 'TBmBJ') functional = 'PZM'
   call Exc_Cor('GS')
   if(functional_t == 'TBmBJ') functional = 'TBmBJ'
 ! yabana
@@ -147,7 +147,7 @@ Program main
     call Hartree
 ! yabana
     functional_t = functional
-    if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZ'
+    if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZM'
     call Exc_Cor('GS')
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'TBmBJ'
 ! yabana
@@ -730,19 +730,12 @@ Subroutine Read_data
 !sym ---
   select case(crystal_structure)
   case("diamond")
-     if(functional == "PZ")then
+     if(functional == "PZ" .or. functional == "PZM" .or. functional == "TBmBJ")then
         if(Sym == 8)then
            if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
            if(NLx /= NLy)call err_finalize('Bad grid point')
            if(NKx /= NKy) call err_finalize('NKx /= NKy')
         else if(Sym ==4 )then
-           if(NLx /= NLy)call err_finalize('Bad grid point')
-           if(NKx /= NKy) call err_finalize('NKx /= NKy')
-        else if(Sym /= 1)then
-           call err_finalize('Bad crystal structure')
-        end if
-     else if(functional == "TBmBJ")then
-        if(Sym == 4)then
            if(NLx /= NLy)call err_finalize('Bad grid point')
            if(NKx /= NKy) call err_finalize('NKx /= NKy')
         else if(Sym /= 1)then
