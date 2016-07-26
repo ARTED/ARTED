@@ -2,7 +2,7 @@
 
 ARTED (Ab-initio Real-Time Electron Dynamics simulator) is an open-source
 computer codes for first-principles calculations of electron dynamics and
-light-matter interactions. It is based on time-dependent density functional theory
+light-matter interactions [1]. It is based on time-dependent density functional theory
 solving time-dependent Kohn-Sham equation in real time using pseudopotentials
 and real-space grid representation.
 
@@ -12,10 +12,15 @@ optimally in the following supercomputer platforms:
 - K-computer
 - Fujitsu FX100 supercomputer system
 - Linux PC Cluster with x86-64 CPU
-- Linux PC Cluster with Intel Xeon Phi (Knights Corner)
+- Linux PC Cluster with Intel Xeon Phi (Knights Corner) [2]
 
 ARTED has been developed by ARTED developers with support from
 Center for Computational Sciences, University of Tsukuba.
+
+### Reference
+
+1. Shunsuke A. Sato, and Kazuhiro Yabana: "Maxwell + TDDFT multi-scale simulation for laser-matter interaction", JSST 2013 International Conference on Simulation Technology, 2013.
+2. Yuta Hirokawa, Taisuke Boku, Shunsuke A. Sato, and Kazuhiro Yabana: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Symmetric Mode Xeon Phi Cluster", The 17th IEEE International Workshop on Parallel and Distributed Scientific and Engineering Computing (PDSEC2016), 2016.
 
 
 ## Build
