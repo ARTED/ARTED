@@ -13,13 +13,8 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-#ifdef ARTED_SC
-# define TIMELOG_BEG(id) call timelog_thread_begin(id)
-# define TIMELOG_END(id) call timelog_thread_end(id)
-#else
-# define TIMELOG_BEG(id)
-# define TIMELOG_END(id)
-#endif
+#define TIMELOG_BEG(id) call timelog_thread_begin(id)
+#define TIMELOG_END(id) call timelog_thread_end(id)
 
 subroutine dt_evolve_hpsi
   use Global_Variables
@@ -31,10 +26,6 @@ subroutine dt_evolve_hpsi
   integer    :: ikb,ik,ib,i
   integer    :: iexp
   complex(8) :: zfac(4)
-#ifdef ARTED_SC
-  integer    :: loop_count
-  loop_count = 0
-#endif
 
   zfac(1)=(-zI*dt)
   do i=2,4
@@ -42,11 +33,7 @@ subroutine dt_evolve_hpsi
   end do
 
   call timelog_begin(LOG_HPSI)
-#ifdef ARTED_SC
-!$omp parallel private(tid) shared(zfac) firstprivate(loop_count)
-#else
 !$omp parallel private(tid) shared(zfac)
-#endif
 !$  tid=omp_get_thread_num()
 
 !$omp do private(ik,ib,iexp)
@@ -64,17 +51,8 @@ subroutine dt_evolve_hpsi
 #ifdef ARTED_CURRENT_OPTIMIZED
     call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
 #endif
-
-#ifdef ARTED_SC
-    loop_count = loop_count + 1
-#endif
   end do
 !$omp end do
-
-#ifdef ARTED_SC
-  hpsi_called(tid) = loop_count
-#endif
-
 !$omp end parallel
   call timelog_end(LOG_HPSI)
 

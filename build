@@ -66,7 +66,6 @@ parser.add_option('--domain-power-of-two', action='store_true',  default=False, 
 parser.add_option('--loop-blocking',       action='store_true',  default=False, dest='loop_blocking',     help='loop blocking applied to stencil computation.')
 parser.add_option('--papi',                action='store_true',  default=False, dest='papi',              help='use PAPI profiling (SC only).')
 parser.add_option('--tlog',                action='store_true',  default=False, dest='tlog',              help='use TLOG profiling.')
-parser.add_option('--threads-profiler',    action='store_true',  default=False, dest='profile_threads',   help='profile each OpenMP threads')
 
 (options, args) = parser.parse_args()
 
@@ -99,7 +98,6 @@ dict['STENCIL_WITH_C']         = on_or_off(options.stencil_with_c)
 dict['LOOP_BLOCKING']          = on_or_off(options.loop_blocking)
 dict['DOMAIN_POWER_OF_TWO']    = on_or_off(options.domain_two)
 dict['EXPLICIT_VEC']           = on_or_off(options.explicit_vec)
-dict['PROFILE_THREADS']        = on_or_off(options.profile_threads)
 
 define = ''
 for k,v in dict.items():
