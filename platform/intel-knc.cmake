@@ -2,6 +2,7 @@
 set(TARGET_SUFFIX               ".mic")
 
 set(ARCH                        "-mmic")
+set(SIMD_SET                    "IMCI")
 set(OPENMP_FLAGS                "-qopenmp")
 set(LAPACK_FLAGS                "-mkl=parallel")
 set(ADDITIONAL_MACRO            "")

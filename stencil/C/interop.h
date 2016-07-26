@@ -69,8 +69,6 @@
 #define mody opt_variables_mp_mody_
 #define modz opt_variables_mp_modz_
 
-#define IDXF opt_variables_mp_zifdt_
-
 #ifdef ARTED_MIGRATE_TO_KNL
 # include "./knc2knl.h"
 #else
