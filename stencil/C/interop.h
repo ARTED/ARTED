@@ -84,10 +84,9 @@ __m512i _mm512_unaligned_load_epi32(int const* v) {
 
 inline
 __m512d dcast_to_dcmplx(double const *v) {
+  const __m512i perm = _mm512_set_epi32(7, 6, 7, 6, 5, 4, 5, 4, 3, 2, 3, 2, 1, 0, 1, 0);
   __m512d w = _mm512_loadunpacklo_pd(_mm512_setzero_pd(), v);
-  __m512i a = _mm512_permute4f128_epi32((__m512i) w, _MM_PERM_BBAA);
-  __m512d b = (__m512d) _mm512_shuffle_epi32(a, _MM_SHUFFLE(1,0,3,2));
-  return _mm512_mask_blend_pd(0x66, (__m512d) a, b);
+  return (__m512d) _mm512_permutevar_epi32(perm, (__m512i) w);
 }
 # endif
 #endif
@@ -106,21 +105,20 @@ __m512d dcomplex_mul(__m512d a, __m512d b) {
 }
 
 inline
-__m512d dcomplex_gather(void const* v, __m512i idx) {
-  /* swizzle index */
-  __m512i one = _mm512_set_epi32(1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0);
+__m512i dcomplex_get_index(__m512i idx)
+{
+  const __m512i perm = _mm512_set_epi32(7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0);
+  const __m512i one  = _mm512_set4_epi32(1, 0, 1, 0);
+  __m512i x = _mm512_permutevar_epi32(perm, idx);
+  __m512i y = _mm512_slli_epi32(x, 1);  /* x * 2 */
+  return      _mm512_xor_si512(y, one); /* y + 1 or y + 0 */
+}
 
-  __m512i a   = _mm512_swizzle_epi64(idx, _MM_SWIZ_REG_AAAA);  // ABABABABABABABAB
-  __m512i b   = _mm512_swizzle_epi64(idx, _MM_SWIZ_REG_BBBB);  // CDCDCDCDCDCDCDCD
-  __m512i ab  = _mm512_shuffle_epi32(a, _MM_SHUFFLE(3,1,2,0)); // AABBAABBAABBAABB
-  __m512i cd  = _mm512_shuffle_epi32(b, _MM_SHUFFLE(3,1,2,0)); // CCDDCCDDCCDDCCDD
-
-  __m512i x   = _mm512_mask_blend_epi32(0xF0F0, ab, cd);       // AABBCCDDAABBCCDD
-  __m512i y   = _mm512_slli_epi32(x, 1);
-  __m512i z   = _mm512_xor_si512(y, one);
-
-  /* gather */
-  return _mm512_i32loextgather_pd(z, v, _MM_UPCONV_PD_NONE, 8, _MM_HINT_NONE);
+inline
+__m512d dcomplex_gather(void const* m, __m512i idx)
+{
+  const __m512i gidx = dcomplex_get_index(idx);
+  return _mm512_i32loextgather_pd(gidx, m, _MM_UPCONV_PD_NONE, 8, _MM_HINT_NONE);
 }
 #endif /* ifdef __KNC__ */
 

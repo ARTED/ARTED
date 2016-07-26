@@ -67,12 +67,6 @@ void hpsi1_rt_stencil_( double         const* restrict A_
   for(n = 0 ; n < 12 ; ++n)
     G[n] = C[n] * -0.5;
 
-  __m512d wm[4];
-  __m512d wp[4];
-
-  __m512d bt, tt, ut;
-  __m512d v1, v2, v3, v4;
-
   __m512i nly = _mm512_set1_epi32(PNLy);
   __m512i nlz = _mm512_set1_epi32(PNLz);
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
@@ -82,17 +76,18 @@ void hpsi1_rt_stencil_( double         const* restrict A_
   __m512i nyx = _mm512_mask_blend_epi32(0xFF00, _mm512_set1_epi32(PNLy   ), _mm512_set1_epi32(PNLx   ));
 #endif
 
-  __declspec(align(64)) int yx_table_org[16] = { -4, -3, -2, -1, 1, 2, 3, 4, -4, -3, -2, -1, 1, 2, 3, 4};
   __declspec(align(64)) int yx_table[16];
-  __m512i *yx_org = (__m512i*) yx_table_org;
+  __m512i  yx_org = _mm512_setr_epi32(-4, -3, -2, -1, 1, 2, 3, 4, -4, -3, -2, -1, 1, 2, 3, 4);
   __m512i *yx     = (__m512i*) yx_table;
+
+  __m512i dnyx = _mm512_add_epi32(nyx, yx_org);
+  __m512i nlyz = _mm512_mask_mullo_epi32(nlz, 0xFF00, nlz, nly);
 
 #ifndef TUNING_Z_MEM_LOAD
   __m512i mlz = _mm512_set1_epi32(NLz - 1);
-  __declspec(align(64)) int z_table_org[16] = { -4, -3, -2, -1, 0, 1, 2, 0
-                                              ,  1,  2,  3,  4, 5, 6, 7, 0 };
-  __m512i *zm_org = (__m512i*) z_table_org;
-  __m512i ze = _mm512_setzero_epi32();
+  __m512i zm_org = _mm512_setr_epi32(-4, -3, -2, -1, 0, 1, 2, 0,
+                                      1,  2,  3,  4, 5, 6, 7, 0);
+  __m512i ze     = _mm512_setzero_epi32();
 #endif
 
 #pragma noprefetch
@@ -137,23 +132,25 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 
     for(iz = 0 ; iz < NLz ; iz += 4)
     {
-      const int p = iz >> 2;
       __m512i tiz = _mm512_set1_epi32(iz);
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(_mm512_add_epi32(tyx, nyx), *yx_org), myx));
+      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(dnyx, tyx), myx));
 #else
 #ifdef TUNING_INDEX_CALC
       __m512i mm  = _mm512_sub_epi32(tyx, uyx);
 #else
-      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_rem_epi32(_mm512_add_epi32(_mm512_add_epi32(tyx, nyx), *yx_org), nyx));
+      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_rem_epi32(_mm512_add_epi32(dnyx, tyx), nyx));
 #endif
 #endif
-      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(_mm512_mask_mullo_epi32(mm, 0xFF00, mm, nly), nlz));
+      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(mm, nlyz));
 
       __m512d ez = _mm512_load_pd(e + iz);
+      __m512d tt = _mm512_setzero_pd();
+      __m512d ut = _mm512_setzero_pd();
 
-      tt = _mm512_setzero_pd();
-      ut = _mm512_setzero_pd();
+      __m512d wm[4];
+      __m512d wp[4];
+      __m512d bt, v0, v1, v2, v3, v4;
 
       /* z-dimension (unit stride) */
       {
@@ -180,7 +177,7 @@ void hpsi1_rt_stencil_( double         const* restrict A_
         wp[2] = (__m512d) _mm512_alignr_epi32(z2, (__m512i) ez, 12);
         wp[3] = (__m512d) z2;
 #else
-        __m512i mz = _mm512_and_epi32(_mm512_add_epi32(_mm512_add_epi32(tiz, nlz), *zm_org), mlz);
+        __m512i mz = _mm512_and_epi32(_mm512_add_epi32(_mm512_add_epi32(tiz, nlz), zm_org), mlz);
 
         wm[3] = dcomplex_gather( e, mz );
         wm[2] = dcomplex_gather( e, _mm512_alignr_epi32(ze, mz,  1) );
@@ -250,9 +247,9 @@ void hpsi1_rt_stencil_( double         const* restrict A_
       v3 = dcomplex_mul(ut, ZI);
 #endif
       v1 = _mm512_add_pd(v2, v3);
-      tt = _mm512_fmadd_pd(bt, ez, v1);
+      v0 = _mm512_fmadd_pd(bt, ez, v1);
 
-      _mm512_storenrngo_pd(&f[iz], tt);
+      _mm512_storenrngo_pd(&f[iz], v0);
     } /* NLz */
   } /* NLy */
   } /* NLx */

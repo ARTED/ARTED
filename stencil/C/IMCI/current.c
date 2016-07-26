@@ -49,9 +49,6 @@ void current_stencil_( double         const* restrict C
   for(n = 0 ; n < 3 ; ++n)
     tt[n] = _mm512_setzero_pd();
 
-  __m512d wp[4];
-  __m512d v1, v2;
-
   __m512i nly = _mm512_set1_epi32(NLy);
   __m512i nlz = _mm512_set1_epi32(NLz);
   __m512i nyx = _mm512_mask_blend_epi32(0xF0F0, _mm512_set1_epi32(NLy    ), _mm512_set1_epi32(NLx    ));
@@ -59,10 +56,12 @@ void current_stencil_( double         const* restrict C
   __m512i myx = _mm512_mask_blend_epi32(0xF0F0, _mm512_set1_epi32(NLy - 1), _mm512_set1_epi32(NLx - 1));
 #endif
 
-  __declspec(align(64)) int yx_table_org[16] = { 1, 2, 3, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0 };
   __declspec(align(64)) int yx_table[16];
-  __m512i *yx_org = (__m512i*) yx_table_org;
+  __m512i  yx_org = _mm512_setr_epi32(1, 2, 3, 4, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0);
   __m512i *yx     = (__m512i*) yx_table;
+
+  __m512i dnyx = _mm512_add_epi32(nyx, yx_org);
+  __m512i nlyz = _mm512_mask_mullo_epi32(nlz, 0xF0F0, nlz, nly);
 
 #pragma noprefetch
 #pragma novector
@@ -98,11 +97,15 @@ void current_stencil_( double         const* restrict C
     {
       __m512i tiz = _mm512_set1_epi32(iz);
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(_mm512_add_epi32(tyx, nyx), *yx_org), myx));
+      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(dnyx, tyx), myx));
 #else
       __m512i mm  = _mm512_sub_epi32(tyx, uyx);
 #endif
-      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(_mm512_mask_mullo_epi32(mm, 0xF0F0, mm, nly), nlz));
+      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(mm, nlyz));
+
+      __m512d wm[4];
+      __m512d wp[4];
+      __m512d v1, v2, v3;
 
       // conj(e[iz])
       __m512d ez = _mm512_load_pd(e + iz);
