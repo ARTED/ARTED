@@ -72,7 +72,7 @@ Subroutine Exc_Cor_PBE(GS_RT)
   use Global_Variables
   implicit none
   character(2) :: GS_RT
-  real(8) :: rho_s(NL),tau_s(NL),j_s(3,NL),grho_s(3,NL),lrho_s(NL)
+  real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   real(8) :: agrho_s(NL)
   integer :: i
   real(8) :: omega
@@ -444,12 +444,13 @@ Subroutine PZxc(trho,exc,dexc_drho)
   real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
   real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
   real(8),parameter :: CU=0.002d0,DU=-0.0116d0
+  real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
   real(8) :: exc,dexc_drho
   real(8) :: trho,ttrho,rs,rssq,rsln
 
   ttrho=trho+1d-10
   rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
-  exc=-.4582d0/rs
+  exc=-const/rs
   dexc_drho=exc/(3*ttrho)
   if (rs>1d0) then
     rssq=sqrt(rs)
@@ -465,11 +466,11 @@ End Subroutine PZxc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine PZMxc(trho,exc,dexc_drho)
   implicit none
-  real(8),parameter :: Pi=4d0*atan(1d0)
+  real(8),parameter :: Pi=3.141592653589793d0
   real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
   real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
   real(8),parameter :: CU=0.2019151940622859d-2, DU=-0.1163206637891297d-1
-  real(8),parameter :: const = 0.75*(3d0/(2d0*pi))**(2d0/3d0)
+  real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
   real(8) :: exc,dexc_drho
   real(8) :: trho,ttrho,rs,rssq,rsln
 
