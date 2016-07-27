@@ -631,6 +631,14 @@ Subroutine Read_data
      else
         if(Sym /= 1)call err_finalize('Bad crystal structure')
      end if
+  case("tetragonal")
+     if(functional == "PZ" .or. functional == "PZM")then
+        if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
+        if(NLx /= NLy)call err_finalize('Bad grid point')
+        if(NKx /= NKy) call err_finalize('NKx /= NKy')
+     else if(Sym /= 1)then
+        call err_finalize('Bad crystal structure')
+     end if
   case default
      if(Sym /= 1)call err_finalize('Bad symmetry')
   end select

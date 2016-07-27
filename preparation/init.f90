@@ -236,6 +236,48 @@ Subroutine init
       itable_sym(2,i)=Lxyz(ixt,iyt,izt)
     end do
 !===  end  diamond(4) ====================================================================
+  else if((Sym == 8).and.(crystal_structure == 'tetragonal')) then
+!=== start diamond(8) ====================================================================
+! f(r_new)=T_1*f(r_old+t); (r_new=T_1*r_old)
+!      |+0 +1 +0|      |+0 -1 +0|      |+0 -1 +0|
+!  R_1=|+1 +0 +0|  R_2=|-1 +0 +0|  R_3=|+1 +0 +0|
+!      |+0 +0 +1|      |+0 +0 +1|      |+0 +0 +1|
+! 
+
+!   T_1(R_1),T_2(R_2),T_3(R_3)
+
+
+! 1. T_1
+    do i=1,NL
+      ix=Lx(i);iy=Ly(i);iz=Lz(i)
+      ixt=iy;iyt=ix;izt=iz ! R_1
+      itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+    end do
+! 2. T_2
+    do i=1,NL
+      ix=Lx(i);iy=Ly(i);iz=Lz(i)
+      ixt=-iy;iyt=-ix;izt=iz
+      ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+      itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+    end do
+! 3. T_3
+    do i=1,NL
+      ix=Lx(i);iy=Ly(i);iz=Lz(i)
+      ixt=-iy;iyt=ix;izt=iz ! R_3
+      ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+      itable_sym(3,i)=Lxyz(ixt,iyt,izt)
+    end do
+! 4. T_3*T_3
+    do i=1,NL
+      ix=Lx(i);iy=Ly(i);iz=Lz(i)
+      ixt=-iy;iyt=ix;izt=iz ! T_3
+
+      ix=ixt;iy=iyt;iz=izt
+      ixt=-iy;iyt=ix;izt=iz ! T_3
+      ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+      itable_sym(4,i)=Lxyz(ixt,iyt,izt)
+    end do
+!===  end  diamond(8) ====================================================================
   else
     call err_finalize('preparation of symmetry table is faled')
   end if

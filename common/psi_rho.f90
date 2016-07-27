@@ -56,9 +56,11 @@ subroutine psi_rho_impl(zutmp,zu_NB)
     end if
   case(8)
     if(crystal_structure == 'diamond')then
-      call sym8(zutmp,zu_NB,rho_l,rho_tmp1,rho_tmp2)
+       call sym8(zutmp,zu_NB,rho_l,rho_tmp1,rho_tmp2)
+    else if(crystal_structure == 'tetragonal')then
+       call sym8_tetragonal(zutmp,zu_NB,rho_l,rho_tmp1,rho_tmp2)
     else
-      call err_finalize('Bad crystal structure')
+       call err_finalize('Bad crystal structure')
     end if
   case default
     call err_finalize('Bad Symmetry')
@@ -238,4 +240,56 @@ contains
 !$omp end do OMP_SIMD
 !$omp end parallel
   end subroutine
+  !====== tetragonal(8) structure =========================!
+  subroutine sym8_tetragonal(zutmp,zu_NB,zrho_l,zrhotmp1,zrhotmp2)
+    use global_variables
+    use opt_variables, only: zrhotmp
+    use omp_lib, only: omp_get_thread_num
+    implicit none
+    integer,intent(in)    :: zu_NB
+    complex(8),intent(in) :: zutmp(0:NL-1,zu_NB,NK_s:NK_e)
+    real(8),intent(out)   :: zrho_l(0:NL-1)
+
+    real(8) :: zrhotmp1(0:NL-1)
+    real(8) :: zrhotmp2(0:NL-1)
+    integer :: i,tid
+    real(8) :: zfac
+
+    ! wk(ik)=8.0,(ikx==iky >. wk(ik)=4.0)
+    zfac=1.0d0/16d0
+
+!$omp parallel private(tid)
+!$  tid=omp_get_thread_num()
+    call reduce(tid,zfac,zutmp,zu_NB)
+
+! 1.T_3
+!$omp do OMP_SIMD
+    do i=0,NL-1
+      zrhotmp2(i)=zrhotmp(i,0)+zrhotmp(itable_sym(3,i+1)-1,0)
+    end do
+!$omp end do OMP_SIMD
+
+! 2.T_3*T_3
+!$omp do OMP_SIMD
+    do i=0,NL-1
+      zrhotmp1(i)=zrhotmp2(i)+zrhotmp2(itable_sym(4,i+1)-1)
+    end do
+!$omp end do OMP_SIMD
+
+! 3.T_1
+!$omp do OMP_SIMD
+    do i=0,NL-1
+      zrhotmp2(i)=zrhotmp1(i)+zrhotmp1(itable_sym(1,i+1)-1)
+    end do
+!$omp end do OMP_SIMD
+
+! 4.T_2
+!$omp do OMP_SIMD
+    do i=0,NL-1
+      zrho_l(i)=zrhotmp2(i)+zrhotmp2(itable_sym(2,i+1)-1)
+    end do
+!$omp end do OMP_SIMD
+!$omp end parallel
+  end subroutine
 end subroutine psi_rho_impl
+
