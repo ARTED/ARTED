@@ -10,4 +10,7 @@ set(SOURCES
     env_variables_internal.c
     papi_wrap.c
     )
+if (USE_NVTX)
+    set(SOURCES ${SOURCES} nvtx.f90)
+endif ()
 add_library(${MODULE_LIB} STATIC ${SOURCES})

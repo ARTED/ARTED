@@ -130,6 +130,7 @@ endif ()
 ### Set optimize options
 option(USE_TLOG            "Use TLOG library"               OFF)
 option(USE_PAPI            "Use Performance API"            OFF)
+option(USE_NVTX            "Use NVTX"                       OFF)
 option(DEBUG               "Enable debug"                   OFF)
 option(OPT_CURRENT         "Optimize current code with RT"  ON)
 option(OPT_STENCIL         "Optimize stencil code"          ON)
@@ -149,6 +150,13 @@ endif ()
 if (USE_PAPI)
   add_definitions(-DARTED_USE_PAPI)
   set(EXTERNAL_LIBS ${EXTERNAL_LIBS} papi)
+endif ()
+
+### NVIDIA Tools Extension Library
+if (USE_NVTX)
+  add_definitions(-DARTED_USE_NVTX)
+  link_directories(/usr/local/cuda/lib64)
+  set(EXTERNAL_LIBS ${EXTERNAL_LIBS} nvToolsExt)
 endif ()
 
 add_definitions_if(DEBUG        -DARTED_DEBUG)
