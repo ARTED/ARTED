@@ -106,7 +106,6 @@ subroutine dt_evolve_hpsi
       ik=ik_table(ikb)
       ib=ib_table(ikb)
       idx = idx_b + ikb1
-
       call init(ztpsi(:,4,idx),zu(:,ib,ik))
     enddo
 #endif
@@ -116,17 +115,32 @@ subroutine dt_evolve_hpsi
       ik=ik_table(ikb)
       ib=ib_table(ikb)
       idx = idx_b + ikb1
-
       call hpsi_omp_KB_RT(ik,ztpsi(:,4,idx),ztpsi(:,1,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,1,idx),ztpsi(:,2,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,2,idx),ztpsi(:,3,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,3,idx),ztpsi(:,4,idx))
+    enddo
+
+#if 1
+    call update_LBLK(zfac,ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e)
+#else
+    do ikb1 = 0, num_ikb1-1
+      ikb = ikb0 + ikb1
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
+      idx = idx_b + ikb1
       call update(zfac,ztpsi(:,:,idx),zu(:,ib,ik))
+    enddo
+#endif
 
 #ifdef ARTED_CURRENT_OPTIMIZED
+    do ikb1 = 0, num_ikb1-1
+      ikb = ikb0 + ikb1
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
       call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
-#endif
     enddo
+#endif
 
 #ifdef ARTED_SC
     loop_count = loop_count + num_ikb1
@@ -171,6 +185,31 @@ contains
     TIMELOG_END(LOG_HPSI_INIT)
   end subroutine
 
+  subroutine update(zfac,tpsi,zu)
+    use Global_Variables, only: NLx,NLy,NLz
+    use opt_variables, only: PNLx,PNLy,PNLz
+    use timelog
+    implicit none
+    complex(8) :: zfac(4)
+    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1,4)
+    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1)
+    integer :: ix,iy,iz
+
+    TIMELOG_BEG(LOG_HPSI_UPDATE)
+!dir$ vector aligned
+    do ix=0,NLx-1
+    do iy=0,NLy-1
+    do iz=0,NLz-1
+      zu(iz,iy,ix)=zu(iz,iy,ix)+zfac(1)*tpsi(iz,iy,ix,1) &
+      &                        +zfac(2)*tpsi(iz,iy,ix,2) &
+      &                        +zfac(3)*tpsi(iz,iy,ix,3) &
+      &                        +zfac(4)*tpsi(iz,iy,ix,4)
+    end do
+    end do
+    end do
+    TIMELOG_END(LOG_HPSI_UPDATE)
+  end subroutine
+
 #ifdef ARTED_LBLK
   subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e,ia)
     use Global_Variables, only: NLx,NLy,NLz
@@ -196,31 +235,36 @@ contains
     end do
     TIMELOG_END(LOG_HPSI_INIT)
   end subroutine
-#endif
 
-  subroutine update(zfac,tpsi,zu)
+  subroutine update_LBLK(zfac,tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
     use timelog
     implicit none
+    integer :: ikb_s,ikb_e
     complex(8) :: zfac(4)
-    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1,4)
-    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1)
-    integer :: ix,iy,iz
+    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    integer :: ikb,ik,ib, ix,iy,iz
 
     TIMELOG_BEG(LOG_HPSI_UPDATE)
-!dir$ vector aligned
-    do ix=0,NLx-1
-    do iy=0,NLy-1
-    do iz=0,NLz-1
-      zu(iz,iy,ix)=zu(iz,iy,ix)+zfac(1)*tpsi(iz,iy,ix,1) &
-      &                        +zfac(2)*tpsi(iz,iy,ix,2) &
-      &                        +zfac(3)*tpsi(iz,iy,ix,3) &
-      &                        +zfac(4)*tpsi(iz,iy,ix,4)
-    end do
-    end do
+    do ikb=ikb_s,ikb_e
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
+      do ix=0,NLx-1
+      do iy=0,NLy-1
+      do iz=0,NLz-1
+        zu(iz,iy,ix, ib,ik)=zu(iz,iy,ix, ib,ik) &
+          &                +zfac(1)*tpsi(iz,iy,ix,1, ikb) &
+          &                +zfac(2)*tpsi(iz,iy,ix,2, ikb) &
+          &                +zfac(3)*tpsi(iz,iy,ix,3, ikb) &
+          &                +zfac(4)*tpsi(iz,iy,ix,4, ikb)
+      end do
+      end do
+      end do
     end do
     TIMELOG_END(LOG_HPSI_UPDATE)
   end subroutine
+#endif
 end subroutine
 
