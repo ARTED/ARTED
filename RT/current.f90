@@ -233,10 +233,12 @@ subroutine current_omp_KB_ST_LBLK(A, ikb_s,ikb_e)
   real(8) :: nabt(12),zx,zy,zz
   integer :: ikb,ik,ib
 
+#if 1
+  call current_stencil_LBLK(A(:,:,:), ikb_s,ikb_e)
+#else
   nabt( 1: 4) = nabx(1:4)
   nabt( 5: 8) = naby(1:4)
   nabt( 9:12) = nabz(1:4)
-
   do ikb=ikb_s,ikb_e
     ik=ik_table(ikb)
     ib=ib_table(ikb)
@@ -249,10 +251,11 @@ subroutine current_omp_KB_ST_LBLK(A, ikb_s,ikb_e)
     zcy(ib,ik)=zy
     zcz(ib,ik)=zz
   enddo
+#endif
 
 end subroutine
-#endif
-#endif
+#endif ! ARTED_LBLK
+#endif ! ARTED_CURRENT_OPTIMIZED
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_GS_omp_KB
   use Global_Variables
