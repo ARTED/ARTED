@@ -188,7 +188,7 @@ contains
 !$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
-!$acc loop gang vector(256)
+!$acc loop independent gang vector(256)
       do vi = 0, t4ppt_max_vi-1
         my_nlma = t4ppt_nlma(vi)
         if (my_nlma < 1) cycle

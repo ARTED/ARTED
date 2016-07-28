@@ -137,6 +137,12 @@ subroutine current_stencil_LBLK(E, ikb_s,ikb_e)
 # define IDZ(dt) modz(iz+(dt)+NLz),iy,ix,ib,ik
 #endif
 
+!$acc kernels pcopy(zcx,zcy,zcz) &
+#ifndef ARTED_DOMAIN_POWER_OF_TWO
+!$acc pcopyin(modx,mody,modz) &
+#endif
+!$acc pcopyin(E,ib_table,ik_table,nabx,naby,nabz)
+!$acc loop independent gang private(H,G,F)
   do ikb=ikb_s,ikb_e
     ik=ik_table(ikb)
     ib=ib_table(ikb)
@@ -144,6 +150,7 @@ subroutine current_stencil_LBLK(E, ikb_s,ikb_e)
     H = 0
     G = 0
     F = 0
+!$acc loop collapse(3) vector(256) reduction(+:F,G,H)
     do ix=0,NLx-1
     do iy=0,NLy-1
     do iz=0,NLz-1
@@ -176,5 +183,6 @@ subroutine current_stencil_LBLK(E, ikb_s,ikb_e)
     zcy(ib,ik)=G
     zcz(ib,ik)=H
   end do
+!$acc end kernels
 end subroutine
 #endif

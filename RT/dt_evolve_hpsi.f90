@@ -78,8 +78,11 @@ subroutine dt_evolve_hpsi
 #ifdef ARTED_SC
   hpsi_called(tid) = loop_count
 #endif
+!$omp end parallel
 
 #else ! #ifdef ARTED_LBLK
+
+!$acc data pcopy(zu, ztpsi)
 
 #ifdef ARTED_SC
 !$omp parallel private(tid,idx_b) shared(zfac) firstprivate(loop_count)
@@ -116,9 +119,11 @@ subroutine dt_evolve_hpsi
 #ifdef ARTED_SC
   hpsi_called(tid) = loop_count
 #endif
+!$omp end parallel
+
+!$acc end data
 
 #endif ! ARTED_LBLK
-!$omp end parallel
 
   call timelog_end(LOG_HPSI)
 #ifdef ARTED_USE_NVTX
@@ -179,14 +184,17 @@ contains
     use timelog
     implicit none
     integer :: ikb_s,ikb_e, ia
-    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
-    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    complex(8),intent(out) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    complex(8),intent(in)  :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
     integer :: ikb,ik,ib, ix,iy,iz
 
     TIMELOG_BEG(LOG_HPSI_INIT)
+!$acc kernels pcopy(tpsi) pcopyin(zu,ib_table,ik_table)
+!$acc loop gang
     do ikb=ikb_s,ikb_e
       ik=ik_table(ikb)
       ib=ib_table(ikb)
+!$acc loop collapse(3) gang vector(256)
       do ix=0,NLx-1
       do iy=0,NLy-1
       do iz=0,NLz-1
@@ -195,6 +203,7 @@ contains
       end do
       end do
     end do
+!$acc end kernels
     TIMELOG_END(LOG_HPSI_INIT)
   end subroutine
 
@@ -204,15 +213,18 @@ contains
     use timelog
     implicit none
     integer :: ikb_s,ikb_e
-    complex(8) :: zfac(4)
-    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
-    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    complex(8),intent(in)    :: zfac(4)
+    complex(8),intent(in)    :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    complex(8),intent(inout) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
     integer :: ikb,ik,ib, ix,iy,iz
 
     TIMELOG_BEG(LOG_HPSI_UPDATE)
+!$acc kernels pcopy(zu) pcopyin(tpsi,zfac,ib_table,ik_table)
+!$acc loop independent gang
     do ikb=ikb_s,ikb_e
       ik=ik_table(ikb)
       ib=ib_table(ikb)
+!$acc loop collapse(3) gang vector(256)
       do ix=0,NLx-1
       do iy=0,NLy-1
       do iz=0,NLz-1
@@ -225,6 +237,7 @@ contains
       end do
       end do
     end do
+!$acc end kernels
     TIMELOG_END(LOG_HPSI_UPDATE)
   end subroutine
 #endif
