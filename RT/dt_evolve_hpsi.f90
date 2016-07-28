@@ -91,15 +91,18 @@ subroutine dt_evolve_hpsi
 
 !$omp do private(num_ikb1,ikb_s,ikb_e,ikb,ik,ib,idx)
   do ikb0=1,NKB, blk_nkb_hpsi
-#ifdef ARTED_USE_NVTX
-    call nvtxStartRange('dt_evolve_hpsi: do ikb0',3)
-#endif
     num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
     ikb_s = ikb0
     ikb_e = ikb0 + num_ikb1-1
 
 #if 1
+#ifdef ARTED_USE_NVTX
+    call nvtxStartRange('dt_evolve_hpsi: init_LBLK()',3)
+#endif
     call init_LBLK(ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e, 4)
+#ifdef ARTED_USE_NVTX
+    call nvtxEndRange()
+#endif
 #else
     do ikb1 = 0, num_ikb1-1
       ikb = ikb0 + ikb1
@@ -122,7 +125,13 @@ subroutine dt_evolve_hpsi
     enddo
 
 #if 1
+#ifdef ARTED_USE_NVTX
+    call nvtxStartRange('dt_evolve_hpsi: update_LBLK()',4)
+#endif
     call update_LBLK(zfac,ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e)
+#ifdef ARTED_USE_NVTX
+    call nvtxEndRange()
+#endif
 #else
     do ikb1 = 0, num_ikb1-1
       ikb = ikb0 + ikb1
@@ -134,6 +143,15 @@ subroutine dt_evolve_hpsi
 #endif
 
 #ifdef ARTED_CURRENT_OPTIMIZED
+#if 1
+#ifdef ARTED_USE_NVTX
+    call nvtxStartRange('dt_evolve_hpsi: current_omp_KB_ST_LBLK()',5)
+#endif
+    call current_omp_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
+#ifdef ARTED_USE_NVTX
+    call nvtxEndRange()
+#endif
+#else
     do ikb1 = 0, num_ikb1-1
       ikb = ikb0 + ikb1
       ik=ik_table(ikb)
@@ -141,12 +159,10 @@ subroutine dt_evolve_hpsi
       call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
     enddo
 #endif
+#endif
 
 #ifdef ARTED_SC
     loop_count = loop_count + num_ikb1
-#endif
-#ifdef ARTED_USE_NVTX
-    call nvtxEndRange()
 #endif
   end do
 !$omp end do
