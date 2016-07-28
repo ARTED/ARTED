@@ -30,8 +30,9 @@ subroutine dt_evolve_hpsi
   integer    :: iexp
   complex(8) :: zfac(4)
 #ifdef ARTED_LBLK
-  integer    :: ikb0,ikb1,num_ikb1
   integer    :: idx_b,idx
+  integer    :: ikb_s,ikb_e
+  integer    :: ikb0,ikb1,num_ikb1
 #endif
 #ifdef ARTED_SC
   integer    :: loop_count
@@ -88,12 +89,18 @@ subroutine dt_evolve_hpsi
 !$  tid=omp_get_thread_num()
   idx_b = tid * blk_nkb_hpsi
 
-!$omp do private(ikb,ik,ib,idx)
+!$omp do private(num_ikb1,ikb_s,ikb_e,ikb,ik,ib,idx)
   do ikb0=1,NKB, blk_nkb_hpsi
 #ifdef ARTED_USE_NVTX
     call nvtxStartRange('dt_evolve_hpsi: do ikb0',3)
 #endif
     num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
+    ikb_s = ikb0
+    ikb_e = ikb0 + num_ikb1-1
+
+#if 1
+    call init_LBLK(ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e, 4)
+#else
     do ikb1 = 0, num_ikb1-1
       ikb = ikb0 + ikb1
       ik=ik_table(ikb)
@@ -101,6 +108,15 @@ subroutine dt_evolve_hpsi
       idx = idx_b + ikb1
 
       call init(ztpsi(:,4,idx),zu(:,ib,ik))
+    enddo
+#endif
+
+    do ikb1 = 0, num_ikb1-1
+      ikb = ikb0 + ikb1
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
+      idx = idx_b + ikb1
+
       call hpsi_omp_KB_RT(ik,ztpsi(:,4,idx),ztpsi(:,1,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,1,idx),ztpsi(:,2,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,2,idx),ztpsi(:,3,idx))
@@ -154,6 +170,33 @@ contains
     end do
     TIMELOG_END(LOG_HPSI_INIT)
   end subroutine
+
+#ifdef ARTED_LBLK
+  subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e,ia)
+    use Global_Variables, only: NLx,NLy,NLz
+    use opt_variables, only: PNLx,PNLy,PNLz
+    use timelog
+    implicit none
+    integer :: ikb_s,ikb_e, ia
+    complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    integer :: ikb,ik,ib, ix,iy,iz
+
+    TIMELOG_BEG(LOG_HPSI_INIT)
+    do ikb=ikb_s,ikb_e
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
+      do ix=0,NLx-1
+      do iy=0,NLy-1
+      do iz=0,NLz-1
+        tpsi(iz,iy,ix, ia,ikb)=zu(iz,iy,ix, ib,ik)
+      end do
+      end do
+      end do
+    end do
+    TIMELOG_END(LOG_HPSI_INIT)
+  end subroutine
+#endif
 
   subroutine update(zfac,tpsi,zu)
     use Global_Variables, only: NLx,NLy,NLz
