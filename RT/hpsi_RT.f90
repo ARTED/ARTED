@@ -161,8 +161,17 @@ contains
 
     !Calculating nonlocal part
 
+!$acc kernels pcopy(uVpsi,tpsi) pcopyin(a_tbl,ekr_omp,ik_table,mps,uv,iuv) &
+#ifdef ARTED_STENCIL_PADDING
+!$acc& pcopyin(zKxyz) &
+#else
+!$acc& pcopyin(zJxyz) &
+#endif
+!$acc& pcopyin(t4ppt_ilma,t4ppt_j,t4ppt_nlma,t4ppt_vi2i)
+!$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
+!$acc loop gang vector(256)
       do ilma=1,Nlma
         ia=a_tbl(ilma)
         uVpsi0=cmplx(0.d0, 0.d0, kind=8)
@@ -176,13 +185,16 @@ contains
 
 #if 1
     ! table version
+!$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
+!$acc loop gang vector(256)
       do vi = 0, t4ppt_max_vi-1
         my_nlma = t4ppt_nlma(vi)
         if (my_nlma < 1) cycle
         i = t4ppt_vi2i(vi)
         tpsi0=cmplx(0.d0, 0.d0, kind=8)
+!$acc loop seq
         do n = 1, my_nlma
           ilma = t4ppt_ilma(vi,n)
           j    = t4ppt_j   (vi,n)
@@ -194,6 +206,7 @@ contains
     enddo
 #else
     ! no table version (similar to original)
+!$acc loop gang vector
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
       do ilma=1,Nlma
@@ -206,6 +219,7 @@ contains
       enddo
     enddo
 #endif
+!$acc end kernels
 
   end subroutine
 
@@ -223,9 +237,12 @@ contains
     real(8) :: k2
     real(8) :: k2lap0_2(ikb_s:ikb_e)
     real(8) :: nabt(12, ikb_s:ikb_e)
+!$acc data pcopy(tpsi) create(k2lap0_2,nabt)
 
     NVTX_BEG('hpsi1_LBLK: hpsi1_RT_stencil()', 4)
     TIMELOG_BEG(LOG_HPSI_STENCIL)
+!$acc kernels pcopy(k2lap0_2,nabt) pcopyin(ik_table,kac,lapx,lapy,lapz,nabx,naby,nabz)
+!$acc loop gang vector
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
       k2=sum(kAc(ik,:)**2)
@@ -234,7 +251,7 @@ contains
       nabt( 5: 8,ikb)=kAc(ik,2)*naby(1:4)
       nabt( 9:12,ikb)=kAc(ik,3)*nabz(1:4)
     enddo
-
+!$acc end kernels
     call hpsi1_RT_stencil_LBLK(k2lap0_2(:),Vloc,lapt,nabt(:,:),tpsi(:,:,:), ikb_s,ikb_e, i_src,i_dst)
     TIMELOG_END(LOG_HPSI_STENCIL)
     NVTX_END()
@@ -245,6 +262,7 @@ contains
     TIMELOG_END(LOG_HPSI_PSEUDO)
     NVTX_END()
 
+!$acc end data
   end subroutine
 end subroutine hpsi_omp_KB_RT_LBLK
 #endif
