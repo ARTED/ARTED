@@ -220,22 +220,22 @@ contains
     complex(8),intent(in)  :: tpsi(0:PNL-1, 4, ikb_s:ikb_e)
     integer :: ikb,ik
 
-    real(8)    :: k2,k2lap0_2
-    real(8)    :: nabt(12)
+    real(8) :: k2
+    real(8) :: k2lap0_2(ikb_s:ikb_e)
+    real(8) :: nabt(12, ikb_s:ikb_e)
 
     NVTX_BEG('hpsi1_LBLK: hpsi1_RT_stencil()', 4)
     TIMELOG_BEG(LOG_HPSI_STENCIL)
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
-
       k2=sum(kAc(ik,:)**2)
-      k2lap0_2=(k2-(lapx(0)+lapy(0)+lapz(0)))*0.5d0
-
-      nabt( 1: 4)=kAc(ik,1)*nabx(1:4)
-      nabt( 5: 8)=kAc(ik,2)*naby(1:4)
-      nabt( 9:12)=kAc(ik,3)*nabz(1:4)
-      call hpsi1_RT_stencil(k2lap0_2,Vloc,lapt,nabt,tpsi(:,i_src,ikb),tpsi(:,i_dst,ikb))
+      k2lap0_2(ikb)=(k2-(lapx(0)+lapy(0)+lapz(0)))*0.5d0
+      nabt( 1: 4,ikb)=kAc(ik,1)*nabx(1:4)
+      nabt( 5: 8,ikb)=kAc(ik,2)*naby(1:4)
+      nabt( 9:12,ikb)=kAc(ik,3)*nabz(1:4)
     enddo
+
+    call hpsi1_RT_stencil_LBLK(k2lap0_2(:),Vloc,lapt,nabt(:,:),tpsi(:,:,:), ikb_s,ikb_e, i_src,i_dst)
     TIMELOG_END(LOG_HPSI_STENCIL)
     NVTX_END()
 
