@@ -95,70 +95,28 @@ subroutine dt_evolve_hpsi
     ikb_s = ikb0
     ikb_e = ikb0 + num_ikb1-1
 
-#if 1
-#ifdef ARTED_USE_NVTX
-    call nvtxStartRange('dt_evolve_hpsi: init_LBLK()',3)
-#endif
     call init_LBLK(ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e, 4)
-#ifdef ARTED_USE_NVTX
-    call nvtxEndRange()
-#endif
+
+#if 1
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 4,1)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 1,2)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 2,3)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 3,4)
 #else
     do ikb1 = 0, num_ikb1-1
       ikb = ikb0 + ikb1
       ik=ik_table(ikb)
-      ib=ib_table(ikb)
-      idx = idx_b + ikb1
-      call init(ztpsi(:,4,idx),zu(:,ib,ik))
-    enddo
-#endif
-
-    do ikb1 = 0, num_ikb1-1
-      ikb = ikb0 + ikb1
-      ik=ik_table(ikb)
-      ib=ib_table(ikb)
       idx = idx_b + ikb1
       call hpsi_omp_KB_RT(ik,ztpsi(:,4,idx),ztpsi(:,1,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,1,idx),ztpsi(:,2,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,2,idx),ztpsi(:,3,idx))
       call hpsi_omp_KB_RT(ik,ztpsi(:,3,idx),ztpsi(:,4,idx))
     enddo
-
-#if 1
-#ifdef ARTED_USE_NVTX
-    call nvtxStartRange('dt_evolve_hpsi: update_LBLK()',4)
 #endif
+
     call update_LBLK(zfac,ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e)
-#ifdef ARTED_USE_NVTX
-    call nvtxEndRange()
-#endif
-#else
-    do ikb1 = 0, num_ikb1-1
-      ikb = ikb0 + ikb1
-      ik=ik_table(ikb)
-      ib=ib_table(ikb)
-      idx = idx_b + ikb1
-      call update(zfac,ztpsi(:,:,idx),zu(:,ib,ik))
-    enddo
-#endif
-
 #ifdef ARTED_CURRENT_OPTIMIZED
-#if 1
-#ifdef ARTED_USE_NVTX
-    call nvtxStartRange('dt_evolve_hpsi: current_omp_KB_ST_LBLK()',5)
-#endif
     call current_omp_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
-#ifdef ARTED_USE_NVTX
-    call nvtxEndRange()
-#endif
-#else
-    do ikb1 = 0, num_ikb1-1
-      ikb = ikb0 + ikb1
-      ik=ik_table(ikb)
-      ib=ib_table(ikb)
-      call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
-    enddo
-#endif
 #endif
 
 #ifdef ARTED_SC

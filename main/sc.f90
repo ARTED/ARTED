@@ -256,6 +256,10 @@ Program main
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
 !====GS calculation============================
 
+#ifdef ARTED_LBLK
+  call opt_vars_init_t4ppt()
+#endif
+
   if(Myrank == 0) write(*,*) 'This is the end of preparation for Real time calculation'
 
 !====RT calculation============================
