@@ -36,6 +36,13 @@ module opt_variables
   integer,allocatable :: zifdx(:,:),zifdy(:,:),zifdz(:,:)
 #endif
 
+  integer,allocatable :: hpsi_called(:)
+
+#ifdef ARTED_LBLK
+  integer, parameter :: at_least_parallelism = 4*1024*1024
+  integer :: blk_nkb_hpsi
+#endif
+
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
 #else
@@ -116,7 +123,16 @@ contains
     PNLz = NLz
     PNL  = PNLx * PNLy * PNLz
 
+#ifdef ARTED_LBLK
+    blk_nkb_hpsi = min(at_least_parallelism/PNL + 1, NKB)
+    write(*,*) "blk_nkb_hpsi:", blk_nkb_hpsi
+#endif
+
+#ifndef ARTED_LBLK
     allocate(ztpsi(0:PNL-1,4,0:NUMBER_THREADS-1))
+#else
+    allocate(ztpsi(0:PNL-1, 4, 0:(NUMBER_THREADS*blk_nkb_hpsi)-1))
+#endif
 
     allocate(zcx(NBoccmax,NK_s:NK_e))
     allocate(zcy(NBoccmax,NK_s:NK_e))

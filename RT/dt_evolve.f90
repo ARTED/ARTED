@@ -20,6 +20,9 @@
 Subroutine dt_evolve_omp_KB(iter)
   use Global_Variables
   use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
   use opt_variables
   implicit none
   integer    :: ik,ib,iter,ixyz
@@ -27,6 +30,9 @@ Subroutine dt_evolve_omp_KB(iter)
   real(8)    :: kr
   integer    :: thr_id,omp_get_thread_num,ikb
 
+#ifdef ARTED_USE_NVTX
+  call nvtxStartRange('dt_evolve_omp_KB',1)
+#endif
   call timelog_begin(LOG_DT_EVOLVE)
 
   thr_id=0
@@ -129,6 +135,9 @@ Subroutine dt_evolve_omp_KB(iter)
   end do
 
   call timelog_end(LOG_DT_EVOLVE)
+#ifdef ARTED_USE_NVTX
+  call nvtxEndRange()
+#endif
 
   return
 End Subroutine dt_evolve_omp_KB

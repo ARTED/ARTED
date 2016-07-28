@@ -25,6 +25,8 @@ set(CMAKE_C_FLAGS_RELEASE       "-fastsse")
 # set(ENABLE_EXPLICIT_VECTORIZATION 1)
 # set(ENABLE_REDUCE_FOR_MANYCORE    1)
 
+set(ENABLE_LARGE_BLOCKING 1)
+
 ########
 # CMake Platform-specific variables
 ########

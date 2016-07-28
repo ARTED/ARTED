@@ -4,10 +4,12 @@
 !
 module nvtx
 
+#ifdef ARTED_USE_NVTX
+
 use iso_c_binding
 implicit none
 
-integer,private :: col(7) = [ Z'0000ff00', Z'000000ff', Z'00ffff00', Z'00ff00ff', Z'0000ffff', Z'00ff0000', Z'00ffffff']
+integer,private :: col(10) = [Z'0000ff00', Z'00007fff', Z'007f00ff', Z'00ff0000', Z'007fff00', Z'0000ff7f',Z'000000ff', Z'00ff007f', Z'00ff7f00', Z'007f7f7f']
 character(len=256),private :: tempName
 
 type, bind(C):: nvtxEventAttributes
@@ -55,7 +57,7 @@ subroutine nvtxStartRange(name,id)
   if ( .not. present(id)) then
     call nvtxRangePush(tempName)
   else
-    event%color=col(mod(id,7)+1)
+    event%color=col(mod(id,10)+1)
     event%message=c_loc(tempName)
     call nvtxRangePushEx(event)
   end if
@@ -64,5 +66,7 @@ end subroutine
 subroutine nvtxEndRange
   call nvtxRangePop
 end subroutine
+
+#endif
 
 end module nvtx

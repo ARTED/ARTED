@@ -239,13 +239,22 @@ end Subroutine
 Subroutine current_omp_KB
   use Global_Variables
   use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
   implicit none
   real(8) :: jx,jy,jz
 
+#ifdef ARTED_USE_NVTX
+  call nvtxStartRange('current_omp_KB',2)
+#endif
   call timelog_begin(LOG_CURRENT)
   call current_omp_KB_impl(zu,jx,jy,jz)
   call current_result_impl(jx,jy,jz)
   call timelog_end(LOG_CURRENT)
+#ifdef ARTED_USE_NVTX
+  call nvtxEndRange()
+#endif
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_init_impl(ik,ib,zutmp,jx,jy,jz)

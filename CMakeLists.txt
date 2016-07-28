@@ -188,8 +188,9 @@ else ()
   add_definitions(-DARTED_STENCIL_ORIGIN)
 endif ()
 
-add_definitions("${ADDITIONAL_MACRO}")
+add_definitions_if(ENABLE_LARGE_BLOCKING  -DARTED_LBLK)
 
+add_definitions("${ADDITIONAL_MACRO}")
 
 ### Build target
 add_subdirectory(modules)
@@ -209,12 +210,12 @@ add_dependencies(${COMMON_LIB}  ${MODULE_LIB})
 add_dependencies(${STENCIL_LIB} ${MODULE_LIB})
 
 set(LIBRARIES
-    ${MODULE_LIB}
     ${PREP_LIB}
     ${GS_LIB}
     ${RT_LIB}
     ${COMMON_LIB}
     ${STENCIL_LIB}
+    ${MODULE_LIB}
     )
 
 if (${BUILD_TARGET} STREQUAL "ms")

@@ -69,6 +69,9 @@ contains
     use Global_Variables, only: kAc,lapx,lapy,lapz,nabx,naby,nabz,Vloc
     use opt_variables, only: lapt,PNLx,PNLy,PNLz
     use timelog
+#ifdef ARTED_USE_NVTX
+    use nvtx
+#endif
     implicit none
     integer,intent(in)     :: ik
     complex(8),intent(in)  :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
@@ -76,6 +79,18 @@ contains
 
     real(8)    :: k2,k2lap0_2
     real(8)    :: nabt(12)
+
+#ifdef ARTED_USE_NVTX
+    call nvtxStartRange('hpsi1',3)
+#endif
+
+#ifdef ARTED_SC
+# define TIMELOG_BEG(id) call timelog_thread_begin(id)
+# define TIMELOG_END(id) call timelog_thread_end(id)
+#else
+# define TIMELOG_BEG(id)
+# define TIMELOG_END(id)
+#endif
 
     k2=sum(kAc(ik,:)**2)
     k2lap0_2=(k2-(lapx(0)+lapy(0)+lapz(0)))*0.5d0
@@ -95,5 +110,9 @@ contains
     TIMELOG_BEG(LOG_HPSI_PSEUDO)
     call pseudo_pt(ik,tpsi,htpsi)
     TIMELOG_END(LOG_HPSI_PSEUDO)
+
+#ifdef ARTED_USE_NVTX
+    call nvtxEndRange()
+#endif
   end subroutine
 end subroutine hpsi_omp_KB_RT

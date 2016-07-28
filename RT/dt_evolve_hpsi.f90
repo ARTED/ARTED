@@ -19,6 +19,9 @@
 subroutine dt_evolve_hpsi
   use Global_Variables
   use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
   use omp_lib
   use opt_variables
   implicit none
@@ -26,13 +29,30 @@ subroutine dt_evolve_hpsi
   integer    :: ikb,ik,ib,i
   integer    :: iexp
   complex(8) :: zfac(4)
+#ifdef ARTED_LBLK
+  integer    :: ikb0,ikb1,num_ikb1
+  integer    :: idx_b,idx
+#endif
+#ifdef ARTED_SC
+  integer    :: loop_count
+  loop_count = 0
+#endif
 
   zfac(1)=(-zI*dt)
   do i=2,4
     zfac(i)=zfac(i-1)*(-zI*dt)/i
   end do
 
+#ifdef ARTED_USE_NVTX
+  call nvtxStartRange('dt_evolve_hpsi',2)
+#endif
   call timelog_begin(LOG_HPSI)
+
+#ifndef ARTED_LBLK
+
+#ifdef ARTED_SC
+!$omp parallel private(tid) shared(zfac) firstprivate(loop_count)
+#else
 !$omp parallel private(tid) shared(zfac)
 !$  tid=omp_get_thread_num()
 
@@ -53,8 +73,65 @@ subroutine dt_evolve_hpsi
 #endif
   end do
 !$omp end do
+
+#ifdef ARTED_SC
+  hpsi_called(tid) = loop_count
+#endif
+
+#else ! #ifdef ARTED_LBLK
+
+#ifdef ARTED_SC
+!$omp parallel private(tid,idx_b) shared(zfac) firstprivate(loop_count)
+#else
+!$omp parallel private(tid,idx_b) shared(zfac)
+#endif
+!$  tid=omp_get_thread_num()
+  idx_b = tid * blk_nkb_hpsi
+
+!$omp do private(ikb,ik,ib,idx)
+  do ikb0=1,NKB, blk_nkb_hpsi
+#ifdef ARTED_USE_NVTX
+    call nvtxStartRange('dt_evolve_hpsi: do ikb0',3)
+#endif
+    num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
+    do ikb1 = 0, num_ikb1-1
+      ikb = ikb0 + ikb1
+      ik=ik_table(ikb)
+      ib=ib_table(ikb)
+      idx = idx_b + ikb1
+
+      call init(ztpsi(:,4,idx),zu(:,ib,ik))
+      call hpsi_omp_KB_RT(ik,ztpsi(:,4,idx),ztpsi(:,1,idx))
+      call hpsi_omp_KB_RT(ik,ztpsi(:,1,idx),ztpsi(:,2,idx))
+      call hpsi_omp_KB_RT(ik,ztpsi(:,2,idx),ztpsi(:,3,idx))
+      call hpsi_omp_KB_RT(ik,ztpsi(:,3,idx),ztpsi(:,4,idx))
+      call update(zfac,ztpsi(:,:,idx),zu(:,ib,ik))
+
+#ifdef ARTED_CURRENT_OPTIMIZED
+      call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
+#endif
+    enddo
+
+#ifdef ARTED_SC
+    loop_count = loop_count + num_ikb1
+#endif
+#ifdef ARTED_USE_NVTX
+    call nvtxEndRange()
+#endif
+  end do
+!$omp end do
+
+#ifdef ARTED_SC
+  hpsi_called(tid) = loop_count
+#endif
+
+#endif ! ARTED_LBLK
 !$omp end parallel
+
   call timelog_end(LOG_HPSI)
+#ifdef ARTED_USE_NVTX
+  call nvtxEndRange()
+#endif
 
 contains
   subroutine init(tpsi,zu)
