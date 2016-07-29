@@ -135,7 +135,6 @@ option(ARRAY_PADDING       "Use array padding"              ON)
 option(LOOP_BLOCKING       "Use loop blocking"              OFF)
 option(DOMAIN_POWER_OF_TWO "Stencil domain is power of two" OFF)
 option(EXPLICIT_VEC        "Use explicit vectorization"     ON)
-option(PROFILE_THREADS     "Profile each OpenMP Threads"    OFF)
 
 ### TLOG time profiler from CCS, Univ. TSUKUBA
 if (USE_TLOG)
@@ -153,8 +152,6 @@ add_definitions_if(DEBUG        -DARTED_DEBUG)
 add_definitions_if(OPT_CURRENT  -DARTED_CURRENT_OPTIMIZED)
 
 add_definitions_if(ENABLE_REDUCE_FOR_MANYCORE -DARTED_REDUCE_FOR_MANYCORE)
-
-add_definitions_if(PROFILE_THREADS -DARTED_PROFILE_THREADS)
 
 if (OPT_STENCIL)
   add_definitions(-DARTED_STENCIL_OPTIMIZED)

@@ -23,6 +23,7 @@ Program main
   use timelog
   use opt_variables
   use environment
+  use performance_analyzer
   implicit none
   integer :: iter,ik,ib,ia,i,ixyz
   character(3) :: Rion_update
@@ -451,10 +452,6 @@ Program main
     call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
     call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
     call timelog_show_min (' - update time     :', LOG_HPSI_UPDATE)
-    print *, ' - stencil GFLOPS  :', get_stencil_gflops(timelog_get(LOG_HPSI_STENCIL))
-#ifdef ARTED_PROFILE_THREADS
-    call write_threads_performance
-#endif
     call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
     call timelog_show_min ('Hartree time       :', LOG_HARTREE)
     call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
@@ -463,6 +460,8 @@ Program main
     call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
     call timelog_show_min ('Other time         :', LOG_OTHER)
   end if
+  call show_performance
+
   if(Myrank == 0) then
     close(7)
     close(8)

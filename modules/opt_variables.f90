@@ -36,8 +36,6 @@ module opt_variables
   integer,allocatable :: zifdx(:,:),zifdy(:,:),zifdz(:,:)
 #endif
 
-  integer,allocatable :: hpsi_called(:)
-
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
 #else
@@ -155,9 +153,6 @@ contains
     do iz=0,NLz*2+Nd-1
       modz(iz) = mod(iz,NLz)
     end do
-
-    allocate(hpsi_called(0:NUMBER_THREADS-1))
-    hpsi_called(:) = 0
 
 #ifdef ARTED_STENCIL_PADDING
     call init_for_padding
@@ -302,79 +297,4 @@ contains
 
     is_symmetric_mode = ret
   end function
-
-  subroutine print_stencil_size
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt,NUMBER_THREADS
-    implicit none
-    integer :: NK, NB
-
-    NK = NK_e - NK_s + 1
-    NB = NBoccmax
-    print *, 'NK =', NK
-    print *, 'NB =', NB
-    print *, 'NL =', NL
-    print *, 'Nt =', (Nt + 1)
-    print *, 'Number of Domain/Thread =', real(NK * NB) / NUMBER_THREADS
-  end subroutine
-
-  function get_stencil_gflops(time,chunk_size)
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt
-    implicit none
-    real(8),intent(in)          :: time
-    integer,intent(in),optional :: chunk_size
-    real(8),parameter           :: FLOPS = 158
-
-    real(8) :: get_stencil_gflops
-    integer :: NK, nsize
-
-    NK = NK_e - NK_s + 1
-    if(present(chunk_size)) then
-      nsize = chunk_size*NL
-    else
-      nsize = NK*NBoccmax*NL
-    end if
-    get_stencil_gflops = (nsize * 4*FLOPS * (Nt + 1)) / (time * (10**9))
-  end function
-
-  subroutine write_threads_performance
-    use global_variables, only: directory,SYSname,NUMBER_THREADS
-    use timelog
-    implicit none
-    integer,parameter :: fd = 32
-    character(100)    :: filepath
-    real(8)           :: time, lgflops, gflops
-    integer           :: i, cnt
-    filepath = trim(directory)//trim(SYSname)//'_hpsi_perf.log'
-
-    open(fd,file=filepath,status='replace')
-    call timelog_write(fd, '### global hpsi time', LOG_HPSI)
-    call timelog_thread_write(fd, '### init time', LOG_HPSI_INIT)
-    call timelog_thread_write(fd, '### stencil time', LOG_HPSI_STENCIL)
-    call timelog_thread_write(fd, '### pseudo pt. time', LOG_HPSI_PSEUDO)
-    call timelog_thread_write(fd, '### update time', LOG_HPSI_UPDATE)
-
-    write(fd,*) '### summation time'
-    do i=0,NUMBER_THREADS-1
-      time = timelog_thread_get(LOG_HPSI_INIT, i)    &
-         & + timelog_thread_get(LOG_HPSI_STENCIL, i) &
-         & + timelog_thread_get(LOG_HPSI_PSEUDO, i)  &
-         & + timelog_thread_get(LOG_HPSI_UPDATE, i)
-      write(fd,*) 'tid =',i,':',time,'sec'
-    end do
-
-    time = timelog_get(LOG_HPSI_STENCIL)
-    write(fd,*) '### global stencil GFLOPS',get_stencil_gflops(time)
-    write(fd,*) '### stencil GFLOPS'
-    do i=0,NUMBER_THREADS-1
-      time    = timelog_thread_get(LOG_HPSI_STENCIL, i)
-      cnt     = hpsi_called(i)
-      lgflops = get_stencil_gflops(time,cnt)
-      write(fd,*) 'tid =',i,': cnt =',cnt,' GFLOPS =',lgflops
-      gflops  = gflops + lgflops
-    end do
-    write(fd,*) '### summation GFLOPS =',gflops
-    close(fd)
-
-    print *, ' - summation        :', gflops
-  end subroutine
 end module opt_variables

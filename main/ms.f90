@@ -23,6 +23,7 @@ Program main
   use timelog
   use opt_variables
   use environment
+  use performance_analyzer
   implicit none
   integer :: iter,ik,ib,ia
   character(3) :: Rion_update
@@ -190,7 +191,6 @@ Program main
     call timelog_show_min ('hpsi time          :', LOG_HPSI)
     call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
     call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
-    print *, '- stencil GFLOPS   :', get_stencil_gflops(timelog_get(LOG_HPSI_STENCIL))
     call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
     call timelog_show_min ('Hartree time       :', LOG_HARTREE)
     call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
@@ -516,19 +516,25 @@ Program main
 
   if(Myrank == 0) then
     call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-    call timelog_show_hour('dynamics time     :', LOG_DYNAMICS)
-    call timelog_show_min ('dt_evolve_Ac time :', LOG_DT_EVOLVE_AC)
-    call timelog_show_min ('dt_evolve time    :', LOG_DT_EVOLVE)
-    call timelog_show_min ('hpsi time         :', LOG_HPSI)
-    call timelog_show_min ('psi_rho time      :', LOG_PSI_RHO)
-    call timelog_show_min ('Hartree time      :', LOG_HARTREE)
-    call timelog_show_min ('Exc_Cor time      :', LOG_EXC_COR)
-    call timelog_show_min ('current time      :', LOG_CURRENT)
-    call timelog_show_min ('Total_Energy time :', LOG_TOTAL_ENERGY)
-    call timelog_show_min ('Ion_Force time    :', LOG_ION_FORCE)
-    call timelog_show_min ('k_shift_wf time   :', LOG_K_SHIFT_WF)
-    call timelog_show_min ('Other time        :', LOG_OTHER)
+    call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
+    call timelog_show_min ('dt_evolve_Ac time  :', LOG_DT_EVOLVE_AC)
+    call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
+    call timelog_show_min ('hpsi time          :', LOG_HPSI)
+    call timelog_show_min (' - init time       :', LOG_HPSI_INIT)
+    call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
+    call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
+    call timelog_show_min (' - update time     :', LOG_HPSI_UPDATE)
+    call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
+    call timelog_show_min ('Hartree time       :', LOG_HARTREE)
+    call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
+    call timelog_show_min ('current time       :', LOG_CURRENT)
+    call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
+    call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timelog_show_min ('k_shift_wf time    :', LOG_K_SHIFT_WF)
+    call timelog_show_min ('Other time         :', LOG_OTHER)
   end if
+  call show_performance
+
   if(Myrank == 0) write(*,*) 'This is the start of write section'
   etime1=MPI_WTIME()
   call write_result_all
