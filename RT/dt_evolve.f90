@@ -126,6 +126,7 @@ Subroutine dt_evolve_omp_KB(iter)
 ! yabana
 
 !$acc data pcopy(zu)  
+
   NVTX_BEG('dt_evolve_hpsi',3)
   call dt_evolve_hpsi
   NVTX_END()
@@ -133,7 +134,6 @@ Subroutine dt_evolve_omp_KB(iter)
   NVTX_BEG('psi_rho_RT',4)
   call psi_rho_RT
   NVTX_END()
-!$acc end data
 
   NVTX_BEG('Hartree',5)
   call Hartree
@@ -144,6 +144,8 @@ Subroutine dt_evolve_omp_KB(iter)
   call Exc_Cor('RT')
   NVTX_END()
 ! yabana
+
+!$acc end data
 
   do ixyz=1,3
     kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)

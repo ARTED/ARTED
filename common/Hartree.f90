@@ -17,9 +17,20 @@
 !This file contain one subroutine.
 !SUBROUTINE Hartree
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_USE_NVTX
+#define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
+#define NVTX_END()         call nvtxEndRange()
+#else
+#define NVTX_BEG(name,id)
+#define NVTX_END()
+#endif
+
 Subroutine Hartree
   use Global_Variables
   use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
   implicit none
   integer :: i,ix,iy,iz,n,nx,ny,nz
   real(8) :: G2

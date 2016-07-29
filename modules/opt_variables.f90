@@ -48,6 +48,11 @@ module opt_variables
 
   integer, parameter :: at_least_parallelism = 4*1024*1024
   integer :: blk_nkb_hpsi
+  integer :: blk_nkb_current
+
+  real(8),allocatable :: t4cp_uVpsix(:,:)  ! (Nlma, NKB)
+  real(8),allocatable :: t4cp_uVpsiy(:,:)
+  real(8),allocatable :: t4cp_uVpsiz(:,:)
 #endif
 
 #if defined(__KNC__) || defined(__AVX512F__)
@@ -133,6 +138,9 @@ contains
 #ifdef ARTED_LBLK
     blk_nkb_hpsi = min(at_least_parallelism/PNL + 1, NKB)
     write(*,*) "blk_nkb_hpsi:", blk_nkb_hpsi
+
+    blk_nkb_current = min(at_least_parallelism/PNL + 1, NKB)
+    write(*,*) "blk_nkb_current:", blk_nkb_current
 #endif
 
 #ifndef ARTED_LBLK
@@ -288,6 +296,11 @@ contains
     enddo
 
 ! !$acc enter data copyin(t4ppt_nlma,t4ppt_i2vi,t4ppt_vi2i,t4ppt_ilma,t4ppt_j)
+
+    allocate(t4cp_uVpsix(Nlma, NKB))
+    allocate(t4cp_uVpsiy(Nlma, NKB))
+    allocate(t4cp_uVpsiz(Nlma, NKB))
+
   end subroutine
 #endif
 

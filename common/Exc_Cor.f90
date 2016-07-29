@@ -33,10 +33,19 @@ Subroutine Exc_Cor(GS_RT)
 Subroutine Exc_Cor_PZ()
   use Global_Variables
   implicit none
+  interface
+    subroutine PZxc(trho,exc,dexc_drho)
+      !$acc routine seq
+      real(8),intent(out) :: trho
+      real(8),intent(in)  :: exc
+      real(8),intent(in)  :: dexc_drho
+    end subroutine PZxc
+  end interface
   real(8) :: rho_s(NL)
   integer :: i
   real(8) :: trho,e_xc,de_xc_drho
 
+!$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
@@ -46,16 +55,26 @@ Subroutine Exc_Cor_PZ()
     Eexc(i)=e_xc*trho
     Vexc(i)=e_xc+trho*de_xc_drho
   enddo
+!$acc end kernels
   return
 End Subroutine Exc_Cor_PZ
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Exc_Cor_PZM()
   use Global_Variables
   implicit none
+  interface
+    subroutine PZMxc(trho,exc,dexc_drho)
+      !$acc routine seq
+      real(8),intent(out) :: trho
+      real(8),intent(in)  :: exc
+      real(8),intent(in)  :: dexc_drho
+    end subroutine PZMxc
+  end interface
   real(8) :: rho_s(NL)
   integer :: i
   real(8) :: trho,e_xc,de_xc_drho
 
+!$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
@@ -65,6 +84,7 @@ Subroutine Exc_Cor_PZM()
     Eexc(i)=e_xc*trho
     Vexc(i)=e_xc+trho*de_xc_drho
   enddo
+!$acc end kernels
   return
 End Subroutine Exc_Cor_PZM
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
@@ -439,6 +459,7 @@ SUBROUTINE fec_xz(x,z,alp,a,b,c,d,e,f,fxz,dfxz_dx,dfxz_dz)
   end
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine PZxc(trho,exc,dexc_drho)
+!$acc routine seq
   implicit none
   real(8),parameter :: Pi=3.141592653589793d0
   real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
@@ -465,6 +486,7 @@ Subroutine PZxc(trho,exc,dexc_drho)
 End Subroutine PZxc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine PZMxc(trho,exc,dexc_drho)
+!$acc routine seq
   implicit none
   real(8),parameter :: Pi=3.141592653589793d0
   real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
@@ -920,15 +942,16 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   j_s_l_omp=0d0
 
   if(GS_RT == 'GS')then
-  thr_id=0
+
+    select case(Nd)
+    case(4)
+
+      thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
-
 !$omp do private(ik,ib,zs,i)
-    do ikb=1,NKB
-      ik=ik_table(ikb) ; ib=ib_table(ikb)  
-      select case(Nd)
-      case(4)
+      do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)  
         do i=1,NL
           zs(1)=nabx(1)*(zu_GS(ifdx(1,i),ib,ik)-zu_GS(ifdx(-1,i),ib,ik))&
             &  +nabx(2)*(zu_GS(ifdx(2,i),ib,ik)-zu_GS(ifdx(-2,i),ib,ik))&
@@ -951,26 +974,24 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           j_s_l_omp(i,2,thr_id)=j_s_l_omp(i,2,thr_id)+imag(conjg(zu_GS(i,ib,ik))*zs(2))*(occ(ib,ik)*0.5d0)
           j_s_l_omp(i,3,thr_id)=j_s_l_omp(i,3,thr_id)+imag(conjg(zu_GS(i,ib,ik))*zs(3))*(occ(ib,ik)*0.5d0)
         enddo
-
-
-      case default
-        call err_finalize('Nd /= 4')
-      end select
-    end do
-
+      end do
 !$omp end parallel
 
+    case default
+      call err_finalize('Nd /= 4')
+    end select
+  
   else  if(GS_RT == 'RT')then
 
-  thr_id=0
+    select case(Nd)
+    case(4)
+
+      thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
-
 !$omp do private(ik,ib,zs,i)
-    do ikb=1,NKB
-      ik=ik_table(ikb) ; ib=ib_table(ikb)  
-      select case(Nd)
-      case(4)
+      do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)  
         do i=1,NL
           zs(1)=nabx(1)*(zu(ifdx(1,i),ib,ik)-zu(ifdx(-1,i),ib,ik))&
             &  +nabx(2)*(zu(ifdx(2,i),ib,ik)-zu(ifdx(-2,i),ib,ik))&
@@ -993,13 +1014,12 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           j_s_l_omp(i,2,thr_id)=j_s_l_omp(i,2,thr_id)+imag(conjg(zu(i,ib,ik))*zs(2))*(occ(ib,ik)*0.5d0)
           j_s_l_omp(i,3,thr_id)=j_s_l_omp(i,3,thr_id)+imag(conjg(zu(i,ib,ik))*zs(3))*(occ(ib,ik)*0.5d0)
         enddo
-
-      case default
-        call err_finalize('Nd /= 4')
-      end select
-    end do
-
+      end do
 !$omp end parallel
+
+    case default
+      call err_finalize('Nd /= 4')
+    end select
 
   else
     call err_finalize('error in meta GGA')
@@ -1009,8 +1029,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   j_s_l(:,1) = j_s_l_omp(:,1,0)
   j_s_l(:,2) = j_s_l_omp(:,2,0)
   j_s_l(:,3) = j_s_l_omp(:,3,0)
-  do thr_id = 1, NUMBER_THREADS-1
 
+  do thr_id = 1, NUMBER_THREADS-1
 !$omp parallel do    
     do i=1,NL
       tau_s_l(i) = tau_s_l(i) + tau_s_l_omp(i,thr_id)
@@ -1019,7 +1039,6 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
       j_s_l(i,3) = j_s_l(i,3) + j_s_l_omp(i,3,thr_id)
     end do
   end do
-
 
   call MPI_ALLREDUCE(tau_s_l,tau_s,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(j_s_l,j_s,NL*3,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
@@ -1057,6 +1076,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           &+lapz(4)*(rho_s(ifdz(4,i))+rho_s(ifdz(-4,i)))
       lrho_s(i)=ss(1)+ss(2)+ss(3)
     enddo
+
   case default
     call err_finalize('Nd /= 4')
   end select
@@ -1069,6 +1089,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
         tau_s(:)=tau_s(:)*0.25d0
         j_s(:,1:2)= 0d0
         j_s(:,3)=j_s(:,3)*0.25d0
+
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 ! 1.T_3
 !$omp parallel do  private(ss,i)  
