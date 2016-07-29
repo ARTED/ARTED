@@ -82,7 +82,7 @@ subroutine dt_evolve_hpsi
 
 #else ! #ifdef ARTED_LBLK
 
-!$acc data pcopy(zu, ztpsi)
+!$acc data pcopy(zu) create(ztpsi)
 
 #ifdef ARTED_SC
 !$omp parallel private(tid,idx_b) shared(zfac) firstprivate(loop_count)

@@ -17,6 +17,14 @@
 !This file contain one subroutine.
 !Subroutine dt_evolve
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_USE_NVTX
+#define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
+#define NVTX_END()         call nvtxEndRange()
+#else
+#define NVTX_BEG(name,id)
+#define NVTX_END()
+#endif
+
 Subroutine dt_evolve_omp_KB(iter)
   use Global_Variables
   use timelog
@@ -30,11 +38,10 @@ Subroutine dt_evolve_omp_KB(iter)
   real(8)    :: kr
   integer    :: thr_id,omp_get_thread_num,ikb
 
-#ifdef ARTED_USE_NVTX
-  call nvtxStartRange('dt_evolve_omp_KB',1)
-#endif
+  NVTX_BEG('dt_evolve_omp_KB',1)
   call timelog_begin(LOG_DT_EVOLVE)
 
+  NVTX_BEG('nonlocal part?',2)
   thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
@@ -51,6 +58,7 @@ Subroutine dt_evolve_omp_KB(iter)
   end do
   end do
 !$omp end parallel
+  NVTX_END()
 
 ! yabana
   select case(functional)
@@ -117,12 +125,24 @@ Subroutine dt_evolve_omp_KB(iter)
   end select
 ! yabana
 
+!$acc data pcopy(zu)  
+  NVTX_BEG('dt_evolve_hpsi',3)
   call dt_evolve_hpsi
+  NVTX_END()
 
+  NVTX_BEG('psi_rho_RT',4)
   call psi_rho_RT
+  NVTX_END()
+!$acc end data
+
+  NVTX_BEG('Hartree',5)
   call Hartree
+  NVTX_END()
+
 ! yabana
+  NVTX_BEG('Exc_Cor',6)
   call Exc_Cor('RT')
+  NVTX_END()
 ! yabana
 
   do ixyz=1,3
@@ -135,9 +155,7 @@ Subroutine dt_evolve_omp_KB(iter)
   end do
 
   call timelog_end(LOG_DT_EVOLVE)
-#ifdef ARTED_USE_NVTX
-  call nvtxEndRange()
-#endif
+  NVTX_END()
 
   return
 End Subroutine dt_evolve_omp_KB
