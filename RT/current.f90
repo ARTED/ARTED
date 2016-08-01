@@ -224,7 +224,7 @@ subroutine current_omp_KB_ST(ib,ik,A)
 end subroutine
 
 #ifdef ARTED_LBLK
-subroutine current_omp_KB_ST_LBLK(A, ikb_s,ikb_e)
+subroutine current_acc_KB_ST_LBLK(A, ikb_s,ikb_e)
   use Global_Variables
   use opt_variables
   implicit none

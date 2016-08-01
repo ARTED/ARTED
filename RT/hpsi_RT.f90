@@ -120,7 +120,7 @@ end subroutine hpsi_omp_KB_RT
 
 
 #ifdef ARTED_LBLK
-subroutine hpsi_omp_KB_RT_LBLK(tpsi,htpsi, ikb_s,ikb_e)
+subroutine hpsi_acc_KB_RT_LBLK(tpsi,htpsi, ikb_s,ikb_e)
   use Global_Variables
   use opt_variables
 #ifdef ARTED_USE_NVTX
@@ -132,12 +132,12 @@ subroutine hpsi_omp_KB_RT_LBLK(tpsi,htpsi, ikb_s,ikb_e)
   complex(8),intent(out) :: htpsi(0:PNL-1, ikb_s:ikb_e)
   integer :: ikb,ik
 
-  NVTX_BEG('hpsi_omp_KB_RT_LBLK', 3)
+  NVTX_BEG('hpsi_acc_KB_RT_LBLK', 3)
   select case(functional)
     case('PZ','PZM', 'PBE','TBmBJ')
       call hpsi1_LBLK(tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
     case('TPSS','VS98')
-      call err_finalize('hpsi_omp_KB_RT_LBLK: TPSS/VS98 ver. not implemented.')
+      call err_finalize('hpsi_acc_KB_RT_LBLK: TPSS/VS98 ver. not implemented.')
   end select
   NVTX_END()
 
@@ -267,5 +267,5 @@ contains
 
 !$acc end data
   end subroutine
-end subroutine hpsi_omp_KB_RT_LBLK
+end subroutine hpsi_acc_KB_RT_LBLK
 #endif

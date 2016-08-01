@@ -147,6 +147,7 @@ Subroutine init
       ib_table(i)=ib
     end do
   end do
+!$acc enter data copyin(ik_table, ib_table)
 
 ! make symmetry table
   if(Sym == 1)then

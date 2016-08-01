@@ -151,7 +151,7 @@ contains
     real(8) :: my_zrho
 
     NVTX_BEG("reduce_acc",1)
-!$acc kernels pcopy(zrho) pcopy(zutmp,occ)
+!$acc kernels pcopy(zrho) pcopyin(zutmp,occ)
     zrho(:)=0.d0
 
 !$acc loop gang vector(1)

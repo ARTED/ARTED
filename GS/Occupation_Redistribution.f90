@@ -138,6 +138,7 @@ Subroutine Occupation_Redistribution
 
   deallocate(zu)
   allocate(zu(NL,NBoccmax,NK_s:NK_e))
+!$acc exit data delete(ik_table, ib_table)
   deallocate(ik_table,ib_table)
   NKB=(NK_e-NK_s+1)*NBoccmax ! sato
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
@@ -150,6 +151,7 @@ Subroutine Occupation_Redistribution
       ib_table(i)=ib
     end do
   end do
+!$acc enter data copyin(ik_table, ib_table)
 
   return
 End Subroutine Occupation_Redistribution

@@ -93,14 +93,14 @@ subroutine dt_evolve_hpsi
 
     call init_LBLK(ztpsi(:,:,4),zu(:,:,:), ikb_s,ikb_e)
 
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
 
     call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
 #ifdef ARTED_CURRENT_OPTIMIZED
-    call current_omp_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
+    call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
 #endif
 
 #ifdef ARTED_SC
