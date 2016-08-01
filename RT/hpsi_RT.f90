@@ -163,7 +163,7 @@ contains
 
     !Calculating nonlocal part
 
-!$acc kernels pcopy(uVpsi,tpsi) pcopyin(a_tbl,ekr_omp,ik_table,mps,uv,iuv) &
+!$acc kernels pcopy(tpsi) create(uVpsi) pcopyin(a_tbl,ekr_omp,ik_table,mps,uv,iuv) &
 #ifdef ARTED_STENCIL_PADDING
 !$acc& pcopyin(zKxyz) &
 #else
