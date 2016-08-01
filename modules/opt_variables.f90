@@ -295,7 +295,7 @@ contains
        enddo
     enddo
 
-! !$acc enter data copyin(t4ppt_nlma,t4ppt_i2vi,t4ppt_vi2i,t4ppt_ilma,t4ppt_j)
+!$acc enter data copyin(t4ppt_nlma,t4ppt_i2vi,t4ppt_vi2i,t4ppt_ilma,t4ppt_j)
 
     allocate(t4cp_uVpsix(Nlma, NKB))
     allocate(t4cp_uVpsiy(Nlma, NKB))
