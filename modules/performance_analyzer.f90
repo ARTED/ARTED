@@ -56,19 +56,19 @@ contains
       print *, '###'
       print *, 'Performance [GFLOPS]'
       print *, '  Processor'
-      print *, '    hamlitonian  :', lgflops(4)
+      print *, '    hamiltonian  :', lgflops(4)
       print *, '    - stencil    :', lgflops(1)
       print *, '    - pseudo pt. :', lgflops(2)
       print *, '    - update     :', lgflops(3)
 #ifdef ARTED_MS
       print *, '  Macroscopic grid point'
-      print *, '    hamlitonian  :', sgflops(4)
+      print *, '    hamiltonian  :', sgflops(4)
       print *, '    - stencil    :', sgflops(1)
       print *, '    - pseudo pt. :', sgflops(2)
       print *, '    - update     :', sgflops(3)
 #endif
       print *, '  System total'
-      print *, '    hamlitonian  :', tgflops(4)
+      print *, '    hamiltonian  :', tgflops(4)
       print *, '    - stencil    :', tgflops(1)
       print *, '    - pseudo pt. :', tgflops(2)
       print *, '    - update     :', tgflops(3)
