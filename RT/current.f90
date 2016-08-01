@@ -652,7 +652,7 @@ subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
 
   IaLxyz = 1.0 / aLxyz
 
-!$acc data pcopyin(zutmp) create(jx,jy,jz) pcopy(ekr_omp) copyin(nabt) &
+!$acc data pcopyin(zutmp) create(jx,jy,jz) pcopyout(ekr_omp) copyin(nabt) &
 !$acc& pcopyin(jxyz,jxx,jyy,jzz,kAc,lx,ly,lz,Mps) 
 
 !Constructing nonlocal part
@@ -660,7 +660,7 @@ subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
 !$acc loop collapse(2) independent gang
   do ik=NK_s,NK_e
   do ia=1,NI
-!$acc loop vector(256)
+!$acc loop independent vector(128)
   do j=1,Mps(ia)
     i=Jxyz(j,ia); ix=Jxx(j,ia); iy=Jyy(j,ia); iz=Jzz(j,ia)
     kr=kAc(ik,1)*(Lx(i)*Hx-ix*aLx)+kAc(ik,2)*(Ly(i)*Hy-iy*aLy)+kAc(ik,3)*(Lz(i)*Hz-iz*aLz)

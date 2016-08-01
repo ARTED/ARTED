@@ -41,7 +41,7 @@ Subroutine dt_evolve_omp_KB(iter)
   NVTX_BEG('dt_evolve_omp_KB',1)
   call timelog_begin(LOG_DT_EVOLVE)
 
-!$acc data pcopy(zu, ekr_omp, vloc)
+!$acc data pcopy(zu, vloc) pcopyout(ekr_omp)
 
   NVTX_BEG('nonlocal part?',2)
 !Constructing nonlocal part ! sato
