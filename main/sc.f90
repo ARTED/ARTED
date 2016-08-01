@@ -293,6 +293,7 @@ Program main
 !$acc enter data copyin(lapx,lapy,lapz)
 !$acc enter data copyin(nabx,naby,nabz)
 !$acc enter data copyin(modx,mody,modz)
+!$acc enter data copyin(zJxyz,zKxyz)
 !$acc enter data copyin(uV,iuV)
 
 !$acc enter data create(kAc)

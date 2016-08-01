@@ -139,7 +139,8 @@ contains
     blk_nkb_hpsi = min(at_least_parallelism/PNL + 1, NKB)
     write(*,*) "blk_nkb_hpsi:", blk_nkb_hpsi
 
-    blk_nkb_current = min(at_least_parallelism/PNL + 1, NKB)
+    !blk_nkb_current = min(at_least_parallelism/PNL + 1, NKB)
+    blk_nkb_current = min(at_least_parallelism/(Nlma*256) + 1, NKB)
     write(*,*) "blk_nkb_current:", blk_nkb_current
 #endif
 
