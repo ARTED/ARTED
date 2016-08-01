@@ -146,7 +146,7 @@ contains
 #ifndef ARTED_LBLK
     allocate(ztpsi(0:PNL-1,4,0:NUMBER_THREADS-1))
 #else
-    allocate(ztpsi(0:PNL-1, 4, 0:(NUMBER_THREADS*blk_nkb_hpsi)-1))
+    allocate(ztpsi(0:PNL-1, 0:blk_nkb_hpsi-1, 4))
 #endif
 
     allocate(zcx(NBoccmax,NK_s:NK_e))

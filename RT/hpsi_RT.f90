@@ -120,28 +120,29 @@ end subroutine hpsi_omp_KB_RT
 
 
 #ifdef ARTED_LBLK
-subroutine hpsi_omp_KB_RT_LBLK(tpsi, ikb_s,ikb_e, i_src,i_dst)
+subroutine hpsi_omp_KB_RT_LBLK(tpsi,htpsi, ikb_s,ikb_e)
   use Global_Variables
   use opt_variables
 #ifdef ARTED_USE_NVTX
   use nvtx
 #endif
   implicit none
-  integer :: ikb_s,ikb_e, i_src,i_dst
-  complex(8),intent(in)  :: tpsi(0:PNL-1, 4, ikb_s:ikb_e)
+  integer :: ikb_s,ikb_e
+  complex(8),intent(in)  ::  tpsi(0:PNL-1, ikb_s:ikb_e)
+  complex(8),intent(out) :: htpsi(0:PNL-1, ikb_s:ikb_e)
   integer :: ikb,ik
 
   NVTX_BEG('hpsi_omp_KB_RT_LBLK', 3)
   select case(functional)
     case('PZ','PZM', 'PBE','TBmBJ')
-      call hpsi1_LBLK(tpsi(:,:,:), ikb_s,ikb_e, i_src,i_dst)
+      call hpsi1_LBLK(tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
     case('TPSS','VS98')
       call err_finalize('hpsi_omp_KB_RT_LBLK: TPSS/VS98 ver. not implemented.')
   end select
   NVTX_END()
 
 contains
-  subroutine pseudo_pt_LBLK(tpsi, ikb_s,ikb_e, i_src,i_dst)
+  subroutine pseudo_pt_LBLK(tpsi,htpsi, ikb_s,ikb_e)
     use Global_Variables, only: Mps,uV,iuV,Hxyz,ekr_omp,Nlma,a_tbl
 #ifdef ARTED_STENCIL_PADDING
     use opt_variables, only: zJxyz => zKxyz,PNL
@@ -149,8 +150,9 @@ contains
     use opt_variables, only: zJxyz,PNL
 #endif
     implicit none
-    integer :: ikb_s,ikb_e, i_src,i_dst
-    complex(8),intent(inout) :: tpsi(0:PNL-1, 4, ikb_s:ikb_e)
+    integer :: ikb_s,ikb_e
+    complex(8),intent(in)  ::  tpsi(0:PNL-1, ikb_s:ikb_e)
+    complex(8),intent(out) :: htpsi(0:PNL-1, ikb_s:ikb_e)
 
     integer    :: ilma,ia,j,i
     integer    :: ikb,ik
@@ -177,7 +179,7 @@ contains
         uVpsi0=cmplx(0.d0, 0.d0, kind=8)
         do j=1,Mps(ia)
           i=zJxyz(j,ia)
-          uVpsi0=uVpsi0 + uV(j,ilma)*ekr_omp(j,ia,ik)*tpsi(i,i_src,ikb)
+          uVpsi0=uVpsi0 + uV(j,ilma)*ekr_omp(j,ia,ik)*tpsi(i,ikb)
         enddo
         uVpsi(ilma,ikb)=uVpsi0*Hxyz*iuV(ilma)
       enddo
@@ -201,7 +203,7 @@ contains
           ia   = a_tbl(ilma)
           tpsi0= tpsi0+conjg(ekr_omp(j,ia,ik))*uVpsi(ilma,ikb)*uV(j,ilma)
         enddo
-        tpsi(i,i_dst,ikb)=tpsi(i,i_dst,ikb)+tpsi0
+        htpsi(i,ikb)=htpsi(i,ikb)+tpsi0
       enddo
     enddo
 #else
@@ -213,7 +215,7 @@ contains
         ia=a_tbl(ilma)
         do j=1,Mps(ia)
           i=zJxyz(j,ia)
-          tpsi(i,i_dst,ikb)=tpsi(i,i_dst,ikb) + &
+          htpsi(i,ikb)=htpsi(i,ikb) + &
             conjg(ekr_omp(j,ia,ik))*uVpsi(ilma,ikb)*uV(j,ilma)
         enddo
       enddo
@@ -223,15 +225,16 @@ contains
 
   end subroutine
 
-  subroutine hpsi1_LBLK(tpsi, ikb_s,ikb_e, i_src,i_dst)
+  subroutine hpsi1_LBLK(tpsi,htpsi, ikb_s,ikb_e)
     use Global_Variables
     use opt_variables
 #ifdef ARTED_SC
     use timelog
 #endif
     implicit none
-    integer :: ikb_s,ikb_e, i_src,i_dst
-    complex(8),intent(in)  :: tpsi(0:PNL-1, 4, ikb_s:ikb_e)
+    integer :: ikb_s,ikb_e
+    complex(8),intent(in)  ::  tpsi(0:PNL-1, ikb_s:ikb_e)
+    complex(8),intent(out) :: htpsi(0:PNL-1, ikb_s:ikb_e)
     integer :: ikb,ik
 
     real(8) :: k2
@@ -252,13 +255,13 @@ contains
       nabt( 9:12,ikb)=kAc(ik,3)*nabz(1:4)
     enddo
 !$acc end kernels
-    call hpsi1_RT_stencil_LBLK(k2lap0_2(:),Vloc,lapt,nabt(:,:),tpsi(:,:,:), ikb_s,ikb_e, i_src,i_dst)
+    call hpsi1_RT_stencil_LBLK(k2lap0_2(:),Vloc,lapt,nabt(:,:),tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
     TIMELOG_END(LOG_HPSI_STENCIL)
     NVTX_END()
 
     NVTX_BEG('hpsi1_LBLK: pseudo_pt()', 5)
     TIMELOG_BEG(LOG_HPSI_PSEUDO)
-    call pseudo_pt_LBLK(tpsi(:,:,:), ikb_s,ikb_e, i_src,i_dst)
+    call pseudo_pt_LBLK(tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
     TIMELOG_END(LOG_HPSI_PSEUDO)
     NVTX_END()
 

@@ -194,19 +194,20 @@ end subroutine
 
 
 #ifdef ARTED_LBLK
-subroutine hpsi1_RT_stencil_LBLK(A,B,C,D,E, ikb_s,ikb_e, i_src,i_dst)
+subroutine hpsi1_RT_stencil_LBLK(A,B,C,D,E,F, ikb_s,ikb_e)
   use global_variables, only: NLx,NLy,NLz,zI
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
   use opt_variables, only: modx, mody, modz
 #endif
   use opt_variables, only: PNLx,PNLy,PNLz
   implicit none
-  integer :: ikb_s,ikb_e, i_src,i_dst
-  real(8),   intent(in)    :: A( ikb_s:ikb_e)
-  real(8),   intent(in)    :: B(0:NLz-1,0:NLy-1,0:NLx-1)
-  real(8),   intent(in)    :: C(12)
-  real(8),   intent(in)    :: D(12, ikb_s:ikb_e)
-  complex(8),intent(inout) :: E(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+  integer :: ikb_s,ikb_e
+  real(8),   intent(in)  :: A(ikb_s:ikb_e)
+  real(8),   intent(in)  :: B(0:NLz-1,0:NLy-1,0:NLx-1)
+  real(8),   intent(in)  :: C(12)
+  real(8),   intent(in)  :: D(12, ikb_s:ikb_e)
+  complex(8),intent(in)  :: E(0:PNLz-1,0:PNLy-1,0:PNLx-1, ikb_s:ikb_e)
+  complex(8),intent(out) :: F(0:PNLz-1,0:PNLy-1,0:PNLx-1, ikb_s:ikb_e)
 
   integer    :: ikb, ix,iy,iz
   complex(8) :: v, w
@@ -215,13 +216,13 @@ subroutine hpsi1_RT_stencil_LBLK(A,B,C,D,E, ikb_s,ikb_e, i_src,i_dst)
 #undef IDY
 #undef IDZ
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-# define IDX(dt) iz,iy,and(ix+(dt)+NLx,NLx-1),i_src,ikb
-# define IDY(dt) iz,and(iy+(dt)+NLy,NLy-1),ix,i_src,ikb
-# define IDZ(dt) and(iz+(dt)+NLz,NLz-1),iy,ix,i_src,ikb
+# define IDX(dt) iz,iy,and(ix+(dt)+NLx,NLx-1),ikb
+# define IDY(dt) iz,and(iy+(dt)+NLy,NLy-1),ix,ikb
+# define IDZ(dt) and(iz+(dt)+NLz,NLz-1),iy,ix,ikb
 #else
-# define IDX(dt) iz,iy,modx(ix+(dt)+NLx),i_src,ikb
-# define IDY(dt) iz,mody(iy+(dt)+NLy),ix,i_src,ikb
-# define IDZ(dt) modz(iz+(dt)+NLz),iy,ix,i_src,ikb
+# define IDX(dt) iz,iy,modx(ix+(dt)+NLx),ikb
+# define IDY(dt) iz,mody(iy+(dt)+NLy),ix,ikb
+# define IDZ(dt) modz(iz+(dt)+NLz),iy,ix,ikb
 #endif
 
 !$acc kernels pcopy(E) &
@@ -263,7 +264,7 @@ subroutine hpsi1_RT_stencil_LBLK(A,B,C,D,E, ikb_s,ikb_e, i_src,i_dst)
       & +D( 3,ikb)*(E(IDX(3))-E(IDX(-3))) &
       & +D( 4,ikb)*(E(IDX(4))-E(IDX(-4)))) + w
   
-      E(iz,iy,ix, i_dst,ikb) = (A(ikb)+B(iz,iy,ix))*E(iz,iy,ix, i_src,ikb) &
+      F(iz,iy,ix, ikb) = (A(ikb)+B(iz,iy,ix))*E(iz,iy,ix, ikb) &
         - 0.5d0 * v - zI * w
     end do
     end do

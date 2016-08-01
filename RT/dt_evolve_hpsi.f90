@@ -84,28 +84,21 @@ subroutine dt_evolve_hpsi
 
 !$acc data pcopy(zu) create(ztpsi)
 
-#ifdef ARTED_SC
-!$omp parallel private(tid,idx_b) shared(zfac) firstprivate(loop_count)
-#else
-!$omp parallel private(tid,idx_b) shared(zfac)
-#endif
-!$  tid=omp_get_thread_num()
-  idx_b = tid * blk_nkb_hpsi
+  idx_b = 0
 
-!$omp do private(num_ikb1,ikb_s,ikb_e,ikb,ik,ib,idx)
   do ikb0=1,NKB, blk_nkb_hpsi
     num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
     ikb_s = ikb0
     ikb_e = ikb0 + num_ikb1-1
 
-    call init_LBLK(ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e, 4)
+    call init_LBLK(ztpsi(:,:,4),zu(:,:,:), ikb_s,ikb_e)
 
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 4,1)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 1,2)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 2,3)
-    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,idx_b), ikb_s,ikb_e, 3,4)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
+    call hpsi_omp_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
 
-    call update_LBLK(zfac,ztpsi(:,:,idx_b),zu(:,:,:), ikb_s,ikb_e)
+    call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
 #ifdef ARTED_CURRENT_OPTIMIZED
     call current_omp_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
 #endif
@@ -114,12 +107,10 @@ subroutine dt_evolve_hpsi
     loop_count = loop_count + num_ikb1
 #endif
   end do
-!$omp end do
 
 #ifdef ARTED_SC
   hpsi_called(tid) = loop_count
 #endif
-!$omp end parallel
 
 !$acc end data
 
@@ -178,13 +169,13 @@ contains
   end subroutine
 
 #ifdef ARTED_LBLK
-  subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e,ia)
+  subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
     use timelog
     implicit none
-    integer :: ikb_s,ikb_e, ia
-    complex(8),intent(out) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    integer :: ikb_s,ikb_e
+    complex(8),intent(out) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, ikb_s:ikb_e)
     complex(8),intent(in)  :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
     integer :: ikb,ik,ib, ix,iy,iz
 
@@ -198,7 +189,7 @@ contains
       do ix=0,NLx-1
       do iy=0,NLy-1
       do iz=0,NLz-1
-        tpsi(iz,iy,ix, ia,ikb)=zu(iz,iy,ix, ib,ik)
+        tpsi(iz,iy,ix, ikb)=zu(iz,iy,ix, ib,ik)
       end do
       end do
       end do
@@ -209,12 +200,12 @@ contains
 
   subroutine update_LBLK(zfac,tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
-    use opt_variables, only: PNLx,PNLy,PNLz
+    use opt_variables, only: PNLx,PNLy,PNLz, blk_nkb_hpsi
     use timelog
     implicit none
     integer :: ikb_s,ikb_e
     complex(8),intent(in)    :: zfac(4)
-    complex(8),intent(in)    :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 4, ikb_s:ikb_e)
+    complex(8),intent(in)    :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 0:blk_nkb_hpsi-1, 4)
     complex(8),intent(inout) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
     integer :: ikb,ik,ib, ix,iy,iz
 
@@ -229,10 +220,10 @@ contains
       do iy=0,NLy-1
       do iz=0,NLz-1
         zu(iz,iy,ix, ib,ik)=zu(iz,iy,ix, ib,ik) &
-          &                +zfac(1)*tpsi(iz,iy,ix,1, ikb) &
-          &                +zfac(2)*tpsi(iz,iy,ix,2, ikb) &
-          &                +zfac(3)*tpsi(iz,iy,ix,3, ikb) &
-          &                +zfac(4)*tpsi(iz,iy,ix,4, ikb)
+          &                +zfac(1)*tpsi(iz,iy,ix, ikb-ikb_s, 1) &
+          &                +zfac(2)*tpsi(iz,iy,ix, ikb-ikb_s, 2) &
+          &                +zfac(3)*tpsi(iz,iy,ix, ikb-ikb_s, 3) &
+          &                +zfac(4)*tpsi(iz,iy,ix, ikb-ikb_s, 4)
       end do
       end do
       end do
