@@ -289,7 +289,8 @@ Program main
     end if
   endif
 
-
+!$acc enter data copyin(ik_table,ib_table)
+!$acc enter data create(kAc)
 
   call timelog_reset
   call timelog_enable_verbose
@@ -302,6 +303,7 @@ Program main
     do ixyz=1,3
       kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
     enddo
+!$acc update device(kAc)
 
     call dt_evolve_omp_KB(iter)
     call current_omp_KB
@@ -425,7 +427,6 @@ Program main
     end if
 !Timer for shutdown
     if (iter/10*10 == iter) then
-!$acc update self(zu)
       Time_now=MPI_WTIME()
       call MPI_BCAST(Time_now,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
       if (Myrank == 0 .and. iter/100*100 == iter) then
@@ -435,6 +436,7 @@ Program main
         call MPI_BARRIER(MPI_COMM_WORLD,ierr)
         write(*,*) Myrank,'iter =',iter
         iter_now=iter
+!$acc update self(zu)
         call prep_Reentrance_write
         go to 1
       end if
