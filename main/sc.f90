@@ -290,6 +290,10 @@ Program main
   endif
 
 !$acc enter data copyin(ik_table,ib_table)
+!$acc enter data copyin(lapx,lapy,lapz)
+!$acc enter data copyin(nabx,naby,nabz)
+!$acc enter data copyin(modx,mody,modz)
+
 !$acc enter data create(kAc)
 
   call timelog_reset
