@@ -41,6 +41,8 @@ Subroutine dt_evolve_omp_KB(iter)
   NVTX_BEG('dt_evolve_omp_KB',1)
   call timelog_begin(LOG_DT_EVOLVE)
 
+!$acc data pcopy(zu)  
+
   NVTX_BEG('nonlocal part?',2)
   thr_id=0
 !$omp parallel private(thr_id)
@@ -63,6 +65,7 @@ Subroutine dt_evolve_omp_KB(iter)
 ! yabana
   select case(functional)
   case('VS98','TPSS','TBmBJ')
+!$acc update self(zu)
 
 !$omp parallel do private(ik,ib)
   do ikb=1,NKB
@@ -120,12 +123,9 @@ Subroutine dt_evolve_omp_KB(iter)
     kAc(:,ixyz)=kAc0(:,ixyz)+0.5*(Ac_tot(iter,ixyz)+Ac_tot(iter+1,ixyz))
   enddo
 
-
-
+!$acc update device(zu)
   end select
 ! yabana
-
-!$acc data pcopy(zu)  
 
   NVTX_BEG('dt_evolve_hpsi',3)
   call dt_evolve_hpsi
@@ -145,8 +145,6 @@ Subroutine dt_evolve_omp_KB(iter)
   NVTX_END()
 ! yabana
 
-!$acc end data
-
   do ixyz=1,3
     kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
   enddo
@@ -155,6 +153,8 @@ Subroutine dt_evolve_omp_KB(iter)
   do i=1,NL
     Vloc(i)=Vh(i)+Vpsl(i)+Vexc(i)
   end do
+
+!$acc end data
 
   call timelog_end(LOG_DT_EVOLVE)
   NVTX_END()
