@@ -47,8 +47,8 @@ CMake detects the below configurations automatically,
     or
     $ mkdir build_dir
     $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=intel-knc .. && make
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=intel-avx .. && make
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knc .. && make
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-avx .. && make
 
 ### for K-computer at RIKEN AICS
 
@@ -56,7 +56,7 @@ CMake detects the below configurations automatically,
     or
     $ mkdir build_dir
     $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=fujitsu-k .. && make
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-k .. && make
 
 ### for FX100 system at Nagoya University
 
@@ -64,7 +64,7 @@ CMake detects the below configurations automatically,
     or
     $ mkdir build_dir
     $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=fujitsu-fx100 .. && make
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-fx100 .. && make
 
 ### Generic version (GNU compiler)
 
@@ -72,7 +72,7 @@ CMake detects the below configurations automatically,
     or
     $ mkdir build_dir
     $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=gnu-generic .. && make
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=gnu-generic .. && make
 
 
 ## Execution/Simulation
