@@ -316,6 +316,7 @@ Subroutine current_init_impl(ik,ib,zutmp,jx,jy,jz)
   jz=occ(ib,ik)*kAc(ik,3)*jt
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_LBLK
 Subroutine current_init_impl_LBLK(zutmp,jx,jy,jz, ikb_s,ikb_e)
   use Global_Variables
   implicit none
@@ -346,6 +347,7 @@ Subroutine current_init_impl_LBLK(zutmp,jx,jy,jz, ikb_s,ikb_e)
 !$acc end kernels
 !$acc end data
 end Subroutine
+#endif ! ARTED_LBLK
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_stencil_impl(ik,ib,zutmp,nabt,jx,jy,jz)
   use Global_Variables
@@ -380,6 +382,7 @@ Subroutine current_RT_stencil_impl(ik,ib,jx,jy,jz)
   jz=jz+zcz(ib,ik)*occ(ib,ik)
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_LBLK
 Subroutine current_RT_stencil_impl_LBLK(jx,jy,jz, ikb_s,ikb_e)
   use Global_Variables
   use opt_variables
@@ -401,6 +404,7 @@ Subroutine current_RT_stencil_impl_LBLK(jx,jy,jz, ikb_s,ikb_e)
 !$acc end kernels
 !$acc end data
 end Subroutine
+#endif ! ARTED_LBLK
 #endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_pseudo_impl(ik,ib,zutmp,IaLxyz,jx,jy,jz)
@@ -452,6 +456,7 @@ Subroutine current_pseudo_impl(ik,ib,zutmp,IaLxyz,jx,jy,jz)
   jz=jz*Hxyz*IaLxyz+jzt
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_LBLK
 Subroutine current_pseudo_impl_LBLK(zutmp,IaLxyz,jx,jy,jz, ikb_s,ikb_e)
   use Global_Variables
   use omp_lib
@@ -528,6 +533,7 @@ Subroutine current_pseudo_impl_LBLK(zutmp,IaLxyz,jx,jy,jz, ikb_s,ikb_e)
 !$acc end kernels
 !$acc end data
 end Subroutine
+#endif ! ARTED_LBLK
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_GS_omp_KB_impl(zutmp,jxs,jys,jzs)
   use Global_Variables
@@ -633,6 +639,7 @@ Subroutine current_omp_KB_impl(zutmp,jxs,jys,jzs)
 !$omp end parallel
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef _OPENACC
 subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
   use Global_Variables
   use opt_variables
@@ -699,6 +706,7 @@ subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
 
 !$acc end data
 end subroutine
+#endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_result_impl(jx,jy,jz)
   use Global_Variables

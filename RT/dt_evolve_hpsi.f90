@@ -181,14 +181,14 @@ contains
 
     TIMELOG_BEG(LOG_HPSI_INIT)
 !$acc kernels pcopy(tpsi) pcopyin(zu,ib_table,ik_table)
-!$acc loop gang
+!$acc loop gang vector(1)
     do ikb=ikb_s,ikb_e
-      ik=ik_table(ikb)
-      ib=ib_table(ikb)
-!$acc loop collapse(3) gang vector(256)
+!$acc loop collapse(3) gang vector(128)
       do ix=0,NLx-1
       do iy=0,NLy-1
       do iz=0,NLz-1
+        ik=ik_table(ikb)
+        ib=ib_table(ikb)
         tpsi(iz,iy,ix, ikb)=zu(iz,iy,ix, ib,ik)
       end do
       end do
@@ -211,14 +211,14 @@ contains
 
     TIMELOG_BEG(LOG_HPSI_UPDATE)
 !$acc kernels pcopy(zu) pcopyin(tpsi,zfac,ib_table,ik_table)
-!$acc loop independent gang
+!$acc loop independent gang vector(1)
     do ikb=ikb_s,ikb_e
-      ik=ik_table(ikb)
-      ib=ib_table(ikb)
-!$acc loop collapse(3) gang vector(256)
+!$acc loop collapse(3) gang vector(128)
       do ix=0,NLx-1
       do iy=0,NLy-1
       do iz=0,NLz-1
+        ik=ik_table(ikb)
+        ib=ib_table(ikb)
         zu(iz,iy,ix, ib,ik)=zu(iz,iy,ix, ib,ik) &
           &                +zfac(1)*tpsi(iz,iy,ix, ikb-ikb_s, 1) &
           &                +zfac(2)*tpsi(iz,iy,ix, ikb-ikb_s, 2) &

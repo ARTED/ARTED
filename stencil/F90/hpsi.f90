@@ -225,18 +225,18 @@ subroutine hpsi1_RT_stencil_LBLK(A,B,C,D,E,F, ikb_s,ikb_e)
 # define IDZ(dt) modz(iz+(dt)+NLz),iy,ix,ikb
 #endif
 
-!$acc kernels pcopy(E) &
+!$acc kernels pcopy(F) &
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
 !$acc& pcopyin(modx,mody,modz) &
 #endif
-!$acc& pcopyin(A,B,C,D)
+!$acc& pcopyin(A,B,C,D,E)
 !$acc loop gang vector(1)
   do ikb = ikb_s, ikb_e
-!$acc loop collapse(3) independent gang vector(256)
-    do ix=0,NLx-1
+!$acc loop collapse(2) independent gang vector(128)
     do iy=0,NLy-1
     do iz=0,NLz-1
-
+!$acc loop seq
+    do ix=0,NLx-1
       v=(C( 9)    *(E(IDZ(1))+E(IDZ(-1))) &
       & +C(10)    *(E(IDZ(2))+E(IDZ(-2))) &
       & +C(11)    *(E(IDZ(3))+E(IDZ(-3))) &

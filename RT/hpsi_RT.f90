@@ -172,11 +172,12 @@ contains
 !$acc& pcopyin(t4ppt_ilma,t4ppt_j,t4ppt_nlma,t4ppt_vi2i)
 !$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
-      ik=ik_table(ikb)
-!$acc loop gang vector(256)
+!$acc loop gang vector(1)
       do ilma=1,Nlma
+        ik=ik_table(ikb)
         ia=a_tbl(ilma)
         uVpsi0=cmplx(0.d0, 0.d0, kind=8)
+!$acc loop vector(128) reduction(+:uVpsi0)
         do j=1,Mps(ia)
           i=zJxyz(j,ia)
           uVpsi0=uVpsi0 + uV(j,ilma)*ekr_omp(j,ia,ik)*tpsi(i,ikb)
@@ -189,12 +190,11 @@ contains
     ! table version
 !$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
-      ik=ik_table(ikb)
-!$acc loop independent gang vector(256)
+!$acc loop independent gang vector(128)
       do vi = 0, t4ppt_max_vi-1
+        ik=ik_table(ikb)
         my_nlma = t4ppt_nlma(vi)
         if (my_nlma < 1) cycle
-        i = t4ppt_vi2i(vi)
         tpsi0=cmplx(0.d0, 0.d0, kind=8)
 !$acc loop seq
         do n = 1, my_nlma
@@ -203,11 +203,12 @@ contains
           ia   = a_tbl(ilma)
           tpsi0= tpsi0+conjg(ekr_omp(j,ia,ik))*uVpsi(ilma,ikb)*uV(j,ilma)
         enddo
+        i = t4ppt_vi2i(vi)
         htpsi(i,ikb)=htpsi(i,ikb)+tpsi0
       enddo
     enddo
 #else
-    ! no table version (similar to original)
+    ! no table version (similar to original, but slow on GPU)
 !$acc loop gang vector
     do ikb = ikb_s, ikb_e
       ik=ik_table(ikb)
