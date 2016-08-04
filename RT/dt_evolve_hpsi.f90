@@ -38,13 +38,8 @@ subroutine dt_evolve_hpsi
   integer    :: iexp
   complex(8) :: zfac(4)
 #ifdef ARTED_LBLK
-  integer    :: idx_b,idx
   integer    :: ikb_s,ikb_e
   integer    :: ikb0,ikb1,num_ikb1
-#endif
-#ifdef ARTED_SC
-  integer    :: loop_count
-  loop_count = 0
 #endif
 
   zfac(1)=(-zI*dt)
@@ -57,11 +52,7 @@ subroutine dt_evolve_hpsi
 
 #ifndef _OPENACC
 
-#ifdef ARTED_SC
-!$omp parallel private(tid) shared(zfac) firstprivate(loop_count)
-#else
 !$omp parallel private(tid) shared(zfac)
-#endif
 !$  tid=omp_get_thread_num()
 
 !$omp do private(ik,ib,iexp)
@@ -81,18 +72,11 @@ subroutine dt_evolve_hpsi
 #endif
   end do
 !$omp end do
-
-#ifdef ARTED_SC
-  hpsi_called(tid) = loop_count
-#endif
 !$omp end parallel
 
 #else ! #ifdef _OPENACC
 
 !$acc data pcopy(zu) create(ztpsi)
-
-  idx_b = 0
-
   do ikb0=1,NKB, blk_nkb_hpsi
     num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
     ikb_s = ikb0
@@ -109,16 +93,7 @@ subroutine dt_evolve_hpsi
 #ifdef ARTED_CURRENT_OPTIMIZED
     call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
 #endif
-
-#ifdef ARTED_SC
-    loop_count = loop_count + num_ikb1
-#endif
   end do
-
-#ifdef ARTED_SC
-  hpsi_called(tid) = loop_count
-#endif
-
 !$acc end data
 
 #endif ! _OPENACC

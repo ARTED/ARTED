@@ -8,8 +8,8 @@ set(LAPACK_FLAGS                "-llapack")
 set(ADDITIONAL_MACRO            "")
 set(ADDITIONAL_OPTIMIZE_FLAGS   "")
 
-# set(Fortran_FLAGS_General       "-Mpreprocess")
-set(Fortran_FLAGS_General       "-Mpreprocess -Mbounds")
+set(Fortran_FLAGS_General       "-Mpreprocess")
+# set(Fortran_FLAGS_General       "-Mpreprocess -Mbounds")
 set(C_FLAGS_General             "")
 
 set(Fortran_FLAGS_STENCIL       "")
