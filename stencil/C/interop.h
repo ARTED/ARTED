@@ -18,6 +18,19 @@
 
 /* Stencil computation code with C supports Intel compiler only. */
 
+/* currently Xeon CPUs and Xeon Phi are 64B cacheline. */
+#ifndef CACHELINE_SIZE
+# define CACHELINE_SIZE 64
+#endif
+
+#ifdef ARTED_ENABLE_SOFTWARE_PREFETCH
+# define PREFETCH_L1(p, distance)  _mm_prefetch(((char const*)p) + distance, _MM_HINT_T0)
+# define BUSY_PREFETCH_L1(p)       PREFETCH_L1(p, CACHELINE_SIZE)
+#else
+# define PREFETCH_L1(p, distance)
+# define BUSY_PREFETCH_L1(p)
+#endif
+
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
 # define VECTOR_SIZE 4
@@ -75,17 +88,33 @@
 # ifdef __KNC__
 /* Knights Corner */
 inline
-__m512i _mm512_unaligned_load_epi32(int const* v) {
+__m512i _mm512_loadu_prefetch_epi32(int const* v) {
   __m512i w;
   w = _mm512_loadunpacklo_epi32(w, v + 0);
   w = _mm512_loadunpackhi_epi32(w, v + 16);
+  BUSY_PREFETCH_L1(v);
   return w;
+}
+
+inline
+__m512i _mm512_load_prefetch_epi64(void const* c) {
+  __m512i a = _mm512_load_epi64(c);
+  BUSY_PREFETCH_L1(c);
+  return a;
+}
+
+inline
+__m512d _mm512_load_prefetch_pd(void const* c) {
+  __m512d a = _mm512_load_pd(c);
+  BUSY_PREFETCH_L1(c);
+  return a;
 }
 
 inline
 __m512d dcast_to_dcmplx(double const *v) {
   const __m512i perm = _mm512_set_epi32(7, 6, 7, 6, 5, 4, 5, 4, 3, 2, 3, 2, 1, 0, 1, 0);
   __m512d w = _mm512_loadunpacklo_pd(_mm512_setzero_pd(), v);
+  BUSY_PREFETCH_L1(v);
   return (__m512d) _mm512_permutevar_epi32(perm, (__m512i) w);
 }
 # endif

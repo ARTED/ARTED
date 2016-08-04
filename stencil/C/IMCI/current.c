@@ -75,7 +75,7 @@ void current_stencil_( double         const* restrict C
   {
     __m512i tix = _mm512_set1_epi32(ix);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
-    __m512i xp = _mm512_unaligned_load_epi32(modx + (ix + 1 + NLx));
+    __m512i xp = _mm512_loadu_prefetch_epi32(modx + (ix + 1 + NLx));
             xp = _mm512_permute4f128_epi32(xp, _MM_PERM_CDAB);
 #endif
 #ifdef ARTED_STENCIL_LOOP_BLOCKING
@@ -86,7 +86,7 @@ void current_stencil_( double         const* restrict C
   {
     __m512i tiy = _mm512_set1_epi32(iy);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
-    __m512i yp  = _mm512_unaligned_load_epi32(mody + (iy + 1 + NLy));
+    __m512i yp  = _mm512_loadu_prefetch_epi32(mody + (iy + 1 + NLy));
     __m512i uyx = _mm512_mask_blend_epi32(0xF0F0, yp, xp);
 #endif
     __m512i tyx = _mm512_mask_blend_epi32(0xF0F0, tiy, tix);
@@ -108,16 +108,16 @@ void current_stencil_( double         const* restrict C
       __m512d v1, v2, v3;
 
       // conj(e[iz])
-      __m512d ez = _mm512_load_pd(e + iz);
+      __m512d ez = _mm512_load_prefetch_pd(e + iz);
       __m512d w  = _mm512_mul_pd(ez, CONJ);
 
       /* z-dimension (unit stride) */
       {
         __m512i z0, z2;
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-        z2 = _mm512_load_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
+        z2 = _mm512_load_prefetch_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
 #else
-        z2 = _mm512_load_epi64(e + modz[iz + 4 + NLz]);
+        z2 = _mm512_load_prefetch_epi64(e + modz[iz + 4 + NLz]);
 #endif
 
         wp[0] = (__m512d) _mm512_alignr_epi32(z2, (__m512i) ez,  4);
@@ -136,10 +136,10 @@ void current_stencil_( double         const* restrict C
 
       /* y-dimension (NLz stride) */
       {
-        wp[0] = _mm512_load_pd(e + yx_table[0]);
-        wp[1] = _mm512_load_pd(e + yx_table[1]);
-        wp[2] = _mm512_load_pd(e + yx_table[2]);
-        wp[3] = _mm512_load_pd(e + yx_table[3]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[0]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[1]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[2]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[3]);
 
         v2 = _mm512_setzero_pd();
 #pragma unroll(4)
@@ -152,10 +152,10 @@ void current_stencil_( double         const* restrict C
 
       /* x-dimension (NLy*NLz stride)  */
       {
-        wp[0] = _mm512_load_pd(e + yx_table[4]);
-        wp[1] = _mm512_load_pd(e + yx_table[5]);
-        wp[2] = _mm512_load_pd(e + yx_table[6]);
-        wp[3] = _mm512_load_pd(e + yx_table[7]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[4]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[5]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[6]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[7]);
 
         v2 = _mm512_setzero_pd();
 #pragma unroll(4)

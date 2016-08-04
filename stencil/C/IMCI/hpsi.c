@@ -103,7 +103,7 @@ void hpsi1_rt_stencil_( double         const* restrict A_
     __m512i tix = _mm512_set1_epi32(ix);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
 #ifdef TUNING_INDEX_CALC
-    __m512i mxm = _mm512_unaligned_load_epi32(modx + (ix - 4 + NLx));
+    __m512i mxm = _mm512_loadu_prefetch_epi32(modx + (ix - 4 + NLx));
     __m512i mxp = _mm512_alignr_epi32(mxm, mxm, 1);
     __m512i xmp = _mm512_mask_blend_epi32(0xF0F0, mxm, mxp);
             xmp = _mm512_permute4f128_epi32(xmp, _MM_PERM_BADC);
@@ -118,7 +118,7 @@ void hpsi1_rt_stencil_( double         const* restrict A_
     __m512i tiy = _mm512_set1_epi32(iy);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
 #ifdef TUNING_INDEX_CALC
-    __m512i mym = _mm512_unaligned_load_epi32(mody + (iy - 4 + NLy));
+    __m512i mym = _mm512_loadu_prefetch_epi32(mody + (iy - 4 + NLy));
     __m512i myp = _mm512_alignr_epi32(mym, mym, 1);
     __m512i ymp = _mm512_mask_blend_epi32(0xF0F0, mym, myp);
     __m512i uyx = _mm512_mask_blend_epi32(0xFF00, ymp, xmp);
@@ -144,7 +144,7 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 #endif
       *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(mm, nlyz));
 
-      __m512d ez = _mm512_load_pd(e + iz);
+      __m512d ez = _mm512_load_prefetch_pd(e + iz);
       __m512d tt = _mm512_setzero_pd();
       __m512d ut = _mm512_setzero_pd();
 
@@ -157,15 +157,15 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 #ifdef TUNING_Z_MEM_LOAD
         __m512i z0, z2;
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-        z0 = _mm512_load_epi64(e + ((iz - 4 + NLz) & (NLz - 1)));
-        z2 = _mm512_load_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
+        z0 = _mm512_load_prefetch_epi64(e + ((iz - 4 + NLz) & (NLz - 1)));
+        z2 = _mm512_load_prefetch_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
 #else
 #ifdef TUNING_INDEX_CALC
-        z0 = _mm512_load_epi64(e + modz[iz - 4 + NLz]);
-        z2 = _mm512_load_epi64(e + modz[iz + 4 + NLz]);
+        z0 = _mm512_load_prefetch_epi64(e + modz[iz - 4 + NLz]);
+        z2 = _mm512_load_prefetch_epi64(e + modz[iz + 4 + NLz]);
 #else
-        z0 = _mm512_load_epi64(e + (iz - 4 + NLz) % NLz);
-        z2 = _mm512_load_epi64(e + (iz + 4 + NLz) % NLz);
+        z0 = _mm512_load_prefetch_epi64(e + (iz - 4 + NLz) % NLz);
+        z2 = _mm512_load_prefetch_epi64(e + (iz + 4 + NLz) % NLz);
 #endif
 #endif
         wm[3] = (__m512d) z0;
@@ -200,14 +200,14 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 
       /* y-dimension (NLz stride) */
       {
-        wm[3] = _mm512_load_pd(e + yx_table[0]);
-        wm[2] = _mm512_load_pd(e + yx_table[1]);
-        wm[1] = _mm512_load_pd(e + yx_table[2]);
-        wm[0] = _mm512_load_pd(e + yx_table[3]);
-        wp[0] = _mm512_load_pd(e + yx_table[4]);
-        wp[1] = _mm512_load_pd(e + yx_table[5]);
-        wp[2] = _mm512_load_pd(e + yx_table[6]);
-        wp[3] = _mm512_load_pd(e + yx_table[7]);
+        wm[3] = _mm512_load_prefetch_pd(e + yx_table[0]);
+        wm[2] = _mm512_load_prefetch_pd(e + yx_table[1]);
+        wm[1] = _mm512_load_prefetch_pd(e + yx_table[2]);
+        wm[0] = _mm512_load_prefetch_pd(e + yx_table[3]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[4]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[5]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[6]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[7]);
 
 #pragma unroll(4)
         for(n = 0 ; n < 4 ; ++n) {
@@ -220,14 +220,14 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 
       /* x-dimension (NLy*NLz stride)  */
       {
-        wm[3] = _mm512_load_pd(e + yx_table[ 8]);
-        wm[2] = _mm512_load_pd(e + yx_table[ 9]);
-        wm[1] = _mm512_load_pd(e + yx_table[10]);
-        wm[0] = _mm512_load_pd(e + yx_table[11]);
-        wp[0] = _mm512_load_pd(e + yx_table[12]);
-        wp[1] = _mm512_load_pd(e + yx_table[13]);
-        wp[2] = _mm512_load_pd(e + yx_table[14]);
-        wp[3] = _mm512_load_pd(e + yx_table[15]);
+        wm[3] = _mm512_load_prefetch_pd(e + yx_table[ 8]);
+        wm[2] = _mm512_load_prefetch_pd(e + yx_table[ 9]);
+        wm[1] = _mm512_load_prefetch_pd(e + yx_table[10]);
+        wm[0] = _mm512_load_prefetch_pd(e + yx_table[11]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[12]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[13]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[14]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[15]);
 
 #pragma unroll(4)
         for(n = 0 ; n < 4 ; ++n) {
