@@ -150,7 +150,7 @@ contains
     integer :: ib,ik,i
     real(8) :: my_zrho
 
-    NVTX_BEG("reduce_acc",1)
+    NVTX_BEG("reduce_acc()",1)
 !$acc kernels pcopy(zrho) pcopyin(zutmp,occ)
     zrho(:)=0.d0
 
@@ -183,7 +183,7 @@ contains
 
     integer :: tid
 
-    NVTX_BEG("sym1",1)
+    NVTX_BEG("sym1()",1)
 
 #ifndef _OPENACC
 !$omp parallel private(tid)
@@ -214,7 +214,7 @@ contains
     integer :: i,tid
     real(8) :: zfac
 
-    NVTX_BEG("sym4",2)
+    NVTX_BEG("sym4()",2)
 
     zfac=1.0d0/4d0
 
@@ -255,7 +255,7 @@ contains
     integer :: i,tid
     real(8) :: zfac
 
-    NVTX_BEG("sym8",3)
+    NVTX_BEG("sym8()",3)
 
     ! wk(ik)=8.0,(ikx==iky >. wk(ik)=4.0)
     zfac=1.0d0/32d0

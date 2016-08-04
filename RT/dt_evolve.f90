@@ -38,12 +38,12 @@ Subroutine dt_evolve_omp_KB(iter)
   real(8)    :: kr
   integer    :: thr_id,omp_get_thread_num,ikb
 
-  NVTX_BEG('dt_evolve_omp_KB',1)
+  NVTX_BEG('dt_evolve_omp_KB()',1)
   call timelog_begin(LOG_DT_EVOLVE)
 
 !$acc data pcopy(zu, vloc) pcopyout(ekr_omp)
 
-  NVTX_BEG('nonlocal part?',2)
+  NVTX_BEG('dt_evolve_omp_KB(): nonlocal part?',2)
 !Constructing nonlocal part ! sato
 !$acc kernels pcopy(ekr_omp) pcopyin(Mps, Jxyz,Jxx,Jyy,Jzz, kAc, Lx,Ly,Lz)
 !$acc loop collapse(2) independent gang
@@ -135,20 +135,20 @@ Subroutine dt_evolve_omp_KB(iter)
   end select
 ! yabana
 
-  NVTX_BEG('dt_evolve_hpsi',3)
+  NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
   call dt_evolve_hpsi
   NVTX_END()
 
-  NVTX_BEG('psi_rho_RT',4)
+  NVTX_BEG('dt_evolve_omp_KB(): psi_rho_RT',4)
   call psi_rho_RT
   NVTX_END()
 
-  NVTX_BEG('Hartree',5)
+  NVTX_BEG('dt_evolve_omp_KB(): Hartree',5)
   call Hartree
   NVTX_END()
 
 ! yabana
-  NVTX_BEG('Exc_Cor',6)
+  NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
   call Exc_Cor('RT')
   NVTX_END()
 ! yabana

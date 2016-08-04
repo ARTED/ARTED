@@ -16,6 +16,14 @@
 #define TIMELOG_BEG(id) call timelog_thread_begin(id)
 #define TIMELOG_END(id) call timelog_thread_end(id)
 
+#ifdef ARTED_USE_NVTX
+#define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
+#define NVTX_END()         call nvtxEndRange()
+#else
+#define NVTX_BEG(name,id)
+#define NVTX_END()
+#endif
+
 subroutine dt_evolve_hpsi
   use Global_Variables
   use timelog
@@ -44,17 +52,16 @@ subroutine dt_evolve_hpsi
     zfac(i)=zfac(i-1)*(-zI*dt)/i
   end do
 
-#ifdef ARTED_USE_NVTX
-  call nvtxStartRange('dt_evolve_hpsi',2)
-#endif
+  ! NVTX_BEG('dt_evolve_hpsi()',2)
   call timelog_begin(LOG_HPSI)
 
-#ifndef ARTED_LBLK
+#ifndef _OPENACC
 
 #ifdef ARTED_SC
 !$omp parallel private(tid) shared(zfac) firstprivate(loop_count)
 #else
 !$omp parallel private(tid) shared(zfac)
+#endif
 !$  tid=omp_get_thread_num()
 
 !$omp do private(ik,ib,iexp)
@@ -80,7 +87,7 @@ subroutine dt_evolve_hpsi
 #endif
 !$omp end parallel
 
-#else ! #ifdef ARTED_LBLK
+#else ! #ifdef _OPENACC
 
 !$acc data pcopy(zu) create(ztpsi)
 
@@ -114,12 +121,10 @@ subroutine dt_evolve_hpsi
 
 !$acc end data
 
-#endif ! ARTED_LBLK
+#endif ! _OPENACC
 
   call timelog_end(LOG_HPSI)
-#ifdef ARTED_USE_NVTX
-  call nvtxEndRange()
-#endif
+  ! NVTX_END()
 
 contains
   subroutine init(tpsi,zu)

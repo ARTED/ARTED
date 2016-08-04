@@ -352,7 +352,11 @@ subroutine spline(Np,xn,yn,an,bn,cn,dn)
   dn(0:Npm2) = yn(0:Npm2)
 ! for c
   do i = 0,Npm2-1
-    cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*u(i))/6d0
+    if (i==0) then
+      cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*0.d0)/6d0
+    else
+      cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*u(i))/6d0 ! OOR when i=0
+    endif
   end do
   cn(Npm2) = dyn(Npm2)/dxn(Npm2) - dxn(Npm2)*(0d0+2d0*u(Npm2))/6d0
 

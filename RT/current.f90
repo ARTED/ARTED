@@ -17,6 +17,14 @@
 !This file contain one subroutine.
 !SUBROUTINE current
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_USE_NVTX
+#define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
+#define NVTX_END()         call nvtxEndRange()
+#else
+#define NVTX_BEG(name,id)
+#define NVTX_END()
+#endif
+
 Subroutine current
   use Global_Variables
   implicit none
@@ -279,20 +287,16 @@ Subroutine current_omp_KB
   implicit none
   real(8) :: jx,jy,jz
 
-#ifdef ARTED_USE_NVTX
-  call nvtxStartRange('current_omp_KB',2)
-#endif
+  NVTX_BEG('current_omp_KB()',2)
   call timelog_begin(LOG_CURRENT)
-#ifdef _OPENACC
-  call current_acc_KB_impl(zu,jx,jy,jz)
-#else
+#ifndef _OPENACC
   call current_omp_KB_impl(zu,jx,jy,jz)
+#else
+  call current_acc_KB_impl(zu,jx,jy,jz)
 #endif
   call current_result_impl(jx,jy,jz)
   call timelog_end(LOG_CURRENT)
-#ifdef ARTED_USE_NVTX
-  call nvtxEndRange()
-#endif
+  NVTX_END()
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_init_impl(ik,ib,zutmp,jx,jy,jz)

@@ -93,7 +93,7 @@ contains
     real(8)    :: k2,k2lap0_2
     real(8)    :: nabt(12)
 
-    NVTX_BEG('hpsi1',3)
+    NVTX_BEG('hpsi1()',3)
 
     k2=sum(kAc(ik,:)**2)
     k2lap0_2=(k2-(lapx(0)+lapy(0)+lapz(0)))*0.5d0
@@ -132,7 +132,7 @@ subroutine hpsi_acc_KB_RT_LBLK(tpsi,htpsi, ikb_s,ikb_e)
   complex(8),intent(out) :: htpsi(0:PNL-1, ikb_s:ikb_e)
   integer :: ikb,ik
 
-  NVTX_BEG('hpsi_acc_KB_RT_LBLK', 3)
+  NVTX_BEG('hpsi_acc_KB_RT_LBLK()', 3)
   select case(functional)
     case('PZ','PZM', 'PBE','TBmBJ')
       call hpsi1_LBLK(tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
@@ -186,8 +186,6 @@ contains
       enddo
     enddo
 
-#if 1
-    ! table version
 !$acc loop gang vector(1)
     do ikb = ikb_s, ikb_e
 !$acc loop independent gang vector(128)
@@ -207,21 +205,6 @@ contains
         htpsi(i,ikb)=htpsi(i,ikb)+tpsi0
       enddo
     enddo
-#else
-    ! no table version (similar to original, but slow on GPU)
-!$acc loop gang vector
-    do ikb = ikb_s, ikb_e
-      ik=ik_table(ikb)
-      do ilma=1,Nlma
-        ia=a_tbl(ilma)
-        do j=1,Mps(ia)
-          i=zJxyz(j,ia)
-          htpsi(i,ikb)=htpsi(i,ikb) + &
-            conjg(ekr_omp(j,ia,ik))*uVpsi(ilma,ikb)*uV(j,ilma)
-        enddo
-      enddo
-    enddo
-#endif
 !$acc end kernels
 
   end subroutine
@@ -243,7 +226,7 @@ contains
     real(8) :: nabt(12, ikb_s:ikb_e)
 !$acc data pcopy(tpsi) create(k2lap0_2,nabt)
 
-    NVTX_BEG('hpsi1_LBLK: hpsi1_RT_stencil()', 4)
+    NVTX_BEG('hpsi1_LBLK(): hpsi1_RT_stencil', 4)
     TIMELOG_BEG(LOG_HPSI_STENCIL)
 !$acc kernels pcopy(k2lap0_2,nabt) pcopyin(ik_table,kac,lapx,lapy,lapz,nabx,naby,nabz)
 !$acc loop gang vector
@@ -260,7 +243,7 @@ contains
     TIMELOG_END(LOG_HPSI_STENCIL)
     NVTX_END()
 
-    NVTX_BEG('hpsi1_LBLK: pseudo_pt()', 5)
+    NVTX_BEG('hpsi1_LBLK(): pseudo_pt', 5)
     TIMELOG_BEG(LOG_HPSI_PSEUDO)
     call pseudo_pt_LBLK(tpsi(:,:),htpsi(:,:), ikb_s,ikb_e)
     TIMELOG_END(LOG_HPSI_PSEUDO)
