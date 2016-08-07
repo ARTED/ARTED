@@ -1,8 +1,6 @@
 ###
 ### Compile stencil computation sources
 ###
-set(CMAKE_Fortran_FLAGS "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${Fortran_FLAGS_STENCIL}")
-set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${C_FLAGS_STENCIL}")
 
 ### Soruces for current and total_energy
 set(SOURCES_COMPILER_VEC
