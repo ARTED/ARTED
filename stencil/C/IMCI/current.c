@@ -29,8 +29,8 @@ extern int *modx, *mody, *modz;
 extern int BX, BY;
 #endif
 
-void current_stencil_( double         const* restrict C
-                     , double complex const* restrict E
+void current_stencil_( double         const           C[restrict 12]
+                     , double complex const           E[restrict NLx][NLy][NLz]
                      , double              * restrict F
                      , double              * restrict G
                      , double              * restrict H
@@ -91,7 +91,7 @@ void current_stencil_( double         const* restrict C
 #endif
     __m512i tyx = _mm512_mask_blend_epi32(0xF0F0, tiy, tix);
 
-    e = &E[ix*NLy*NLz + iy*NLz];
+    e = &E[ix][iy][0];
 
     for(iz = 0 ; iz < NLz ; iz += 4)
     {

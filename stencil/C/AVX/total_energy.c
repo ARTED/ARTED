@@ -30,9 +30,9 @@ extern int BX, BY;
 #endif
 
 void total_energy_stencil_( double         const* restrict A_
-                          , double         const* restrict C
-                          , double         const* restrict D
-                          , double complex const* restrict E
+                          , double         const           C[restrict 12]
+                          , double         const           D[restrict 12]
+                          , double complex const           E[restrict NLx][NLy][NLz]
                           , double complex      * restrict F
 ) {
   const double A = *A_;
@@ -62,7 +62,7 @@ void total_energy_stencil_( double         const* restrict A_
   for(iy = 0 ; iy < NLy ; ++iy)
 #endif
   {
-    e = &E[ix*NLy*NLz + iy*NLz];
+    e = &E[ix][iy][0];
 
     for(iz = 0 ; iz < NLz ; iz += 2)
     {

@@ -37,11 +37,11 @@ extern int BX, BY;
 #define TUNING_INDEX_CALC
 
 void hpsi1_rt_stencil_( double         const* restrict A_
-                      , double         const* restrict B
-                      , double         const* restrict C
-                      , double         const* restrict D
-                      , double complex const* restrict E
-                      , double complex      * restrict F
+                      , double         const           B[restrict NLx][NLy][NLz]
+                      , double         const           C[restrict 12]
+                      , double         const           D[restrict 12]
+                      , double complex const           E[restrict PNLx][PNLy][PNLz]
+                      , double complex                 F[restrict PNLx][PNLy][PNLz]
 )
 {
   const  double         A = *A_;
@@ -126,9 +126,9 @@ void hpsi1_rt_stencil_( double         const* restrict A_
 #endif
     __m512i tyx = _mm512_mask_blend_epi32(0xFF00, tiy, tix);
 
-    b = &B[ix* NLy* NLz + iy* NLz];
-    e = &E[ix*PNLy*PNLz + iy*PNLz];
-    f = &F[ix*PNLy*PNLz + iy*PNLz];
+    b = &B[ix][iy][0];
+    e = &E[ix][iy][0];
+    f = &F[ix][iy][0];
 
     for(iz = 0 ; iz < NLz ; iz += 4)
     {
