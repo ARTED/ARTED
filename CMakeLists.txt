@@ -228,3 +228,8 @@ target_link_libraries(${TARGET_NAME} ${LIBRARIES} ${EXTERNAL_LIBS})
 
 get_directory_property(MACRO_LOG COMPILE_DEFINITIONS)
 message(STATUS "${MACRO_LOG}")
+
+set(_OPENACC_LIBRARIES "accapi;accg;accn;accg2;dl;cudadevice;")
+foreach(_accLibs ${_OPENACC_LIBRARIES})
+  list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ${_accLibs})
+endforeach()
