@@ -16,15 +16,12 @@ set(ADDITIONAL_OPTIMIZE_FLAGS   "")
 set(Fortran_FLAGS_General       "-cpp")
 set(C_FLAGS_General             "-std=c99 -Wall")
 
-set(Fortran_FLAGS_STENCIL       "-fno-strict-aliasing")
-set(C_FLAGS_STENCIL             "-fno-strict-aliasing")
-
 set(CMAKE_Fortran_COMPILER      "mpif90")
 set(CMAKE_Fortran_FLAGS_DEBUG   "-O2 -g")
-set(CMAKE_Fortran_FLAGS_RELEASE "-O3")
+set(CMAKE_Fortran_FLAGS_RELEASE "-fno-strict-aliasing -O3")
 set(CMAKE_C_COMPILER            "mpicc")
 set(CMAKE_C_FLAGS_DEBUG         "-O2 -g")
-set(CMAKE_C_FLAGS_RELEASE       "-O3")
+set(CMAKE_C_FLAGS_RELEASE       "-fno-strict-aliasing -O3")
 
 
 ########
