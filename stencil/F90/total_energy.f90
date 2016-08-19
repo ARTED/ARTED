@@ -13,6 +13,10 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
+#ifdef defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+# define ENABLE_OPTIMIZED_LOAD
+#endif
+
 subroutine total_energy_stencil(A,C,D,E,F)
   use global_variables, only: NLx,NLy,NLz,zI
 #ifdef ARTED_STENCIL_LOOP_BLOCKING
@@ -84,7 +88,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
   do iz=0,NLz-1
     z = A * E(iz,iy,ix)
 
-#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+#ifdef ENABLE_OPTIMIZED_LOAD
     t(1) = E(IDZ( 1))
     t(2) = E(IDZ( 2))
     t(3) = E(IDZ( 3))
