@@ -17,6 +17,7 @@ module performance_analyzer
   implicit none
 
   public  print_stencil_size, show_performance
+  public  get_hamiltonian_performance
 
   private summation_threads, get_gflops, get_hamiltonian_chunk_size
   private get_stencil_FLOP, get_pseudo_pt_FLOP, get_update_FLOP
@@ -34,6 +35,12 @@ contains
     print *, 'NL =', NL
     print *, 'Nt =', (Nt + 1)
     print *, 'Number of Domain/Thread =', real(NK * NB) / NUMBER_THREADS
+  end subroutine
+
+  subroutine get_hamiltonian_performance(lgflops)
+    implicit none
+    real(8) :: lgflops(4)
+    call summation_threads(lgflops)
   end subroutine
 
   subroutine show_performance

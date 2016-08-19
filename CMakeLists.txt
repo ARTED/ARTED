@@ -123,6 +123,9 @@ set(FDTD_LIB    FDTD)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR})
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/${BINARY_DIR}")
 
+if("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Intel")
+  set(FIX_Fortran_NOMAIN "-nofor-main")
+endif ()
 
 ### Set optimize options
 option(USE_TLOG            "Use TLOG library"               OFF)
@@ -187,6 +190,7 @@ add_subdirectory(GS)
 add_subdirectory(RT)
 add_subdirectory(common)
 add_subdirectory(stencil)
+add_subdirectory(perfcheck)
 add_executable(${TARGET_NAME} main/${BUILD_TARGET}.f90)
 
 add_dependencies(${TARGET_NAME} ${MODULE_LIB} ${STENCIL_LIB})
