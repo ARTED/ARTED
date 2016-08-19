@@ -4,7 +4,7 @@ set(TARGET_SUFFIX               ".pgi_cpu")
 set(ARCH                        "")
 set(SIMD_SET                    "")
 set(OPENMP_FLAGS                "-mp")
-set(LAPACK_FLAGS                "-llapack")
+set(LAPACK_FLAGS                "-llapack -lblas")
 set(ADDITIONAL_MACRO            "")
 set(ADDITIONAL_OPTIMIZE_FLAGS   "")
 
