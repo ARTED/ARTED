@@ -15,7 +15,7 @@
 !
 #define ENABLE_NONTEMPORAL_STORE
 
-#ifdef defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
 # define ENABLE_OPTIMIZED_LOAD
 #endif
 
@@ -40,7 +40,7 @@ subroutine hpsi1_RT_stencil(A,B,C,D,E,F)
 #endif
   integer    :: ix,iy,iz
   complex(8) :: v, w
-#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+#ifdef ENABLE_OPTIMIZED_LOAD
   complex(8) :: t(8)
 #endif
 

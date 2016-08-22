@@ -13,7 +13,7 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-#ifdef defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
 # define ENABLE_OPTIMIZED_LOAD
 #endif
 
@@ -36,7 +36,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
 #endif
   integer    :: ix,iy,iz
   complex(8) :: v,w,z
-#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+#ifdef ENABLE_OPTIMIZED_LOAD
   complex(8) :: t(8)
 #endif
 
