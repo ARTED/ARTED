@@ -53,4 +53,7 @@ subroutine print_optimize_message
 #ifdef ARTED_EXPLICIT_VECTORIZATION
   print *, '  ARTED_EXPLICIT_VECTORIZATION'
 #endif
+#ifdef ARTED_ENABLE_SOFTWARE_PREFETCH
+  print *, '  ARTED_ENABLE_SOFTWARE_PREFETCH'
+#endif
 end subroutine
