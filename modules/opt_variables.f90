@@ -36,6 +36,25 @@ module opt_variables
   integer,allocatable :: zifdx(:,:),zifdy(:,:),zifdz(:,:)
 #endif
 
+  integer,allocatable :: hpsi_called(:)
+
+#ifdef ARTED_LBLK
+  integer,allocatable :: t4ppt_nlma(:)    ! (PNL)
+  integer,allocatable :: t4ppt_i2vi(:)    ! (PNL)
+  integer,allocatable :: t4ppt_vi2i(:)    ! (PNL)
+  integer,allocatable :: t4ppt_ilma(:,:)  ! (PNL?,Nlma?)
+  integer,allocatable :: t4ppt_j(:,:)     ! (PNL?,Nlma?)
+  integer :: t4ppt_max_vi
+
+  integer, parameter :: at_least_parallelism = 4*1024*1024
+  integer :: blk_nkb_hpsi
+  integer :: blk_nkb_current
+
+  real(8),allocatable :: t4cp_uVpsix(:,:)  ! (Nlma, NKB)
+  real(8),allocatable :: t4cp_uVpsiy(:,:)
+  real(8),allocatable :: t4cp_uVpsiz(:,:)
+#endif
+
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
 #else
@@ -116,7 +135,17 @@ contains
     PNLz = NLz
     PNL  = PNLx * PNLy * PNLz
 
+#ifndef ARTED_LBLK
     allocate(ztpsi(0:PNL-1,4,0:NUMBER_THREADS-1))
+#else
+    blk_nkb_hpsi = min(at_least_parallelism/PNL + 1, NKB)
+    allocate(ztpsi(0:PNL-1, 0:blk_nkb_hpsi-1, 4))
+    !write(*,*) "blk_nkb_hpsi:", blk_nkb_hpsi
+
+    !blk_nkb_current = min(at_least_parallelism/PNL + 1, NKB)
+    blk_nkb_current = min(at_least_parallelism/(Nlma*128) + 1, NKB)
+    !write(*,*) "blk_nkb_current:", blk_nkb_current
+#endif
 
     allocate(zcx(NBoccmax,NK_s:NK_e))
     allocate(zcy(NBoccmax,NK_s:NK_e))
@@ -200,6 +229,78 @@ contains
       end do
     end do
   end subroutine
+
+#ifdef ARTED_LBLK
+  subroutine opt_vars_init_t4ppt
+    use global_variables
+    implicit none
+
+    integer    :: ilma,ia,j,i, max_nlma,n, vi,max_vi
+    ! write(*,*) "NUMBER_THREADS:", NUMBER_THREADS
+
+    allocate(t4ppt_nlma(0:PNL-1))
+    allocate(t4ppt_i2vi(0:PNL-1))
+    allocate(t4ppt_vi2i(0:PNL-1))
+
+    t4ppt_nlma(:) = 0
+    do ilma=1,Nlma
+       ia=a_tbl(ilma)
+       do j=1,Mps(ia)
+#ifdef ARTED_STENCIL_PADDING
+          i=zKxyz(j,ia)
+#else
+          i=zJxyz(j,ia)
+#endif
+          t4ppt_nlma(i) = t4ppt_nlma(i) + 1
+       enddo
+    enddo
+
+    max_nlma = 0
+    vi = 0
+    do i=0,PNL-1
+       max_nlma = max(max_nlma, t4ppt_nlma(i))
+
+       t4ppt_i2vi(i) = -1
+       if (t4ppt_nlma(i) > 0) then
+          t4ppt_i2vi( i) = vi
+          t4ppt_vi2i(vi) =  i
+          vi = vi + 1
+       endif
+    enddo
+    max_vi = vi
+    ! write(*,*) "max_nlma:", max_nlma
+    ! write(*,*) "max_vi:", max_vi
+
+    allocate(t4ppt_ilma(0:max_vi-1, max_nlma))
+    allocate(t4ppt_j   (0:max_vi-1, max_nlma))
+    t4ppt_max_vi = max_vi
+    t4ppt_nlma(:) = 0
+    do ilma=1,Nlma
+       ia=a_tbl(ilma)
+       do j=1,Mps(ia)
+#ifdef ARTED_STENCIL_PADDING
+          i=zKxyz(j,ia)
+#else
+          i=zJxyz(j,ia)
+#endif
+          vi = t4ppt_i2vi(i)
+
+          t4ppt_nlma(vi) = t4ppt_nlma(vi) + 1
+          n = t4ppt_nlma(vi)
+
+          t4ppt_ilma(vi,n) = ilma
+          t4ppt_j   (vi,n) = j
+       enddo
+    enddo
+
+!$acc enter data copyin(t4ppt_nlma,t4ppt_i2vi,t4ppt_vi2i,t4ppt_ilma,t4ppt_j)
+
+    allocate(t4cp_uVpsix(Nlma, NKB))
+    allocate(t4cp_uVpsiy(Nlma, NKB))
+    allocate(t4cp_uVpsiz(Nlma, NKB))
+
+  end subroutine
+#endif
 
   subroutine auto_blocking
     implicit none

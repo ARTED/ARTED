@@ -95,7 +95,11 @@ contains
     call get_hamiltonian_chunk_size(chunk_size)
 
     lgflops = 0.0d0
+#ifndef _OPENACC
     do i=0,NUMBER_THREADS-1
+#else
+    do i=0,0
+#endif
       cnt = chunk_size(i)
 
       hflop(1) = get_stencil_FLOP(cnt)
@@ -121,6 +125,7 @@ contains
     integer,intent(out) :: chunk_size(0:NUMBER_THREADS-1)
     integer :: ikb, tid
 
+#ifndef _OPENACC
     tid = 0
     chunk_size(:) = 0
 !$omp parallel private(tid) shared(chunk_size)
@@ -131,6 +136,10 @@ contains
     end do
 !$omp end do
 !$omp end parallel
+#else
+    chunk_size(:) = 0
+    chunk_size(0) = NKB
+#endif
   end subroutine
 
   function get_stencil_FLOP(chunk_size)

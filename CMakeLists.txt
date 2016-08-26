@@ -130,6 +130,7 @@ endif ()
 ### Set optimize options
 option(USE_TLOG            "Use TLOG library"               OFF)
 option(USE_PAPI            "Use Performance API"            OFF)
+option(USE_NVTX            "Use NVTX"                       OFF)
 option(DEBUG               "Enable debug"                   OFF)
 option(OPT_CURRENT         "Optimize current code with RT"  ON)
 option(OPT_STENCIL         "Optimize stencil code"          ON)
@@ -149,6 +150,13 @@ endif ()
 if (USE_PAPI)
   add_definitions(-DARTED_USE_PAPI)
   set(EXTERNAL_LIBS ${EXTERNAL_LIBS} papi)
+endif ()
+
+### NVIDIA Tools Extension Library
+if (USE_NVTX)
+  add_definitions(-DARTED_USE_NVTX)
+  link_directories(/usr/local/cuda/lib64)
+  set(EXTERNAL_LIBS ${EXTERNAL_LIBS} nvToolsExt)
 endif ()
 
 add_definitions_if(DEBUG        -DARTED_DEBUG)
@@ -180,8 +188,9 @@ else ()
   add_definitions(-DARTED_STENCIL_ORIGIN)
 endif ()
 
-add_definitions("${ADDITIONAL_MACRO}")
+add_definitions_if(ENABLE_LARGE_BLOCKING  -DARTED_LBLK)
 
+add_definitions("${ADDITIONAL_MACRO}")
 
 ### Build target
 add_subdirectory(modules)
@@ -201,12 +210,12 @@ add_dependencies(${COMMON_LIB}  ${MODULE_LIB})
 add_dependencies(${STENCIL_LIB} ${MODULE_LIB})
 
 set(LIBRARIES
-    ${MODULE_LIB}
     ${PREP_LIB}
     ${GS_LIB}
     ${RT_LIB}
     ${COMMON_LIB}
     ${STENCIL_LIB}
+    ${MODULE_LIB}
     )
 
 if (${BUILD_TARGET} STREQUAL "ms")
@@ -219,3 +228,8 @@ target_link_libraries(${TARGET_NAME} ${LIBRARIES} ${EXTERNAL_LIBS})
 
 get_directory_property(MACRO_LOG COMPILE_DEFINITIONS)
 message(STATUS "${MACRO_LOG}")
+
+set(_OPENACC_LIBRARIES "accapi;accg;accn;accg2;dl;cudadevice;")
+foreach(_accLibs ${_OPENACC_LIBRARIES})
+  list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ${_accLibs})
+endforeach()

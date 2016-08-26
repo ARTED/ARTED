@@ -66,6 +66,8 @@ parser.add_option('--domain-power-of-two', action='store_true',  default=False, 
 parser.add_option('--loop-blocking',       action='store_true',  default=False, dest='loop_blocking',     help='loop blocking applied to stencil computation.')
 parser.add_option('--papi',                action='store_true',  default=False, dest='papi',              help='use PAPI profiling (SC only).')
 parser.add_option('--tlog',                action='store_true',  default=False, dest='tlog',              help='use TLOG profiling.')
+parser.add_option('--nvtx',                action='store_true',  default=False, dest='nvtx',              help='use NVIDIA Tools Extention Library.')
+parser.add_option('--threads-profiler',    action='store_true',  default=False, dest='profile_threads',   help='profile each OpenMP threads')
 
 (options, args) = parser.parse_args()
 
@@ -91,6 +93,7 @@ dict['BUILD_TARGET']           = options.target.lower()
 dict['CMAKE_VERBOSE_MAKEFILE'] = zero_or_one(options.verbose)
 dict['USE_TLOG']               = on_or_off(options.tlog)
 dict['USE_PAPI']               = on_or_off(options.papi)
+dict['USE_NVTX']               = on_or_off(options.nvtx)
 dict['DEBUG']                  = on_or_off(options.debug)
 dict['OPT_STENCIL']            = on_or_off(options.stencil_optimized)
 dict['OPT_CURRENT']            = on_or_off(options.current_optimized)

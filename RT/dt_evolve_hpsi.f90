@@ -16,9 +16,20 @@
 #define TIMELOG_BEG(id) call timelog_thread_begin(id)
 #define TIMELOG_END(id) call timelog_thread_end(id)
 
+#ifdef ARTED_USE_NVTX
+#define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
+#define NVTX_END()         call nvtxEndRange()
+#else
+#define NVTX_BEG(name,id)
+#define NVTX_END()
+#endif
+
 subroutine dt_evolve_hpsi
   use Global_Variables
   use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
   use omp_lib
   use opt_variables
   implicit none
@@ -26,13 +37,21 @@ subroutine dt_evolve_hpsi
   integer    :: ikb,ik,ib,i
   integer    :: iexp
   complex(8) :: zfac(4)
+#ifdef ARTED_LBLK
+  integer    :: ikb_s,ikb_e
+  integer    :: ikb0,ikb1,num_ikb1
+#endif
 
   zfac(1)=(-zI*dt)
   do i=2,4
     zfac(i)=zfac(i-1)*(-zI*dt)/i
   end do
 
+  ! NVTX_BEG('dt_evolve_hpsi()',2)
   call timelog_begin(LOG_HPSI)
+
+#ifndef _OPENACC
+
 !$omp parallel private(tid) shared(zfac)
 !$  tid=omp_get_thread_num()
 
@@ -54,7 +73,33 @@ subroutine dt_evolve_hpsi
   end do
 !$omp end do
 !$omp end parallel
+
+#else ! #ifdef _OPENACC
+
+!$acc data pcopy(zu) create(ztpsi)
+  do ikb0=1,NKB, blk_nkb_hpsi
+    num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
+    ikb_s = ikb0
+    ikb_e = ikb0 + num_ikb1-1
+
+    call init_LBLK(ztpsi(:,:,4),zu(:,:,:), ikb_s,ikb_e)
+
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
+
+    call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
+#ifdef ARTED_CURRENT_OPTIMIZED
+    call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
+#endif
+  end do
+!$acc end data
+
+#endif ! _OPENACC
+
   call timelog_end(LOG_HPSI)
+  ! NVTX_END()
 
 contains
   subroutine init(tpsi,zu)
@@ -102,5 +147,70 @@ contains
     end do
     TIMELOG_END(LOG_HPSI_UPDATE)
   end subroutine
+
+#ifdef ARTED_LBLK
+  subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e)
+    use Global_Variables, only: NLx,NLy,NLz
+    use opt_variables, only: PNLx,PNLy,PNLz
+    use timelog
+    implicit none
+    integer :: ikb_s,ikb_e
+    complex(8),intent(out) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, ikb_s:ikb_e)
+    complex(8),intent(in)  :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    integer :: ikb,ik,ib, ix,iy,iz
+
+    TIMELOG_BEG(LOG_HPSI_INIT)
+!$acc kernels pcopy(tpsi) pcopyin(zu,ib_table,ik_table)
+!$acc loop gang vector(1)
+    do ikb=ikb_s,ikb_e
+!$acc loop collapse(3) gang vector(128)
+      do ix=0,NLx-1
+      do iy=0,NLy-1
+      do iz=0,NLz-1
+        ik=ik_table(ikb)
+        ib=ib_table(ikb)
+        tpsi(iz,iy,ix, ikb)=zu(iz,iy,ix, ib,ik)
+      end do
+      end do
+      end do
+    end do
+!$acc end kernels
+    TIMELOG_END(LOG_HPSI_INIT)
+  end subroutine
+
+  subroutine update_LBLK(zfac,tpsi,zu, ikb_s,ikb_e)
+    use Global_Variables, only: NLx,NLy,NLz
+    use opt_variables, only: PNLx,PNLy,PNLz, blk_nkb_hpsi
+    use timelog
+    implicit none
+    integer :: ikb_s,ikb_e
+    complex(8),intent(in)    :: zfac(4)
+    complex(8),intent(in)    :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, 0:blk_nkb_hpsi-1, 4)
+    complex(8),intent(inout) :: zu(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)
+    integer :: ikb,ik,ib, ix,iy,iz
+
+    TIMELOG_BEG(LOG_HPSI_UPDATE)
+!$acc kernels pcopy(zu) pcopyin(tpsi,zfac,ib_table,ik_table)
+!$acc loop independent gang vector(1)
+    do ikb=ikb_s,ikb_e
+!$acc loop collapse(3) gang vector(128)
+      do ix=0,NLx-1
+      do iy=0,NLy-1
+      do iz=0,NLz-1
+        ik=ik_table(ikb)
+        ib=ib_table(ikb)
+        zu(iz,iy,ix, ib,ik)=zu(iz,iy,ix, ib,ik) &
+          &                +zfac(1)*tpsi(iz,iy,ix, ikb-ikb_s, 1) &
+          &                +zfac(2)*tpsi(iz,iy,ix, ikb-ikb_s, 2) &
+          &                +zfac(3)*tpsi(iz,iy,ix, ikb-ikb_s, 3) &
+          &                +zfac(4)*tpsi(iz,iy,ix, ikb-ikb_s, 4)
+      end do
+      end do
+      end do
+    end do
+!$acc end kernels
+    TIMELOG_END(LOG_HPSI_UPDATE)
+  end subroutine
+#endif
 end subroutine
 

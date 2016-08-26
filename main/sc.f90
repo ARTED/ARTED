@@ -256,6 +256,10 @@ Program main
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
 !====GS calculation============================
 
+#ifdef ARTED_LBLK
+  call opt_vars_init_t4ppt()
+#endif
+
   if(Myrank == 0) write(*,*) 'This is the end of preparation for Real time calculation'
 
 !====RT calculation============================
@@ -285,7 +289,14 @@ Program main
     end if
   endif
 
+!$acc enter data copyin(ik_table,ib_table)
+!$acc enter data copyin(lapx,lapy,lapz)
+!$acc enter data copyin(nabx,naby,nabz)
+!$acc enter data copyin(modx,mody,modz)
+!$acc enter data copyin(zJxyz,zKxyz)
+!$acc enter data copyin(uV,iuV)
 
+!$acc enter data create(kAc)
 
   call timelog_reset
   call timelog_enable_verbose
@@ -293,22 +304,26 @@ Program main
   call papi_begin
 #endif
   etime1=MPI_WTIME()
+!$acc enter data copyin(zu)
   do iter=entrance_iter+1,Nt
     do ixyz=1,3
       kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
     enddo
+!$acc update device(kAc)
 
     call dt_evolve_omp_KB(iter)
     call current_omp_KB
 
     javt(iter,:)=jav(:)
     if (MD_option == 'Y') then
+!$acc update self(zu)
       call Ion_Force_omp(Rion_update,'RT')
       if (iter/10*10 == iter) then
         call Total_Energy_omp(Rion_update,'RT')
       end if
     else
       if (iter/10*10 == iter) then
+!$acc update self(zu)
         call Total_Energy_omp(Rion_update,'RT')
         call Ion_Force_omp(Rion_update,'RT')
       end if
@@ -427,6 +442,7 @@ Program main
         call MPI_BARRIER(MPI_COMM_WORLD,ierr)
         write(*,*) Myrank,'iter =',iter
         iter_now=iter
+!$acc update self(zu)
         call prep_Reentrance_write
         go to 1
       end if
@@ -434,6 +450,7 @@ Program main
 
     call timelog_end(LOG_OTHER)
   enddo !end of RT iteraction========================
+!$acc exit data copyout(zu)
   etime2=MPI_WTIME()
 #ifdef ARTED_USE_PAPI
   call papi_end
