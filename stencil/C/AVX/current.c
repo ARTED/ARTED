@@ -64,14 +64,13 @@ void current_stencil_( double         const* restrict C
 
     for(iz = 0 ; iz < NLz ; iz += 2)
     {
-#define STENCIL_CALC(MM,PP,CC) \
-      v2 = _mm256_mul_pd(_mm256_broadcast_sd(CC),  _mm256_sub_pd(PP, MM)); \
+#define STENCIL_CALC(PP,CC) \
+      v2 = _mm256_mul_pd(_mm256_broadcast_sd(CC), PP); \
       v1 = _mm256_add_pd(v1, v2);
 
-#define STENCIL(IDM,IDP,CC) \
-      m = _mm256_load_pd((double *) (e + iz - IDM));     \
+#define STENCIL(IDP,CC) \
       p = _mm256_load_pd((double *) (e + iz - IDP));     \
-      STENCIL_CALC(m,p,CC) \
+      STENCIL_CALC(p,CC) \
 
       __m256d m, p;
       __m256d v1, v2, v3, v4;
@@ -83,10 +82,10 @@ void current_stencil_( double         const* restrict C
       /* x-dimension (NLy*NLz stride)  */
       {
         v1 = _mm256_setzero_pd();
-        STENCIL(IDX(-1), IDX(1), C+0);
-        STENCIL(IDX(-2), IDX(2), C+1);
-        STENCIL(IDX(-3), IDX(3), C+2);
-        STENCIL(IDX(-4), IDX(4), C+3);
+        STENCIL(IDX(1), C+0);
+        STENCIL(IDX(2), C+1);
+        STENCIL(IDX(3), C+2);
+        STENCIL(IDX(4), C+3);
         v3 = _mm256_shuffle_pd(v1, v1, 0x05);
         v4 = _mm256_mul_pd(w, v3);
         tx = _mm256_add_pd(v4, tx);
@@ -95,10 +94,10 @@ void current_stencil_( double         const* restrict C
       /* y-dimension (NLz stride) */
       {
         v1 = _mm256_setzero_pd();
-        STENCIL(IDY(-1), IDY(1), C+4);
-        STENCIL(IDY(-2), IDY(2), C+5);
-        STENCIL(IDY(-3), IDY(3), C+6);
-        STENCIL(IDY(-4), IDY(4), C+7);
+        STENCIL(IDY(1), C+4);
+        STENCIL(IDY(2), C+5);
+        STENCIL(IDY(3), C+6);
+        STENCIL(IDY(4), C+7);
         v3 = _mm256_shuffle_pd(v1, v1, 0x05);
         v4 = _mm256_mul_pd(w, v3);
         ty = _mm256_add_pd(v4, ty);
@@ -106,28 +105,22 @@ void current_stencil_( double         const* restrict C
 
       /* z-dimension (unit stride) */
       {
-        __m256d z0,z1,z2,z3,z4,z5,z6,z7;
+        __m256d z2,z3,z5,z7;
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-        z1 = _mm256_load_pd((double *)(e + ((iz - 2 + NLz) & (NLz - 1))));
         z2 = _mm256_load_pd((double *)(e + ((iz + 2 + NLz) & (NLz - 1))));
-        z0 = _mm256_load_pd((double *)(e + ((iz - 4 + NLz) & (NLz - 1))));
         z3 = _mm256_load_pd((double *)(e + ((iz + 4 + NLz) & (NLz - 1))));
 #else
-        z1 = _mm256_load_pd((double *)(e + modz[iz - 2 + NLz]));
         z2 = _mm256_load_pd((double *)(e + modz[iz + 2 + NLz]));
-        z0 = _mm256_load_pd((double *)(e + modz[iz - 4 + NLz]));
         z3 = _mm256_load_pd((double *)(e + modz[iz + 4 + NLz]));
 #endif
-        z6 = _mm256_permute2f128_pd(z0, z1, 0x21);
-        z4 = _mm256_permute2f128_pd(z1, ez, 0x21);
         z5 = _mm256_permute2f128_pd(ez, z2, 0x21);
         z7 = _mm256_permute2f128_pd(z2, z3, 0x21);
 
         v1 = _mm256_setzero_pd();
-        STENCIL_CALC(z1, z2, C+ 9);
-        STENCIL_CALC(z0, z3, C+11);
-        STENCIL_CALC(z4, z5, C+ 8);
-        STENCIL_CALC(z6, z7, C+10);
+        STENCIL_CALC(z2, C+ 9);
+        STENCIL_CALC(z3, C+11);
+        STENCIL_CALC(z5, C+ 8);
+        STENCIL_CALC(z7, C+10);
         v3 = _mm256_shuffle_pd(v1, v1, 0x05);
         v4 = _mm256_mul_pd(w, v3);
         tz = _mm256_add_pd(v4, tz);
@@ -135,6 +128,12 @@ void current_stencil_( double         const* restrict C
     }  /* NLz */
   } /* NLy */
   } /* NLx */
+
+  const __m256d two = _mm256_set1_pd(2);
+
+  tx = _mm256_mul_pd(tx, two);
+  ty = _mm256_mul_pd(ty, two);
+  tz = _mm256_mul_pd(tz, two);
 
   __declspec(align(32)) double r[4];
 
