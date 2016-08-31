@@ -230,7 +230,9 @@ subroutine current_omp_KB_ST(ib,ik,A)
   zcy(ib,ik)=zy
   zcz(ib,ik)=zz
 end subroutine
-
+#endif
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifdef ARTED_CURRENT_OPTIMIZED
 #ifdef ARTED_LBLK
 subroutine current_acc_KB_ST_LBLK(A, ikb_s,ikb_e)
   use Global_Variables
@@ -239,32 +241,10 @@ subroutine current_acc_KB_ST_LBLK(A, ikb_s,ikb_e)
   complex(8),intent(in) :: A(0:NL-1, NBoccmax, NK_s:NK_e)
   integer,intent(in)    :: ikb_s,ikb_e
 
-  real(8) :: nabt(12),zx,zy,zz
-  integer :: ikb,ik,ib
-
-#if 1
   call current_stencil_LBLK(A(:,:,:), ikb_s,ikb_e)
-#else
-  nabt( 1: 4) = nabx(1:4)
-  nabt( 5: 8) = naby(1:4)
-  nabt( 9:12) = nabz(1:4)
-  do ikb=ikb_s,ikb_e
-    ik=ik_table(ikb)
-    ib=ib_table(ikb)
-
-    zx = 0.d0
-    zy = 0.d0
-    zz = 0.d0
-    call current_stencil(nabt,A(:,ib,ik),zx,zy,zz)
-    zcx(ib,ik)=zx
-    zcy(ib,ik)=zy
-    zcz(ib,ik)=zz
-  enddo
-#endif
-
 end subroutine
-#endif ! ARTED_LBLK
-#endif ! ARTED_CURRENT_OPTIMIZED
+#endif
+#endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_GS_omp_KB
   use Global_Variables
@@ -385,8 +365,10 @@ Subroutine current_RT_stencil_impl(ik,ib,jx,jy,jz)
   jy=jy+zcy(ib,ik)*occ(ib,ik)
   jz=jz+zcz(ib,ik)*occ(ib,ik)
 end Subroutine
+#endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 #ifdef ARTED_LBLK
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_RT_stencil_impl_LBLK(jx,jy,jz, ikb_s,ikb_e)
   use Global_Variables
   use opt_variables
@@ -408,7 +390,7 @@ Subroutine current_RT_stencil_impl_LBLK(jx,jy,jz, ikb_s,ikb_e)
 !$acc end kernels
 !$acc end data
 end Subroutine
-#endif ! ARTED_LBLK
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 #endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_pseudo_impl(ik,ib,zutmp,IaLxyz,jx,jy,jz)
@@ -643,7 +625,7 @@ Subroutine current_omp_KB_impl(zutmp,jxs,jys,jzs)
 !$omp end parallel
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-#ifdef _OPENACC
+#ifdef ARTED_LBLK
 subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
   use Global_Variables
   use opt_variables
@@ -687,12 +669,10 @@ subroutine current_acc_KB_impl(zutmp,jxs,jys,jzs)
     ikb_e = ikb0 + num_ikb1-1
 
     call current_init_impl_LBLK(zutmp(:,:,:), jx(:),jy(:),jz(:), ikb_s,ikb_e)
-
 #ifndef ARTED_CURRENT_OPTIMIZED
     call current_stencil_LBLK(zutmp(:,:,:), ikb_s,ikb_e)
 #endif
     call current_RT_stencil_impl_LBLK(jx(:),jy(:),jz(:), ikb_s,ikb_e)
-
     call current_pseudo_impl_LBLK(zutmp(:,:,:),IaLxyz,jx(:),jy(:),jz(:), ikb_s,ikb_e)
   enddo
 
