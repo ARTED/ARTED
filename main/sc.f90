@@ -616,7 +616,6 @@ Subroutine Read_data
   call MPI_BCAST(file_dns,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_ovlp,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_nex,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_kw,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr) !uemoto
   call MPI_BCAST(aL,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ax,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ay,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)

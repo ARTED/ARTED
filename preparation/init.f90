@@ -84,7 +84,7 @@ Subroutine init
   if (0 < NKx .and. 0<NKy .and. 0<NKz) then
     call init_uniform_k_grid()
   else
-    call init_non_uniform_k_grid() ! Load k-points from SYSNAME_k.dat
+    call init_non_uniform_k_grid()
   endif
 
   do ib=1,NB
@@ -305,7 +305,7 @@ subroutine init_non_uniform_k_grid()
   real(8) :: temp(4)
 
   if (myrank == 0) then
-    ! Read coordinates from "SYSNAME_k.dat"
+    ! Read coordinates from file_kw
     open(410, file=file_kw, status="old")
     read(410, *) nk_dummy, nkxyz_dummy
     do i=1, NK
