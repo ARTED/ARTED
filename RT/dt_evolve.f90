@@ -43,11 +43,12 @@ Subroutine dt_evolve_omp_KB(iter)
 
 !$acc data pcopy(zu, vloc) pcopyout(ekr_omp)
 
-  NVTX_BEG('dt_evolve_omp_KB(): nonlocal part?',2)
-!Constructing nonlocal part ! sato
+!Constructing nonlocal part
+  NVTX_BEG('dt_evolve_omp_KB(): nonlocal part',2)
+#ifdef _OPENACC
 !$acc kernels pcopy(ekr_omp) pcopyin(Mps, Jxyz,Jxx,Jyy,Jzz, kAc, Lx,Ly,Lz)
 !$acc loop collapse(2) independent gang
-#ifndef _OPENACC
+#else
   thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
@@ -63,10 +64,11 @@ Subroutine dt_evolve_omp_KB(iter)
   end do
   end do
   end do
-#ifndef _OPENACC
+#ifdef _OPENACC
+!$acc end kernels
+#else
 !$omp end parallel
 #endif
-!$acc end kernels
   NVTX_END()
 
 ! yabana
@@ -158,8 +160,9 @@ Subroutine dt_evolve_omp_KB(iter)
   enddo
 !$acc update device(kAc)
 
+#ifdef _OPENACC
 !$acc kernels pcopy(Vloc) pcopyin(Vh,Vpsl,Vexc)
-#ifndef _OPENACC
+#else
 !$omp parallel do
 #endif
   do i=1,NL
@@ -178,6 +181,7 @@ End Subroutine dt_evolve_omp_KB
 Subroutine dt_evolve_omp_KB_MS
   use Global_Variables
   use timelog
+  use nvtx
   use opt_variables
   implicit none
   integer    :: ik,ib
@@ -185,14 +189,22 @@ Subroutine dt_evolve_omp_KB_MS
   real(8)    :: kr
   integer    :: thr_id,omp_get_thread_num,ikb
 
+  NVTX_BEG('dt_evolve_omp_KB_MS()',1)
   call timelog_begin(LOG_DT_EVOLVE)
 
+!$acc data pcopy(zu, vloc) pcopyout(ekr_omp)
+
+!Constructing nonlocal part ! sato
+  NVTX_BEG('dt_evolve_omp_KB_MS(): nonlocal part',2)
+#ifdef _OPENACC
+!$acc kernels pcopy(ekr_omp) pcopyin(Mps, Jxyz,Jxx,Jyy,Jzz, kAc, Lx,Ly,Lz)
+!$acc loop collapse(2) independent gang
+#else
   thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
-
-!Constructing nonlocal part ! sato
 !$omp do private(ik,ia,j,i,ix,iy,iz,kr) collapse(2)
+#endif
   do ik=NK_s,NK_e
   do ia=1,NI
   do j=1,Mps(ia)
@@ -202,11 +214,16 @@ Subroutine dt_evolve_omp_KB_MS
   end do
   end do
   end do
+#ifdef _OPENACC
+!$acc end kernels
+#else
 !$omp end parallel
+#endif
 
 ! yabana
   select case(functional)
   case('VS98','TPSS','TBmBJ')
+!$acc update self(zu, ekr_omp, vloc)
 
 
 !$omp parallel do private(ik,ib)
@@ -251,20 +268,38 @@ Subroutine dt_evolve_omp_KB_MS
   end select
 ! yabana
 
+  NVTX_BEG('dt_evolve_omp_KB_MS(): dt_evolve_hpsi',3)
   call dt_evolve_hpsi
+  NVTX_END()
 
+  NVTX_BEG('dt_evolve_omp_KB_MS(): psi_rho_RT',4)
   call psi_rho_RT
+  NVTX_END()
+
+  NVTX_BEG('dt_evolve_omp_KB_MS(): Hartree',5)
   call Hartree
+  NVTX_END()
+
 ! yabana
+  NVTX_BEG('dt_evolve_omp_KB_MS(): Hartree',5)
   call Exc_Cor('RT')
+  NVTX_END()
 ! yabana
 
+#ifdef _OPENACC
+!$acc kernels pcopy(Vloc) pcopyin(Vh,Vpsl,Vexc)
+#else
 !$omp parallel do
+#endif
   do i=1,NL
     Vloc(i)=Vh(i)+Vpsl(i)+Vexc(i)
   end do
+!$acc end kernels
+
+!$acc end data
 
   call timelog_end(LOG_DT_EVOLVE)
+  NVTX_END()
 
   return
 End Subroutine dt_evolve_omp_KB_MS
