@@ -154,8 +154,9 @@ endif ()
 
 ### NVIDIA Tools Extension Library
 if (USE_NVTX)
+  find_package(CUDA REQUIRED)
   add_definitions(-DARTED_USE_NVTX)
-  link_directories(/usr/local/cuda/lib64)
+  link_directories(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
   set(EXTERNAL_LIBS ${EXTERNAL_LIBS} nvToolsExt)
 endif ()
 
