@@ -36,9 +36,9 @@ Subroutine Exc_Cor_PZ()
   interface
     subroutine PZxc(trho,exc,dexc_drho)
       !$acc routine seq
-      real(8),intent(out) :: trho
-      real(8),intent(in)  :: exc
-      real(8),intent(in)  :: dexc_drho
+      real(8),intent(in) :: trho
+      real(8),intent(out)  :: exc
+      real(8),intent(out)  :: dexc_drho
     end subroutine PZxc
   end interface
   real(8) :: rho_s(NL)
@@ -65,9 +65,9 @@ Subroutine Exc_Cor_PZM()
   interface
     subroutine PZMxc(trho,exc,dexc_drho)
       !$acc routine seq
-      real(8),intent(out) :: trho
-      real(8),intent(in)  :: exc
-      real(8),intent(in)  :: dexc_drho
+      real(8),intent(in) :: trho
+      real(8),intent(out)  :: exc
+      real(8),intent(out)  :: dexc_drho
     end subroutine PZMxc
   end interface
   real(8) :: rho_s(NL)
@@ -466,8 +466,11 @@ Subroutine PZxc(trho,exc,dexc_drho)
   real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
   real(8),parameter :: CU=0.002d0,DU=-0.0116d0
   real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
-  real(8) :: exc,dexc_drho
-  real(8) :: trho,ttrho,rs,rssq,rsln
+  real(8) :: ttrho,rs,rssq,rsln
+  real(8),intent(in) :: trho
+  real(8),intent(out) :: exc
+  real(8),intent(out) :: dexc_drho
+
 
   ttrho=trho+1d-10
   rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
@@ -493,8 +496,10 @@ Subroutine PZMxc(trho,exc,dexc_drho)
   real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
   real(8),parameter :: CU=0.2019151940622859d-2, DU=-0.1163206637891297d-1
   real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
-  real(8) :: exc,dexc_drho
-  real(8) :: trho,ttrho,rs,rssq,rsln
+  real(8) :: ttrho,rs,rssq,rsln
+  real(8),intent(in) :: trho
+  real(8),intent(out) :: exc
+  real(8),intent(out) :: dexc_drho
 
   ttrho=trho+1d-10
   rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
