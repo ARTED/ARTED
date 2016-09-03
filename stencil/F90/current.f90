@@ -116,7 +116,8 @@ end subroutine
 
 #ifdef ARTED_LBLK
 subroutine current_stencil_LBLK(E, ikb_s,ikb_e)
-  use global_variables
+  use global_variables, only: ik_table,ib_table,NBoccmax,NK_s,NK_e,NLx,NLy,NLz, &
+  &                           nabx,naby,nabz,zI
   use opt_variables
   implicit none
   complex(8), intent(in)  :: E(0:NLz-1,0:NLy-1,0:NLx-1, NBoccmax, NK_s:NK_e)

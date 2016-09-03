@@ -24,12 +24,12 @@
 #define NVTX_END()
 #endif
 
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#ifndef ARTED_LBLK
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine dt_evolve_hpsi
   use Global_Variables
   use timelog
-#ifdef ARTED_USE_NVTX
-  use nvtx
-#endif
   use omp_lib
   use opt_variables
   implicit none
@@ -37,20 +37,13 @@ subroutine dt_evolve_hpsi
   integer    :: ikb,ik,ib,i
   integer    :: iexp
   complex(8) :: zfac(4)
-#ifdef ARTED_LBLK
-  integer    :: ikb_s,ikb_e
-  integer    :: ikb0,ikb1,num_ikb1
-#endif
 
   zfac(1)=(-zI*dt)
   do i=2,4
     zfac(i)=zfac(i-1)*(-zI*dt)/i
   end do
 
-  ! NVTX_BEG('dt_evolve_hpsi()',2)
   call timelog_begin(LOG_HPSI)
-
-#ifndef _OPENACC
 
 !$omp parallel private(tid) shared(zfac)
 !$  tid=omp_get_thread_num()
@@ -74,32 +67,7 @@ subroutine dt_evolve_hpsi
 !$omp end do
 !$omp end parallel
 
-#else ! #ifdef _OPENACC
-
-!$acc data pcopy(zu) create(ztpsi)
-  do ikb0=1,NKB, blk_nkb_hpsi
-    num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
-    ikb_s = ikb0
-    ikb_e = ikb0 + num_ikb1-1
-
-    call init_LBLK(ztpsi(:,:,4),zu(:,:,:), ikb_s,ikb_e)
-
-    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
-    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
-    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
-    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
-
-    call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
-#ifdef ARTED_CURRENT_OPTIMIZED
-    call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
-#endif
-  end do
-!$acc end data
-
-#endif ! _OPENACC
-
   call timelog_end(LOG_HPSI)
-  ! NVTX_END()
 
 contains
   subroutine init(tpsi,zu)
@@ -147,8 +115,56 @@ contains
     end do
     TIMELOG_END(LOG_HPSI_UPDATE)
   end subroutine
+end subroutine
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+! ifndef ARTED_LBLK
+#else
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+subroutine dt_evolve_hpsi
+  use Global_Variables
+  use timelog
+#ifdef ARTED_USE_NVTX
+  use nvtx
+#endif
+  use omp_lib
+  use opt_variables
+  implicit none
+  integer    :: i,iexp
+  complex(8) :: zfac(4)
+  integer    :: ikb_s,ikb_e
+  integer    :: ikb0,ikb1,num_ikb1
 
-#ifdef ARTED_LBLK
+  zfac(1)=(-zI*dt)
+  do i=2,4
+    zfac(i)=zfac(i-1)*(-zI*dt)/i
+  end do
+
+  ! NVTX_BEG('dt_evolve_hpsi()',2)
+  call timelog_begin(LOG_HPSI)
+
+!$acc data pcopy(zu) create(ztpsi)
+  do ikb0=1,NKB, blk_nkb_hpsi
+    num_ikb1 = min(blk_nkb_hpsi, NKB-ikb0+1)
+    ikb_s = ikb0
+    ikb_e = ikb0 + num_ikb1-1
+
+    call init_LBLK(ztpsi(:,:,4),zu(:,:,:), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,4),ztpsi(:,:,1), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,1),ztpsi(:,:,2), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,2),ztpsi(:,:,3), ikb_s,ikb_e)
+    call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
+    call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
+
+#ifdef ARTED_CURRENT_OPTIMIZED
+    call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
+#endif
+  end do
+!$acc end data
+
+  call timelog_end(LOG_HPSI)
+  ! NVTX_END()
+
+contains
   subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
@@ -211,6 +227,7 @@ contains
 !$acc end kernels
     TIMELOG_END(LOG_HPSI_UPDATE)
   end subroutine
-#endif
 end subroutine
-
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+#endif
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130

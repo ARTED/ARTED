@@ -185,16 +185,15 @@ contains
 
     NVTX_BEG("sym1()",1)
 
-#ifndef _OPENACC
+#ifdef _OPENACC
+    call reduce_acc(1.0d0,zutmp,zu_NB,zrho_l)
+#else
 !$omp parallel private(tid)
 !$  tid=omp_get_thread_num()
     call reduce(tid,1.0d0,zutmp,zu_NB)
 !$omp end parallel
 
     zrho_l(:) = zrhotmp(0:NL-1,0)
-#else
-    !
-    call reduce_acc(1.0d0, zutmp, zu_NB, zrho_l)
 #endif
 
     NVTX_END()
@@ -218,9 +217,16 @@ contains
 
     zfac=1.0d0/4d0
 
+#ifdef _OPENACC
+    call reduce_acc(zfac,zutmp,zu_NB,zrhotmp(:,0))
+#endif
+
 !$omp parallel private(tid)
 !$  tid=omp_get_thread_num()
+
+#ifndef _OPENACC
     call reduce(tid,zfac,zutmp,zu_NB)
+#endif
 
 ! 1.T_3
 !$omp do OMP_SIMD
@@ -260,9 +266,16 @@ contains
     ! wk(ik)=8.0,(ikx==iky >. wk(ik)=4.0)
     zfac=1.0d0/32d0
 
+#ifdef _OPENACC
+    call reduce_acc(zfac,zutmp,zu_NB,zrhotmp(:,0))
+#endif
+
 !$omp parallel private(tid)
 !$  tid=omp_get_thread_num()
+
+#ifndef _OPENACC
     call reduce(tid,zfac,zutmp,zu_NB)
+#endif
 
 ! 1.T_4
 !$omp do OMP_SIMD
@@ -300,6 +313,7 @@ contains
 !$omp end do OMP_SIMD
 !$omp end parallel
   end subroutine
+
   !====== tetragonal(8) structure =========================!
   subroutine sym8_tetragonal(zutmp,zu_NB,zrho_l,zrhotmp1,zrhotmp2)
     use global_variables
@@ -318,9 +332,16 @@ contains
     ! wk(ik)=8.0,(ikx==iky >. wk(ik)=4.0)
     zfac=1.0d0/16d0
 
+#ifdef _OPENACC
+    call reduce_acc(zfac,zutmp,zu_NB,zrhotmp(:,0))
+#endif
+
 !$omp parallel private(tid)
 !$  tid=omp_get_thread_num()
+
+#ifndef _OPENACC
     call reduce(tid,zfac,zutmp,zu_NB)
+#endif
 
 ! 1.T_3
 !$omp do OMP_SIMD

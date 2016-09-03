@@ -253,6 +253,10 @@ Program main
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
 !====GS calculation============================
 
+#ifdef ARTED_LBLK
+  call opt_vars_init_t4ppt()
+#endif
+
   if(Myrank == 0) write(*,*) 'This is the end of preparation for Real time calculation'
 
 !====RT calculation============================
@@ -302,10 +306,19 @@ Program main
     open(943,file=trim(directory)//'Ac_M'//trim(cMacro_x)//'.out',position = position_option)
   end if
 
+!$acc enter data copyin(ik_table,ib_table)
+!$acc enter data copyin(lapx,lapy,lapz)
+!$acc enter data copyin(nabx,naby,nabz)
+!$acc enter data copyin(modx,mody,modz)
+!$acc enter data copyin(zJxyz,zKxyz)
+!$acc enter data copyin(uV,iuV)
+
+!$acc enter data create(kAc)
 
   call timelog_reset
   call timelog_enable_verbose
   etime1=MPI_WTIME()
+!$acc enter data copyin(zu)
   RTiteratopm : do iter=entrance_iter+1,Nt ! sato
 
     call dt_evolve_Ac ! sato
@@ -325,6 +338,7 @@ Program main
       kAc(:,1)=kAc0(:,1)
       kAc(:,2)=kAc0(:,2)+(Ac_new_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m))/2d0
       kAc(:,3)=kAc0(:,3)+(Ac_new_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m))/2d0
+!$acc update device(kAc)
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
       
@@ -342,6 +356,7 @@ Program main
       kAc(:,1)=kAc0(:,1)
       kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
       kAc(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
+!$acc update device(kAc)
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
 
@@ -361,12 +376,14 @@ Program main
 
       javt(iter,:)=jav(:)
       if (MD_option == 'Y') then
+!$acc update self(zu)
         call Ion_Force_omp(Rion_update,'RT')
         if (iter/Nstep_write*Nstep_write == iter) then ! sato
           call Total_Energy_omp(Rion_update,'RT')
         end if
       else
         if (iter/Nstep_write*Nstep_write == iter) then ! sato
+!$acc update self(zu)
           call Total_Energy_omp(Rion_update,'RT')
           call Ion_Force_omp(Rion_update,'RT')
         end if
@@ -485,6 +502,7 @@ Program main
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
       write(*,*) Myrank,'iter =',iter
       iter_now=iter
+!$acc update self(zu)
       call prep_Reentrance_write
       go to 1
     end if
@@ -511,6 +529,7 @@ Program main
     call timelog_end(LOG_OTHER)
 
   enddo RTiteratopm !end of RT iteraction========================
+!$acc exit data copyout(zu)
   etime2=MPI_WTIME()
   call timelog_disable_verbose
 
