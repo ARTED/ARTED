@@ -55,23 +55,23 @@ CMake detects the below configurations automatically,
     $ ./build -t sc fujitsu k
     or
     $ mkdir build_dir
-    $ cd builld_dir
+    $ cd build_dir
     $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-k .. && make
 
 ### for FX100 system at Nagoya University
 
-    $ ./built fujitsu fx100
+    $ ./build fujitsu fx100
     or
     $ mkdir build_dir
-    $ cd builld_dir
+    $ cd build_dir
     $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-fx100 .. && make
 
 ### Generic version (GNU compiler)
 
-    $ ./built gnu generic
+    $ ./build gnu generic
     or
     $ mkdir build_dir
-    $ cd builld_dir
+    $ cd build_dir
     $ cmake -D CMAKE_TOOLCHAIN_FILE=gnu-generic .. && make
 
 
