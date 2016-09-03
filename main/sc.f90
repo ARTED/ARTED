@@ -557,6 +557,10 @@ Subroutine Read_data
     read(*,*) aL,ax,ay,az
     read(*,*) Sym,crystal_structure ! sym
     read(*,*) Nd,NLx,NLy,NLz,NKx,NKy,NKz
+    !uemoto
+    if ((NKx <= 0) .or. (NKy <= 0) .or. (NKz <= 0)) then
+      read(*,*) file_kw
+    endif
     read(*,*) NEwald, aEwald
     read(*,*) KbTev ! sato
 
@@ -672,16 +676,32 @@ Subroutine Read_data
   Hxyz=Hx*Hy*Hz
   NL=NLx*NLy*NLz
   NG=NL
-  NKxyz=NKx*NKy*NKz
 
-  select case(Sym)
-  case(1)
-    NK=NKx*NKy*NKz
-  case(4)
-    NK=(NKx/2)*(NKy/2)*NKz
-  case(8)
-    NK=NKz*(NKx/2)*((NKx/2)+1)/2
-  end select
+  ! Added by M.Uemoto on 2016-07-07
+  if (0<NKx .and. 0<NKy .and. 0<NKy) then
+    ! Use uniform rectangular k-grid
+    NKxyz=NKx*NKy*NKz
+    select case(Sym)
+    case(1)
+      NK=NKx*NKy*NKz
+    case(4)
+      NK=(NKx/2)*(NKy/2)*NKz
+    case(8)
+      NK=NKz*(NKx/2)*((NKx/2)+1)/2
+    end select
+  else
+    ! Use non-uniform k-points
+    if (myrank == 0) then
+      write(*,*) "Use non-uniform k-points distribution"
+      write(*,*) "file_kw=", file_kw
+      open(410, file=file_kw, status="old")
+      read(410, *) NK, NKxyz
+      close(410)
+      write(*,*) "NK=", NK, "NKxyz=", NKxyz      
+    endif
+    call MPI_BCAST(NK,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(NKxyz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  endif
 
   NK_ave=NK/Nprocs; NK_remainder=NK-NK_ave*Nprocs
   NG_ave=NG/Nprocs; NG_remainder=NG-NG_ave*Nprocs

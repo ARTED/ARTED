@@ -41,7 +41,7 @@ Subroutine Fermi_Dirac_distribution
 
     do ik=NK_s,NK_e
       do ib=1,NB
-        occ_l(ib,ik)=2.d0/(NKx*NKy*NKz)*wk(ik) &
+        occ_l(ib,ik)=2.d0/(NKxyz)*wk(ik) &
           &/(exp(beta_FD*(esp(ib,ik)-chemical_potential))+1d0)
       end do
     end do
