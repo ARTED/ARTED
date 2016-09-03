@@ -14,13 +14,8 @@
 !  limitations under the License.
 !
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-#ifdef ARTED_SC
 # define TIMELOG_BEG(id) call timelog_thread_begin(id)
 # define TIMELOG_END(id) call timelog_thread_end(id)
-#else
-# define TIMELOG_BEG(id)
-# define TIMELOG_END(id)
-#endif
 
 #ifdef ARTED_USE_NVTX
 #define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
