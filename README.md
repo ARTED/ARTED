@@ -13,6 +13,7 @@ optimally in the following supercomputer platforms:
 - Fujitsu FX100 supercomputer system
 - Linux PC Cluster with x86-64 CPU
 - Linux PC Cluster with Intel Xeon Phi (Knights Corner) [2]
+- Linux PC Cluster with NVIDIA GPU (OpenACC, Kepler and newer GPUs)
 
 ARTED has been developed by ARTED developers with support from
 Center for Computational Sciences, University of Tsukuba.
@@ -49,6 +50,14 @@ CMake detects the below configurations automatically,
     $ cd builld_dir
     $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knc .. && make
     $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-avx .. && make
+
+### for HA-PACS/TCA at CCS, University of Tsukuba
+
+    $ ./build -t sc pgi openacc
+    or
+    $ mkdir build_dir
+    $ cd builld_dir
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=pgi-openacc .. && make
 
 ### for K-computer at RIKEN AICS
 
@@ -90,6 +99,12 @@ Please read to jobscript directory files.
 2. Intel MPI 5.1.3
 3. Intel MKL 11.3.2
 
+### HA-PACS/TCA at CCS, University of Tsukuba
+
+1. PGI Compiler 16.4
+2. OpenMPI 1.10.3 or MVAPICH2 GDR 2.1
+3. CUDA 7.5.18
+
 ### K-computer at RIKEN AICS
 
 1. Fujitsu Compiler version K-1.2.0-20-1
@@ -123,3 +138,8 @@ ARTED is available under Apache License version 2.0.
     See the License for the specific language governing permissions and
     limitations under the License.
 
+## Acknowledgement
+
+### NVIDIA GPU support with OpenACC
+
+Thanks to Mr. Akira Naruse (NVIDIA Corporation)
