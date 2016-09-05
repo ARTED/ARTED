@@ -248,9 +248,7 @@ Program main
     write(*,*) '-----------------------------------------------'
   end if
 
-#ifndef ARTED_DEBUG
   call write_GS_data
-#endif
 
   deallocate(rho_in,rho_out)
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
@@ -380,7 +378,6 @@ Program main
            &Eall,Eall-Eall0,Tion
       write(9,'(1x,100e16.6E3)') iter*dt,((force(ixyz,ia),ixyz=1,3),ia=1,NI),((dRion(ixyz,ia,iter),ixyz=1,3),ia=1,NI)
     endif
-#ifndef ARTED_DEBUG
 !Dynamical Density
     if (iter/100*100 == iter.and.Myrank == 0) then
       write(8,'(1x,i10)') iter
@@ -388,7 +385,6 @@ Program main
         write(8,'(1x,2e16.6E3)') rho(i),(rho(i)-rho_gs(i))
       enddo
     endif
-#endif
 
 
 !j_Ac writing
@@ -490,10 +486,6 @@ Program main
   endif
 
   if(Myrank == 0) write(*,*) 'This is the end of RT calculation'
-
-#ifdef ARTED_DEBUG
-  call err_finalize('force shutdown.')
-#endif
 
 !====RT calculation===========================
 !====Analyzing calculation====================
