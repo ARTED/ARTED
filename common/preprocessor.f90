@@ -23,9 +23,6 @@ subroutine print_optimize_message
 #ifdef ARTED_MS
   print *, '  ARTED_MS'
 #endif
-#ifdef ARTED_DEBUG
-  print *, '  ARTED_DEBUG'
-#endif
 #ifdef ARTED_USE_TLOG
   print *, '  ARTED_USE_TLOG'
 #endif

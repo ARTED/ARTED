@@ -646,14 +646,6 @@ Subroutine Read_data
     read(*,*) NEwald, aEwald
     read(*,*) KbTev ! sato
 
-    ! resize "# of macro grid point"
-#ifdef ARTED_DEBUG
-    if(NX_m == 0) then
-      NX_m = Nprocs / NKsplit
-      write (*,*) '[INFO] NX_m is resized.'
-    end if
-#endif
-
     write(*,*) 'entrance_iter=',entrance_iter
     write(*,*) SYSname
     write(*,*) directory
