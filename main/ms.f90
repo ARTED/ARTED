@@ -444,8 +444,12 @@ Program main
         do ix_m=NXvacL_m,NXvacR_m
           Bmag(1,ix_m,iy_m)=(Ac_m(3,ix_m,iy_m+1)-Ac_m(3,ix_m,iy_m-1))*c_light &
             &/(2d0*HY_m)
-          Bmag(2,ix_m,iy_m)=-(Ac_m(3,ix_m+1,iy_m)-Ac_m(3,ix_m-1,iy_m))*c_light &
-            &/(2d0*HX_m)
+          if (NXvacL_m < ix_m .and. ix_m < NXvacR_m) then
+            Bmag(2,ix_m,iy_m)=-(Ac_m(3,ix_m+1,iy_m)-Ac_m(3,ix_m-1,iy_m))*c_light &
+              &/(2d0*HX_m)
+          else
+            Bmag(2,ix_m,iy_m)=0.0
+          endif
           Bmag(3,ix_m,iy_m)=(Ac_m(2,ix_m,iy_m+1)-Ac_m(2,ix_m,iy_m-1))*c_light &
             &/(2d0*HX_m)
         end do
