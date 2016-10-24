@@ -641,6 +641,9 @@ Subroutine Read_data
     read(*,*) aL,ax,ay,az
     read(*,*) Sym,crystal_structure ! sym
     read(*,*) Nd,NLx,NLy,NLz,NKx,NKy,NKz
+    if((NKx <= 0).or.(NKy <= 0).or.(NKz <= 0)) then
+      read(*,*) file_kw
+    endif
     read(*,*) FDTDdim ! sato
     read(*,*) TwoD_shape ! sato
     read(*,*) NX_m,NY_m ! sato
@@ -708,6 +711,7 @@ Subroutine Read_data
   call MPI_BCAST(file_dns,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_ovlp,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(file_nex,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(file_kw,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(aL,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ax,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(ay,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
@@ -790,16 +794,29 @@ Subroutine Read_data
   Hxyz=Hx*Hy*Hz
   NL=NLx*NLy*NLz
   NG=NL
-  NKxyz=NKx*NKy*NKz
 
-  select case(Sym)
-  case(1)
-    NK=NKx*NKy*NKz
-  case(4)
-    NK=(NKx/2)*(NKy/2)*NKz
-  case(8)
-    NK=NKz*(NKx/2)*((NKx/2)+1)/2
-  end select
+  if (0<NKx .and. 0<NKy .and. 0<NKz) then
+    NKxyz=NKx*NKy*NKz
+    select case(Sym)
+    case(1)
+      NK=NKx*NKy*NKz
+    case(4)
+      NK=(NKx/2)*(NKy/2)*NKz
+    case(8)
+      NK=NKz*(NKx/2)*((NKx/2)+1)/2
+    end select
+  else
+    if (myrank == 0) then
+      write(*,*) "Use non-uniform k-points distribution"
+      write(*,*) "file_kw=", file_kw
+      open(410, file=file_kw, status="old")
+      read(410,*) NK, NKxyz
+      close(410)
+      write(*,*) "NK=", NK, "NKxyz=", NKxyz
+    endif
+    call MPI_BCAST(NK,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(NKxyz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  endif
 
 ! sato ---------------------------------------------------------------------------------------
   if(NXYsplit /= 1 .and. NKsplit /=1) call err_finalize('cannot respond your request')
