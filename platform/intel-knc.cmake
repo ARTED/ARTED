@@ -21,6 +21,7 @@ set(CMAKE_C_FLAGS_RELEASE       "-qopt-assume-safe-padding -ansi-alias -fno-alia
 set(ENABLE_STENCIL_WITH_C         1)
 set(ENABLE_EXPLICIT_VECTORIZATION 1)
 set(ENABLE_REDUCE_FOR_MANYCORE    1)
+set(ENABLE_SOFTWARE_PREFETCH      1)
 
 
 ########

@@ -34,8 +34,8 @@ extern int BX, BY;
 
 void hpsi1_rt_stencil_( double         const* restrict A_
                       , double         const           B[restrict NLx][NLy][NLz]
-                      , double         const* restrict C
-                      , double         const* restrict D
+                      , double         const           C[restrict 12]
+                      , double         const           D[restrict 12]
                       , double complex const           E[restrict PNLx][PNLy][PNLz]
                       , double complex                 F[restrict PNLx][PNLy][PNLz]
 )

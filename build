@@ -61,6 +61,8 @@ parser.add_option('--stencil-with-c',      action='store_true',  default=True,  
 parser.add_option('--stencil-with-f90',    action='store_false',                dest='stencil_with_c',    help='use F90 code of stencil.')
 parser.add_option('--explicit-vec',        action='store_true',  default=True,  dest='explicit_vec',      help='stencil use explicit vectorization with intrinsics. (default)')
 parser.add_option('--compiler-vec',        action='store_false',                dest='explicit_vec',      help='stencil use automatic vectorization by the compiler.')
+parser.add_option('--enable-swp',          action='store_true',  default=True,  dest='swp',               help='Add software prefetch in the explicit vec. (default)')
+parser.add_option('--disable-swp',         action='store_false',                dest='swp',               help='disable software prefetch option.')
 parser.add_option('--domain-power-of-two', action='store_true',  default=False, dest='domain_two',        help='3-D domain size is power of two.')
 parser.add_option('--loop-blocking',       action='store_true',  default=False, dest='loop_blocking',     help='loop blocking applied to stencil computation.')
 parser.add_option('--papi',                action='store_true',  default=False, dest='papi',              help='use PAPI profiling (SC only).')
@@ -99,6 +101,7 @@ dict['STENCIL_WITH_C']         = on_or_off(options.stencil_with_c)
 dict['LOOP_BLOCKING']          = on_or_off(options.loop_blocking)
 dict['DOMAIN_POWER_OF_TWO']    = on_or_off(options.domain_two)
 dict['EXPLICIT_VEC']           = on_or_off(options.explicit_vec)
+dict['SW_PREFETCH']            = on_or_off(options.swp)
 
 define = ''
 for k,v in dict.items():

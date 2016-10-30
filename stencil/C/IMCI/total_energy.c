@@ -30,9 +30,9 @@ extern int BX, BY;
 #endif
 
 void total_energy_stencil_( double         const* restrict A_
-                          , double         const* restrict C
-                          , double         const* restrict D
-                          , double complex const* restrict E
+                          , double         const           C[restrict 12]
+                          , double         const           D[restrict 12]
+                          , double complex const           E[restrict NLx][NLy][NLz]
                           , double complex      * restrict F
 ) {
   const double A = *A_;
@@ -51,11 +51,6 @@ void total_energy_stencil_( double         const* restrict A_
   for(n = 0 ; n < 12 ; ++n)
     G[n] = C[n] * -0.5;
 
-  __m512d wm[4];
-  __m512d wp[4];
-
-  __m512d v1, v2, v3, v4, tt, ut;
-
   __m512i nly = _mm512_set1_epi32(NLy);
   __m512i nlz = _mm512_set1_epi32(NLz);
   __m512i nyx = _mm512_mask_blend_epi32(0xFF00, _mm512_set1_epi32(NLy    ), _mm512_set1_epi32(NLx    ));
@@ -63,10 +58,12 @@ void total_energy_stencil_( double         const* restrict A_
   __m512i myx = _mm512_mask_blend_epi32(0xFF00, _mm512_set1_epi32(NLy - 1), _mm512_set1_epi32(NLx - 1));
 #endif
 
-  __declspec(align(64)) int yx_table_org[16] = { -4, -3, -2, -1, 1, 2, 3, 4, -4, -3, -2, -1, 1, 2, 3, 4};
   __declspec(align(64)) int yx_table[16];
-  __m512i *yx_org = (__m512i*) yx_table_org;
+  __m512i  yx_org = _mm512_setr_epi32(-4, -3, -2, -1, 1, 2, 3, 4, -4, -3, -2, -1, 1, 2, 3, 4);
   __m512i *yx     = (__m512i*) yx_table;
+
+  __m512i dnyx = _mm512_add_epi32(nyx, yx_org);
+  __m512i nlyz = _mm512_mask_mullo_epi32(nlz, 0xFF00, nlz, nly);
 
   __m512d zr = _mm512_setzero_pd();
   __m512d zi = _mm512_setzero_pd();
@@ -83,7 +80,7 @@ void total_energy_stencil_( double         const* restrict A_
   {
     __m512i tix = _mm512_set1_epi32(ix);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
-    __m512i mxm = _mm512_unaligned_load_epi32(modx + (ix - 4 + NLx));
+    __m512i mxm = _mm512_loadu_prefetch_epi32(modx + (ix - 4 + NLx));
     __m512i mxp = _mm512_alignr_epi32(mxm, mxm, 1);
     __m512i xmp = _mm512_mask_blend_epi32(0xF0F0, mxm, mxp);
             xmp = _mm512_permute4f128_epi32(xmp, _MM_PERM_BADC);
@@ -96,42 +93,45 @@ void total_energy_stencil_( double         const* restrict A_
   {
     __m512i tiy = _mm512_set1_epi32(iy);
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
-    __m512i mym = _mm512_unaligned_load_epi32(mody + (iy - 4 + NLy));
+    __m512i mym = _mm512_loadu_prefetch_epi32(mody + (iy - 4 + NLy));
     __m512i myp = _mm512_alignr_epi32(mym, mym, 1);
     __m512i ymp = _mm512_mask_blend_epi32(0xF0F0, mym, myp);
     __m512i uyx = _mm512_mask_blend_epi32(0xFF00, ymp, xmp);
 #endif
     __m512i tyx = _mm512_mask_blend_epi32(0xFF00, tiy, tix);
 
-    e = &E[ix*NLy*NLz + iy*NLz];
+    e = &E[ix][iy][0];
 
     for(iz = 0 ; iz < NLz ; iz += 4)
     {
-      const int p = iz >> 2;
       __m512i tiz = _mm512_set1_epi32(iz);
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(_mm512_add_epi32(tyx, nyx), *yx_org), myx));
+      __m512i mm  = _mm512_sub_epi32(tyx, _mm512_and_epi32(_mm512_add_epi32(dnyx, tyx), myx));
 #else
       __m512i mm  = _mm512_sub_epi32(tyx, uyx);
 #endif
-      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(_mm512_mask_mullo_epi32(mm, 0xFF00, mm, nly), nlz));
+      *yx = _mm512_sub_epi32(tiz, _mm512_mullo_epi32(mm, nlyz));
 
       // conj(e[iz])
-      __m512d ez = _mm512_load_pd(e + iz);
+      __m512d ez = _mm512_load_prefetch_pd(e + iz);
       __m512d w  = (__m512d) _mm512_xor_si512((__m512i) ez, INV);
 
-      tt = _mm512_setzero_pd();
-      ut = _mm512_setzero_pd();
+      __m512d tt = _mm512_setzero_pd();
+      __m512d ut = _mm512_setzero_pd();
+
+      __m512d wm[4];
+      __m512d wp[4];
+      __m512d v1, v2, v3, v4;
 
       /* z-dimension (unit stride) */
       {
         __m512i z0, z2;
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
-        z0 = _mm512_load_epi64(e + ((iz - 4 + NLz) & (NLz - 1)));
-        z2 = _mm512_load_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
+        z0 = _mm512_load_prefetch_epi64(e + ((iz - 4 + NLz) & (NLz - 1)));
+        z2 = _mm512_load_prefetch_epi64(e + ((iz + 4 + NLz) & (NLz - 1)));
 #else
-        z0 = _mm512_load_epi64(e + modz[iz - 4 + NLz]);
-        z2 = _mm512_load_epi64(e + modz[iz + 4 + NLz]);
+        z0 = _mm512_load_prefetch_epi64(e + modz[iz - 4 + NLz]);
+        z2 = _mm512_load_prefetch_epi64(e + modz[iz + 4 + NLz]);
 #endif
 
         wm[3] = (__m512d) z0;
@@ -154,14 +154,14 @@ void total_energy_stencil_( double         const* restrict A_
 
       /* y-dimension (NLz stride) */
       {
-        wm[3] = _mm512_load_pd(e + yx_table[0]);
-        wm[2] = _mm512_load_pd(e + yx_table[1]);
-        wm[1] = _mm512_load_pd(e + yx_table[2]);
-        wm[0] = _mm512_load_pd(e + yx_table[3]);
-        wp[0] = _mm512_load_pd(e + yx_table[4]);
-        wp[1] = _mm512_load_pd(e + yx_table[5]);
-        wp[2] = _mm512_load_pd(e + yx_table[6]);
-        wp[3] = _mm512_load_pd(e + yx_table[7]);
+        wm[3] = _mm512_load_prefetch_pd(e + yx_table[0]);
+        wm[2] = _mm512_load_prefetch_pd(e + yx_table[1]);
+        wm[1] = _mm512_load_prefetch_pd(e + yx_table[2]);
+        wm[0] = _mm512_load_prefetch_pd(e + yx_table[3]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[4]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[5]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[6]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[7]);
 
 #pragma unroll(4)
         for(n = 0 ; n < 4 ; ++n) {
@@ -174,14 +174,14 @@ void total_energy_stencil_( double         const* restrict A_
 
       /* x-dimension (NLy*NLz stride) */
       {
-        wm[3] = _mm512_load_pd(e + yx_table[ 8]);
-        wm[2] = _mm512_load_pd(e + yx_table[ 9]);
-        wm[1] = _mm512_load_pd(e + yx_table[10]);
-        wm[0] = _mm512_load_pd(e + yx_table[11]);
-        wp[0] = _mm512_load_pd(e + yx_table[12]);
-        wp[1] = _mm512_load_pd(e + yx_table[13]);
-        wp[2] = _mm512_load_pd(e + yx_table[14]);
-        wp[3] = _mm512_load_pd(e + yx_table[15]);
+        wm[3] = _mm512_load_prefetch_pd(e + yx_table[ 8]);
+        wm[2] = _mm512_load_prefetch_pd(e + yx_table[ 9]);
+        wm[1] = _mm512_load_prefetch_pd(e + yx_table[10]);
+        wm[0] = _mm512_load_prefetch_pd(e + yx_table[11]);
+        wp[0] = _mm512_load_prefetch_pd(e + yx_table[12]);
+        wp[1] = _mm512_load_prefetch_pd(e + yx_table[13]);
+        wp[2] = _mm512_load_prefetch_pd(e + yx_table[14]);
+        wp[3] = _mm512_load_prefetch_pd(e + yx_table[15]);
 
 #pragma unroll(4)
         for(n = 0 ; n < 4 ; ++n) {
