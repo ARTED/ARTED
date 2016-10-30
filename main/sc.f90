@@ -402,7 +402,7 @@ Program main
     end if
 !Adiabatic evolution
     if (AD_RHO /= 'No' .and. iter/100*100 == iter) then
-      call k_shift_wf(Rion_update,2)
+      call k_shift_wf(Rion_update,5)
       if (Myrank == 0) then
         do ia=1,NI
           write(*,'(1x,i7,3f15.6)') ia,force(1,ia),force(2,ia),force(3,ia)
