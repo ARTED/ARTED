@@ -1,5 +1,14 @@
 # ARTED: Ab-initio Real-Time Electron Dynamics Simulator
 
+- [Overview](#overview)
+- [Build](#build)
+- [Execution](#execution)
+- [Test Environment](#test-environment)
+- [License](#license)
+- [Acknowledgement](#acknowledgement)
+
+## Overview
+
 ARTED (Ab-initio Real-Time Electron Dynamics simulator) is an open-source
 computer codes for first-principles calculations of electron dynamics and
 light-matter interactions [1]. It is based on time-dependent density functional theory
@@ -11,7 +20,7 @@ optimally in the following supercomputer platforms:
 
 - K-computer
 - Fujitsu FX100 supercomputer system
-- Linux PC Cluster with x86-64 CPU
+- Linux PC Cluster with x86-64 CPUs
 - Linux PC Cluster with Intel Xeon Phi (Knights Corner) [2]
 - Linux PC Cluster with NVIDIA GPU (OpenACC, Kepler and newer GPUs)
 
@@ -31,8 +40,11 @@ We use [CMake](https://cmake.org/) cross-platform build tools.
 CMake detects the below configurations automatically,
 
 - MPI Fortran/C compiler
-- OpenMP flag
+- OpenMP compile flag
 - LAPACK(/BLAS) libraries
+
+CMake software version **must** be 2.8 and newer.
+We recommend *3.0* and newer versions.
 
 ### for your computer
 
@@ -42,7 +54,7 @@ CMake detects the below configurations automatically,
     $ cd build_dir
     $ cmake .. && make
 
-### for COMA at CCS, University of Tsukuba
+### for Intel Xeon CPU (Ivy-Bridge) with Intel Knights Corner
 
     $ ./build -t sc intel avx knc
     or
@@ -51,7 +63,7 @@ CMake detects the below configurations automatically,
     $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knc .. && make
     $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-avx .. && make
 
-### for HA-PACS/TCA at CCS, University of Tsukuba
+### for x86-64 CPUs with NVIDIA GPUs (Kepler and newer GPUs)
 
     $ ./build -t sc pgi openacc
     or
@@ -75,16 +87,8 @@ CMake detects the below configurations automatically,
     $ cd build_dir
     $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-fx100 .. && make
 
-### Generic version (GNU compiler)
 
-    $ ./build gnu generic
-    or
-    $ mkdir build_dir
-    $ cd build_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=gnu-generic .. && make
-
-
-## Execution/Simulation
+## Execution
 
 Please read to jobscript directory files.
 
@@ -93,31 +97,37 @@ Please read to jobscript directory files.
 
 ## Test Environment
 
-### COMA at CCS, University of Tsukuba
+### Intel x86-64 CPU with Intel Knights Corner
+
+COMA at CCS, University of Tsukuba
 
 1. Intel Compiler version 16.0.2
-2. Intel MPI 5.1.3
-3. Intel MKL 11.3.2
+1. Intel MPI 5.1.3
+1. Intel MKL 11.3.2
 
-### HA-PACS/TCA at CCS, University of Tsukuba
+### x86-64 CPUs with NVIDIA Kepler GPU
+
+HA-PACS/TCA at CCS, University of Tsukuba
 
 1. PGI Compiler 16.4
 2. OpenMPI 1.10.3 or MVAPICH2 GDR 2.1
 3. CUDA 7.5.18
 
-### K-computer at RIKEN AICS
-
-1. Fujitsu Compiler version K-1.2.0-20-1
-
-### FX100 system at Nagoya University
-
-1. Fujitsu Compiler Driver Version 2.0.0
-
-### GNU Compiler (Generic version)
+### x86-64 CPUs (General version)
 
 1. GCC version 4.4.7
 2. OpenMPI 1.10.3
 3. LAPACK 3.6.0
+
+### Supercomputer system
+
+K-computer at RIKEN AICS
+
+1. Fujitsu Compiler version K-1.2.0-20-1
+
+FX100 system at Nagoya University
+
+1. Fujitsu Compiler Driver Version 2.0.0
 
 
 ## License
