@@ -167,14 +167,11 @@ Subroutine input_pseudopotential_YS
         end do
         anorm(l,ik) = 0.5d0*anorm(l,ik)
         inorm(l,ik)=+1
-        if(abs(anorm(l,ik)).lt.Eps0) then
-          inorm(l,ik)=0
-        else 
-          if(anorm(l,ik).lt.0.d0) then
-            anorm(l,ik)=-anorm(l,ik)
-            inorm(l,ik)=-1
-          endif
+        if(anorm(l,ik).lt.0.d0) then
+          anorm(l,ik)=-anorm(l,ik)
+          inorm(l,ik)=-1
         endif
+        if(abs(anorm(l,ik)).lt.Eps0)inorm(l,ik)=0
         anorm(l,ik)=sqrt(anorm(l,ik))
       enddo
 
