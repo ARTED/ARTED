@@ -68,7 +68,6 @@ parser.add_option('--loop-blocking',       action='store_true',  default=False, 
 parser.add_option('--papi',                action='store_true',  default=False, dest='papi',              help='use PAPI profiling (SC only).')
 parser.add_option('--tlog',                action='store_true',  default=False, dest='tlog',              help='use TLOG profiling.')
 parser.add_option('--nvtx',                action='store_true',  default=False, dest='nvtx',              help='use NVIDIA Tools Extention Library.')
-parser.add_option('--threads-profiler',    action='store_true',  default=False, dest='profile_threads',   help='profile each OpenMP threads')
 
 (options, args) = parser.parse_args()
 
