@@ -25,8 +25,8 @@ Subroutine init_wf
   real(8) :: r2,x1,y1,z1,rnd
 
   zu_GS=0.d0
-  iseed=123
   do ik=NK_s,NK_e
+    iseed= 123 + ik
     do ib=1,NB
       call quickrnd(iseed,rnd)
       x1=aLx*rnd
