@@ -83,6 +83,10 @@ Module Global_Variables
   real(8),allocatable :: esp_vb_min(:),esp_vb_max(:) !FS set
   real(8),allocatable :: esp_cb_min(:),esp_cb_max(:) !FS set
   real(8),allocatable :: Eall_GS(:),esp_var_ave(:),esp_var_max(:),dns_diff(:)
+!Nonlinear core correction
+  integer :: iflag_nlcc = 0
+  real(8),allocatable :: rho_nlcc_tbl(:,:),tau_nlcc_tbl(:,:)
+  real(8),allocatable :: rho_nlcc(:),tau_nlcc(:)
 
 ! wave functions, work array
   complex(8),allocatable :: zu(:,:,:),zu_GS(:,:,:),zu_GS0(:,:,:)

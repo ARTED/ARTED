@@ -17,7 +17,8 @@
 Subroutine input_pseudopotential_YS
   use Global_Variables,only : Pi,Zatom,Mass,NE,directory,ierr,Myrank,ps_format,PSmask_option&
        &,Nrmax,Lmax,Mlps,Lref,Zps,NRloc,NRps,inorm&
-       &,rad,Rps,vloctbl,udVtbl,radnl,Rloc,anorm,dvloctbl,dudVtbl
+       &,rad,Rps,vloctbl,udVtbl,radnl,Rloc,anorm,dvloctbl,dudVtbl &
+       &,rho_nlcc_tbl,tau_nlcc_tbl,rho_nlcc,tau_nlcc,iflag_nlcc,NL
   implicit none
   include 'mpif.h'
   integer,parameter :: Lmax0=4,Nrmax0=50000
@@ -27,9 +28,14 @@ Subroutine input_pseudopotential_YS
   real(8) :: r1,r2,r3,r4
   real(8) :: vpp(0:Nrmax0,0:Lmax0),upp(0:Nrmax0,0:Lmax0)   !zero in radial index for taking derivative
   real(8) :: dvpp(0:Nrmax0,0:Lmax0),dupp(0:Nrmax0,0:Lmax0) !zero in radial index for taking derivative
+  real(8) :: rhor_nlcc(0:Nrmax0,0:2)   !zero in radial index for taking derivative
   character(2) :: atom_symbol
   character(50) :: ps_file
   character(10) :: ps_postfix
+
+! Nonlinear core correction
+  allocate(rho_nlcc_tbl(Nrmax,NE),tau_nlcc_tbl(Nrmax,NE))
+  allocate(rho_nlcc(NL),tau_nlcc(NL))
 
   if (Myrank == 0) then
 ! --- Making prefix ---
@@ -141,7 +147,8 @@ Subroutine input_pseudopotential_YS
       select case (ps_format)
       case('KY')        ; call Read_PS_KY(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
       case('ABINIT')    ; call Read_PS_ABINIT(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
-      case('ABINITFHI') ; call Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
+      case('ABINITFHI') ; call Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,&
+        rhor_nlcc,ik,ps_file)
       case('FHI')       ; call Read_PS_FHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
 !      case('ATOM')      ; call Read_PS_ATOM
       case default ; stop 'Unprepared ps_format is required input_pseudopotential_YS'
@@ -222,6 +229,8 @@ Subroutine input_pseudopotential_YS
   CALL MPI_BCAST(udVtbl,Nrmax*(Lmax+1)*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(dudVtbl,Nrmax*(Lmax+1)*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(Mass,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(rho_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(tau_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 
   return
   contains
@@ -311,6 +320,14 @@ Subroutine input_pseudopotential_YS
         dudVtbl(1:NRps(ik),l,ik)=dudVtbl(1:NRps(ik),l,ik)/anorm(l,ik)
       enddo
 
+      if(iflag_nlcc /= 1)return
+      rho_nlcc_tbl(:,ik)=0d0; tau_nlcc_tbl(:,ik)=0d0
+      do i=1,NRps(ik)
+        if(rhor_nlcc(i-1,0)/rhor_nlcc(0,0) < 1d-7)exit
+        rho_nlcc_tbl(i,ik)=rhor_nlcc(i-1,0)
+        tau_nlcc_tbl(i,ik)=0.25d0*rhor_nlcc(i-1,1)**2/rhor_nlcc(i-1,0)
+      end do
+
       return
     End Subroutine Making_PS_with_masking
 !====
@@ -356,6 +373,14 @@ Subroutine input_pseudopotential_YS
         udVtbl(1:NRps(ik),l,ik)=udVtbl(1:NRps(ik),l,ik)/anorm(l,ik)
         dudVtbl(1:NRps(ik),l,ik)=dudVtbl(1:NRps(ik),l,ik)/anorm(l,ik)
       enddo
+
+      if(iflag_nlcc /= 1)return
+      rho_nlcc_tbl(:,ik)=0d0; tau_nlcc_tbl(:,ik)=0d0
+      do i=1,NRps(ik)
+        if(rhor_nlcc(i-1,0)/rhor_nlcc(0,0) < 1d-7)exit
+        rho_nlcc_tbl(i,ik)=rhor_nlcc(i-1,0)
+        tau_nlcc_tbl(i,ik)=0.25d0*rhor_nlcc(i-1,1)**2/rhor_nlcc(i-1,0)
+      end do
 
       return
     End Subroutine Making_PS_without_masking
@@ -764,10 +789,10 @@ Subroutine Read_PS_ABINIT(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
   return
 End Subroutine Read_PS_ABINIT
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
+Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,ik,ps_file)
 !This is for  FHI pseudopotential listed in abinit web page and not for original FHI98PP.
 !See http://www.abinit.org/downloads/psp-links/lda_fhi
-  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad
+  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad,iflag_nlcc,pi
   implicit none
 !argument
   integer,intent(in) :: Lmax0,Nrmax0,ik
@@ -775,6 +800,7 @@ Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
   real(8),intent(out) :: rRC(0:Lmax0)
   real(8),intent(out) :: vpp(0:Nrmax0,0:Lmax0),upp(0:Nrmax0,0:Lmax0)
   character(50),intent(in) :: ps_file
+  real(8),intent(out) :: rhor_nlcc(0:Nrmax0,0:2)
 !local variable
   character(50) :: temptext
   integer :: i,j
@@ -807,7 +833,19 @@ Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
     upp(0,l)=0.d0
     vpp(0,l)=vpp(1,l)-(vpp(2,l)-vpp(1,l))/(rad(3,ik)-rad(2,ik))*(rad(2,ik))
   end do
-  close(4)
+!Nonlinear core-correction
+  do i=1,Mr_l(0)
+    read(4,*,err=940) rad(i+1,ik),rhor_nlcc(i,0),rhor_nlcc(i,1),rhor_nlcc(i,2)
+  end do
+  rhor_nlcc(0,:)=rhor_nlcc(1,:)-(rhor_nlcc(2,:)-rhor_nlcc(1,:)) &
+    /(rad(3,ik)-rad(2,ik))*(rad(2,ik))
+  rhor_nlcc = rhor_nlcc/(4d0*pi)
+  iflag_nlcc = 1
+!Nonlinear core-correction
+
+
+940 close(4)
+  
 
   if(minval(Mr_l(0:Mlps(ik))).ne.maxval(Mr_l(0:Mlps(ik)))) then
     stop 'Mr are diffrent at Read_PS_FHI'
