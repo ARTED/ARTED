@@ -231,6 +231,7 @@ Subroutine input_pseudopotential_YS
   CALL MPI_BCAST(Mass,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(rho_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(tau_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(iflag_nlcc,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
   return
   contains
