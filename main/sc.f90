@@ -261,7 +261,7 @@ Program main
 !====RT calculation============================
 
   call init_Ac
-
+  Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! yabana
 !  kAc0=kAc
 ! yabana
@@ -309,7 +309,8 @@ Program main
     enddo
 !$acc update device(kAc)
 
-    call dt_evolve_omp_KB(iter)
+!    call dt_evolve_omp_KB(iter)
+    call dt_evolve_aetrs_omp_KB(iter)
     call current_omp_KB
 
     javt(iter,:)=jav(:)
@@ -749,6 +750,7 @@ Subroutine Read_data
   allocate(ifdx(-Nd:Nd,1:NL),ifdy(-Nd:Nd,1:NL),ifdz(-Nd:Nd,1:NL))
   allocate(kAc(NK,3),kAc0(NK,3))
   allocate(Vh(NL),Vexc(NL),Eexc(NL),rho(NL),Vpsl(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
+  allocate(Vloc_new(NL),Vloc_old(NL,2))
 !yabana
   allocate(tmass(NL),tjr(NL,3),tjr2(NL),tmass_t(NL),tjr_t(NL,3),tjr2_t(NL))
 !yabana
