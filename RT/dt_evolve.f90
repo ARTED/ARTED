@@ -178,7 +178,7 @@ Subroutine dt_evolve_omp_KB(iter)
   return
 End Subroutine dt_evolve_omp_KB
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine dt_evolve_aetrs_omp_KB(iter)
+Subroutine dt_evolve_etrs_omp_KB(iter)
   use Global_Variables
   use timelog
 #ifdef ARTED_USE_NVTX
@@ -279,6 +279,54 @@ Subroutine dt_evolve_aetrs_omp_KB(iter)
 #endif
   NVTX_END()
 
+!== predictor-corrector ==
+  select case(functional)
+  case('VS98','TPSS','TBmBJ')
+!$acc update self(zu, ekr_omp, vloc)
+
+!$omp parallel do private(ik,ib)
+     do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)
+        zu_GS(:,ib,ik)=zu(:,ib,ik)
+     end do
+
+     NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
+     call dt_evolve_hpsi
+     NVTX_END()
+
+     NVTX_BEG('dt_evolve_omp_KB(): psi_rho_RT',4)
+     call psi_rho_RT
+     NVTX_END()
+
+     NVTX_BEG('dt_evolve_omp_KB(): Hartree',5)
+     call Hartree
+     NVTX_END()
+
+     NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
+     call Exc_Cor('RT')
+     NVTX_END()
+
+#ifdef _OPENACC
+!$acc kernels pcopy(Vloc) pcopyin(Vh,Vpsl,Vexc)
+#else
+!$omp parallel do
+#endif
+  do i=1,NL
+    Vloc(i)=Vh(i)+Vpsl(i)+Vexc(i)
+  end do
+!$acc end kernels
+
+!$acc end data
+
+
+!$omp parallel do private(ik,ib)
+     do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)
+        zu(:,ib,ik)=zu_GS(:,ib,ik)
+     end do
+
+  end select
+
 
   NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
   call dt_evolve_hpsi
@@ -292,12 +340,9 @@ Subroutine dt_evolve_aetrs_omp_KB(iter)
   call Hartree
   NVTX_END()
 
-! yabana
   NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
   call Exc_Cor('RT')
   NVTX_END()
-! yabana
-
 
 
 #ifdef _OPENACC
@@ -317,7 +362,7 @@ Subroutine dt_evolve_aetrs_omp_KB(iter)
   NVTX_END()
 
   return
-End Subroutine dt_evolve_aetrs_omp_KB
+End Subroutine dt_evolve_etrs_omp_KB
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine dt_evolve_omp_KB_MS
   use Global_Variables

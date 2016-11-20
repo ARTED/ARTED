@@ -310,7 +310,7 @@ Program main
 !$acc update device(kAc)
 
 !    call dt_evolve_omp_KB(iter)
-    call dt_evolve_aetrs_omp_KB(iter)
+    call dt_evolve_etrs_omp_KB(iter)
     call current_omp_KB
 
     javt(iter,:)=jav(:)
