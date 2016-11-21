@@ -29,7 +29,7 @@ Program main
   character(3) :: Rion_update
   character(10) :: functional_t
   integer :: ix_m,iy_m,ixy_m
-  character(20) :: cMacro_x
+  integer :: index
 !$ integer :: omp_get_max_threads  
 
   call MPI_init(ierr)
@@ -262,8 +262,12 @@ Program main
 !====RT calculation============================
 
 !  call init_Ac
-  call init_Ac_ms
-
+  if (trim(FDTDdim) == '2DC') then
+    call init_Ac_ms_2dc()
+  else
+    call init_Ac_ms
+  endif
+  
   rho_gs(:)=rho(:)
 
 ! sato ---------------------------------------
@@ -286,24 +290,30 @@ Program main
     position_option='rewind'
     entrance_iter=-1
   end if
+  
+  ! Output filename
+  write(file_energy_transfer, "(A,'energy-transfer.out')") trim(directory)
+  write(file_ac_vac, "(A,'Ac_Vac.out')") trim(directory)
+  write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
+  write(file_ac_m, "(A,'Ac_M',I4.4,'.out')") trim(directory), NXY_s
+  
   if (Myrank == 0) then
 !    open(7,file=file_epst,position = position_option)
 !    open(8,file=file_dns,position = position_option)
 !    open(9,file=file_force_dR,position = position_option)
-    open(940,file=trim(directory)//'energy-transfer.out',position = position_option)
-    open(941,file=trim(directory)//'Ac_Vac.out',position = position_option)
+    open(940,file=file_energy_transfer, position = position_option)
+    open(941,file=file_ac_vac, position = position_option)
 !    if (ovlp_option == 'yes') then 
 !      open(404,file=file_ovlp,position = position_option) 
 !      open(408,file=file_nex,position = position_option) 
 !    end if
   endif
   if (Myrank == 1) then
-    open(942,file=trim(directory)//'Ac_Vac_back.out',position = position_option)
+    open(942,file=file_ac_vac_back, position = position_option)
   end if
 
   if(Newrank == 0)then
-    write(cMacro_x,'(I4.4)')NXY_s
-    open(943,file=trim(directory)//'Ac_M'//trim(cMacro_x)//'.out',position = position_option)
+    open(943,file=file_ac_m ,position = position_option)
   end if
 
 !$acc enter data copyin(ik_table,ib_table)
@@ -335,7 +345,7 @@ Program main
         Vloc(:)=Vloc_m(:,ixy_m)
       end if
 
-      kAc(:,1)=kAc0(:,1)
+      kAc(:,1)=kAc0(:,1)+(Ac_new_m(1,ix_m,iy_m)+Ac_m(1,ix_m,iy_m))/2d0
       kAc(:,2)=kAc0(:,2)+(Ac_new_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m))/2d0
       kAc(:,3)=kAc0(:,3)+(Ac_new_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m))/2d0
 !$acc update device(kAc)
@@ -353,7 +363,7 @@ Program main
         Eexc_m(:,ixy_m)=Eexc(:)
         Vloc_m(:,ixy_m)=Vloc(:)
       end if
-      kAc(:,1)=kAc0(:,1)
+      kAc(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
       kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
       kAc(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
 !$acc update device(kAc)
@@ -369,7 +379,7 @@ Program main
         jav(2)=0d0
       end if
       if(NEWRANK == 0)then
-        jmatter_m_l(2:3,ix_m,iy_m)=jav(2:3)
+        jmatter_m_l(1:3,ix_m,iy_m)=jav(1:3)
       end if
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
@@ -378,11 +388,11 @@ Program main
       if (MD_option == 'Y') then
 !$acc update self(zu)
         call Ion_Force_omp(Rion_update,'RT')
-        if (iter/Nstep_write*Nstep_write == iter) then ! sato
+        if (mod(iter, Nstep_write) == 0) then
           call Total_Energy_omp(Rion_update,'RT')
         end if
       else
-        if (iter/Nstep_write*Nstep_write == iter) then ! sato
+        if (mod(iter, Nstep_write) == 0) then
 !$acc update self(zu)
           call Total_Energy_omp(Rion_update,'RT')
           call Ion_Force_omp(Rion_update,'RT')
@@ -413,7 +423,7 @@ Program main
     end do Macro_loop
 
     call timelog_begin(LOG_ALLREDUCE)
-    call MPI_ALLREDUCE(jmatter_m_l,jmatter_m,2*NX_m*NY_m,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_ALLREDUCE(jmatter_m_l,jmatter_m,3*NX_m*NY_m,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
     j_m(:,1:NX_m,1:NY_m)=jmatter_m(:,1:NX_m,1:NY_m)
     if(mod(iter,10) == 1) then
       call MPI_BCAST(reentrance_switch,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
@@ -434,55 +444,44 @@ Program main
       write(943,'(5e26.16E3)')iter*dt,Ac_new_m(2,ix_m,1),Ac_new_m(3,ix_m,1) &
         &,j_m(2,ix_m,1),j_m(3,ix_m,1)
     end if
-
-
-    if(iter/Nstep_write*Nstep_write == iter) then
-! calc electro-magnetic field
-      Elec(2,:,:)=-(Ac_new_m(2,:,:)-Ac_old_m(2,:,:))/(2d0*dt)
-      Elec(3,:,:)=-(Ac_new_m(3,:,:)-Ac_old_m(3,:,:))/(2d0*dt)
-      do iy_m=1,NY_m
-        do ix_m=NXvacL_m,NXvacR_m
-          Bmag(1,ix_m,iy_m)=(Ac_m(3,ix_m,iy_m+1)-Ac_m(3,ix_m,iy_m-1))*c_light &
-            &/(2d0*HY_m)
-          if (NXvacL_m < ix_m .and. ix_m < NXvacR_m) then
-            Bmag(2,ix_m,iy_m)=-(Ac_m(3,ix_m+1,iy_m)-Ac_m(3,ix_m-1,iy_m))*c_light &
-              &/(2d0*HX_m)
-          else
-            Bmag(2,ix_m,iy_m)=0.0
-          endif
-          Bmag(3,ix_m,iy_m)=(Ac_m(2,ix_m,iy_m+1)-Ac_m(2,ix_m,iy_m-1))*c_light &
-            &/(2d0*HX_m)
-        end do
-      end do
-! calc energy distribution
+    
+    call calc_elec_field()
+    call calc_bmag_field()
+    call calc_energy_joule()
+    call calc_energy_elemag()
+    
+    if (mod(iter, Nstep_write) == 0) then
+      index = iter / Nstep_write
+      
       call timelog_begin(LOG_ALLREDUCE)
       call MPI_ALLREDUCE(energy_elec_Matter_l,energy_elec_Matter &
         &,NX_m*NY_m,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
       call timelog_end(LOG_ALLREDUCE)
 
-      energy_elec(1:NX_m,1:NY_m)=energy_elec_Matter(1:NX_m,1:NY_m)         
-      do iy_m=1,NY_m
-        do ix_m=NXvacL_m,NXvacR_m
-          energy_elemag(ix_m,iy_m)=sum(Elec(:,ix_m,iy_m)**2+Bmag(:,ix_m,iy_m)**2)/(8d0*pi)*aLxyz
-        end do
-      end do
+      energy_elec(1:NX_m,1:NY_m)=energy_elec_Matter(1:NX_m,1:NY_m) 
       energy_total=energy_elemag+energy_elec
 
-      data_out(1,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=Ac_new_m(2,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(2,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=Ac_new_m(3,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(3,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=Elec(2,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(4,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=Elec(3,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(5,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=j_m(2,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(6,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=j_m(3,NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(7,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=energy_elemag(NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(8,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=energy_elec(NXvacL_m:NXvacR_m,1:NY_m)
-      data_out(9,NXvacL_m:NXvacR_m,1:NY_m,iter/Nstep_write)=energy_total(NXvacL_m:NXvacR_m,1:NY_m)
-
+      data_out(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(4,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(5,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(6,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(7,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(8,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(9,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(10,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(11,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(12,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(13,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(14,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_joule(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(15,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
 
       if(MYrank == 0)then
-!        call write_result(iter)
-        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
-          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
+        call write_result(index)
+!        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
+!          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
       end if
     
     end if
@@ -993,16 +992,17 @@ Subroutine Read_data
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
 
-! sato ---------------------------------------------------------------------------------------
-  allocate(Ac_m(2:3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(Ac_old_m(2:3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(Ac_new_m(2:3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(g(2:3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(Elec(3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(Bmag(3,NXvacL_m:NXvacR_m,0:NY_m+1))
-  allocate(j_m(2:3,NXvacL_m:NXvacR_m,NY_m))
-  allocate(jmatter_m(2:3,1:NX_m,1:NY_m))
-  allocate(jmatter_m_l(2:3,1:NX_m,1:NY_m))
+  NYvacB_m = 1
+  NYvacT_m = NY_m  
+  allocate(Ac_m(1:3,NXvacL_m-1:NXvacR_m+1,0:NY_m+1))
+  allocate(Ac_old_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
+  allocate(Ac_new_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
+  allocate(g(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
+  allocate(Elec(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
+  allocate(Bmag(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
+  allocate(j_m(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
+  allocate(jmatter_m(1:3,1:NX_m,1:NY_m))
+  allocate(jmatter_m_l(1:3,1:NX_m,1:NY_m))
   jmatter_m_l=0d0;j_m=0d0
 
   if(NXYsplit /= 1)then
@@ -1013,16 +1013,17 @@ Subroutine Read_data
     allocate(Eexc_m(NL,NXY_s:NXY_e))         
     allocate(Vloc_m(NL,NXY_s:NXY_e))         
   end if
+    allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m))
     allocate(energy_elec_Matter_l(1:NX_m,1:NY_m))
     allocate(energy_elec_Matter(1:NX_m,1:NY_m))
-    allocate(energy_elec(NXvacL_m:NXvacR_m,1:NY_m))
-    allocate(energy_elemag(NXvacL_m:NXvacR_m,1:NY_m))
-    allocate(energy_total(NXvacL_m:NXvacR_m,1:NY_m))
+    allocate(energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
+    allocate(energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
+    allocate(energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
     allocate(excited_electron_l(1:NX_m,1:NY_m))
     allocate(excited_electron(1:NX_m,1:NY_m))
     energy_elec_Matter_l(:,:)=0d0
     excited_electron_l=0d0
-    allocate(data_out(9,NXvacL_m:NXvacR_m,NY_m+1,0:Nt/Nstep_write))
+    allocate(data_out(16,NXvacL_m:NXvacR_m,NY_m+1,0:Nt/Nstep_write))
 ! sato ---------------------------------------------------------------------------------------
 
   if (Myrank == 0) then

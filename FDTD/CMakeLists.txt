@@ -1,4 +1,5 @@
 set(SOURCES
+    beam.f90
     FDTD.f90
     )
 
