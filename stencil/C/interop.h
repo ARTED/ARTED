@@ -82,20 +82,8 @@
 #define mody opt_variables_mp_mody_
 #define modz opt_variables_mp_modz_
 
-#ifdef ARTED_MIGRATE_TO_KNL
-# include "./knc2knl.h"
-#else
-# ifdef __KNC__
-/* Knights Corner */
-inline
-__m512i _mm512_loadu_prefetch_epi32(int const* v) {
-  __m512i w;
-  w = _mm512_loadunpacklo_epi32(w, v + 0);
-  w = _mm512_loadunpackhi_epi32(w, v + 16);
-  BUSY_PREFETCH_L1(v);
-  return w;
-}
 
+#if defined(__AVX512F__) || (__KNC__)
 inline
 __m512i _mm512_load_prefetch_epi64(void const* c) {
   __m512i a = _mm512_load_epi64(c);
@@ -108,29 +96,6 @@ __m512d _mm512_load_prefetch_pd(void const* c) {
   __m512d a = _mm512_load_pd(c);
   BUSY_PREFETCH_L1(c);
   return a;
-}
-
-inline
-__m512d dcast_to_dcmplx(double const *v) {
-  const __m512i perm = _mm512_set_epi32(7, 6, 7, 6, 5, 4, 5, 4, 3, 2, 3, 2, 1, 0, 1, 0);
-  __m512d w = _mm512_loadunpacklo_pd(_mm512_setzero_pd(), v);
-  BUSY_PREFETCH_L1(v);
-  return (__m512d) _mm512_permutevar_epi32(perm, (__m512i) w);
-}
-# endif
-#endif
-
-#ifdef __KNC__
-/* Knights Corner */
-inline
-__m512d dcomplex_mul(__m512d a, __m512d b) {
-  __m512d ze = _mm512_setzero_pd();
-  __m512d s0 = _mm512_swizzle_pd(a, _MM_SWIZ_REG_CDAB);  /* s0 = [a.i a.r] */
-  __m512d re = _mm512_mask_blend_pd(0xAA, a, s0);        /* re = [a.r a.r] */
-  __m512d im = _mm512_mask_sub_pd(a, 0x55, ze, s0);      /* im = [-a.i a.i] */
-  __m512d t0 = _mm512_mul_pd(re, b);                     /* t0 = [a.r*b.r a.r*b.i] */
-  __m512d s1 = _mm512_swizzle_pd(b, _MM_SWIZ_REG_CDAB);  /* s1 = [b.i b.r] */
-  return       _mm512_fmadd_pd(im, s1, t0);              /* [-a.i*b.i+a.r*b.r a.i*b.r+a.r*b.i] */
 }
 
 inline
@@ -149,9 +114,40 @@ __m512d dcomplex_gather(void const* m, __m512i idx)
   const __m512i gidx = dcomplex_get_index(idx);
   return _mm512_i32loextgather_pd(gidx, m, _MM_UPCONV_PD_NONE, 8, _MM_HINT_NONE);
 }
-#endif /* ifdef __KNC__ */
+#endif
 
-#if defined(__AVX__) && !defined(__AVX512F__)
+#if defined(__AVX512F__)
+# include "./imci2avx512f.h"
+#elif defined(__KNC__)
+/* Knights Corner */
+inline
+__m512i _mm512_loadu_prefetch_epi32(int const* v) {
+  __m512i w;
+  w = _mm512_loadunpacklo_epi32(w, v + 0);
+  w = _mm512_loadunpackhi_epi32(w, v + 16);
+  BUSY_PREFETCH_L1(v);
+  return w;
+}
+
+inline
+__m512d dcast_to_dcmplx(double const *v) {
+  const __m512i perm = _mm512_set_epi32(7, 6, 7, 6, 5, 4, 5, 4, 3, 2, 3, 2, 1, 0, 1, 0);
+  __m512d w = _mm512_loadunpacklo_pd(_mm512_setzero_pd(), v);
+  BUSY_PREFETCH_L1(v);
+  return (__m512d) _mm512_permutevar_epi32(perm, (__m512i) w);
+}
+
+inline
+__m512d dcomplex_mul(__m512d a, __m512d b) {
+  __m512d ze = _mm512_setzero_pd();
+  __m512d s0 = _mm512_swizzle_pd(a, _MM_SWIZ_REG_CDAB);  /* s0 = [a.i a.r] */
+  __m512d re = _mm512_mask_blend_pd(0xAA, a, s0);        /* re = [a.r a.r] */
+  __m512d im = _mm512_mask_sub_pd(a, 0x55, ze, s0);      /* im = [-a.i a.i] */
+  __m512d t0 = _mm512_mul_pd(re, b);                     /* t0 = [a.r*b.r a.r*b.i] */
+  __m512d s1 = _mm512_swizzle_pd(b, _MM_SWIZ_REG_CDAB);  /* s1 = [b.i b.r] */
+  return       _mm512_fmadd_pd(im, s1, t0);              /* [-a.i*b.i+a.r*b.r a.i*b.r+a.r*b.i] */
+}
+#elif defined(__AVX__)
 /* Sandy-Bridge or higher processors */
 inline
 __m256d dcast_to_dcmplx(double const *v) {
@@ -159,6 +155,6 @@ __m256d dcast_to_dcmplx(double const *v) {
   __m256d b = _mm256_permute2f128_pd(a, a, 0x0);
   return _mm256_shuffle_pd(b, b, 0xC);
 }
-#endif /* defined(__AVX__) && !defined(__AVX512F__) */
+#endif
 
 #endif /* ARTED_INTEROP */

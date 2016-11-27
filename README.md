@@ -19,9 +19,10 @@ ARTED has been developed in such a way that it runs
 optimally in the following supercomputer platforms:
 
 - K-computer
-- Fujitsu FX100 supercomputer system
-- Linux PC Cluster with x86-64 CPUs
-- Linux PC Cluster with Intel Xeon Phi (Knights Corner) [2]
+- Fujitsu FX100 supercomputer system [2]
+- Linux PC Cluster with x86-64 CPU
+- Linux PC Cluster with Intel Knights Landing [2]
+- Linux PC Cluster with Intel Knights Corner [3]
 - Linux PC Cluster with NVIDIA GPU (OpenACC, Kepler and newer GPUs)
 
 ARTED has been developed by ARTED developers with support from
@@ -30,7 +31,8 @@ Center for Computational Sciences, University of Tsukuba.
 ### Reference
 
 1. Shunsuke A. Sato, and Kazuhiro Yabana: "Maxwell + TDDFT multi-scale simulation for laser-matter interaction", JSST 2013 International Conference on Simulation Technology, 2013.
-2. Yuta Hirokawa, Taisuke Boku, Shunsuke A. Sato, and Kazuhiro Yabana: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Symmetric Mode Xeon Phi Cluster", The 17th IEEE International Workshop on Parallel and Distributed Scientific and Engineering Computing (PDSEC2016), 2016.
+2. Yuta Hirokawa: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Many-Core Systems", SC16 ACM SRC Poster, 2016.
+3. Yuta Hirokawa, Taisuke Boku, Shunsuke A. Sato, and Kazuhiro Yabana: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Symmetric Mode Xeon Phi Cluster", The 17th IEEE International Workshop on Parallel and Distributed Scientific and Engineering Computing (PDSEC2016), 2016.
 
 
 ## Build
@@ -53,6 +55,14 @@ We recommend *3.0* and newer versions.
     $ mkdir build_dir
     $ cd build_dir
     $ cmake .. && make
+
+### for Intel Knights Landing
+
+    $ ./build -t sc intel knl
+    or
+    $ mkdir build_dir
+    $ cd builld_dir
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knl .. && make
 
 ### for Intel Xeon CPU (Ivy-Bridge) with Intel Knights Corner
 
@@ -96,6 +106,14 @@ Please read to jobscript directory files.
 
 
 ## Test Environment
+
+### Intel Knights Landing
+
+Oakforest-PACS at JCAHPC, The University of Tokyo and University of Tsukuba
+
+1. Intel Compiler version 17.0.1
+2. Intel MPI 5.1.3
+3. Intel MKL 11.3.2
 
 ### Intel x86-64 CPU with Intel Knights Corner
 
