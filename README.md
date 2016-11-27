@@ -29,9 +29,9 @@ ARTED has been developed by ARTED developers with support from
 Center for Computational Sciences, University of Tsukuba.
 
 ### Reference
-1. G. F. Bertsch, J.-I. Iwata, Angel Rubio, and K. Yabana,:"Real-space, real-time method for the dielectric function", Phys. Rev. B 62, 7998 (2000).
-2. K. Yabana, T. Sugiyama, Y. Shinohara, T. Otobe, and G. F. Bertsch: "Time-dependent density functional theory for strong electromagnetic fields in crystalline solids", Phys. Rev. B  85, 045134 (2012).
-3. Shunsuke A. Sato, and Kazuhiro Yabana: "Maxwell + TDDFT multi-scale simulation for laser-matter interaction", J. Adv. Simulat. Sci. Eng. 1, 98 (2014).
+1. G. F. Bertsch, J.-I. Iwata, Angel Rubio, and K. Yabana,:"Real-space, real-time method for the dielectric function", [Phys. Rev. B 62, 7998 (2000)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.62.7998).
+2. K. Yabana, T. Sugiyama, Y. Shinohara, T. Otobe, and G. F. Bertsch: "Time-dependent density functional theory for strong electromagnetic fields in crystalline solids", [Phys. Rev. B  85, 045134 (2012)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045134).
+3. Shunsuke A. Sato, and Kazuhiro Yabana: "Maxwell + TDDFT multi-scale simulation for laser-matter interaction", [J. Adv. Simulat. Sci. Eng. 1, 98 (2014)](https://www.jstage.jst.go.jp/article/jasse/1/1/1_98/_article).
 4. Yuta Hirokawa: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Many-Core Systems", SC16 ACM SRC Poster, 2016.
 5. Yuta Hirokawa, Taisuke Boku, Shunsuke A. Sato, and Kazuhiro Yabana: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Symmetric Mode Xeon Phi Cluster", The 17th IEEE International Workshop on Parallel and Distributed Scientific and Engineering Computing (PDSEC2016), 2016.
 
