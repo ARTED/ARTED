@@ -5,8 +5,6 @@
 #PJM -o joblog/arted.knl.log
 #PJM -j
 
-cd $SLURM_SUBMIT_DIR
-
 export I_MPI_PIN_DOMAIN=272
 
 export KMP_AFFINITY=balanced,granularity=fine
