@@ -1111,6 +1111,7 @@ subroutine prep_Reentrance_Read
 
   allocate(javt(0:Nt,3))
   allocate(Vpsl(NL),Vh(NL),Vexc(NL),Eexc(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
+  allocate(Vloc_new(NL),Vloc_old(NL,2))
   allocate(tmass(NL),tjr(NL,3),tjr2(NL),tmass_t(NL),tjr_t(NL,3),tjr2_t(NL))
   allocate(dVloc_G(NG_s:NG_e,NE))
   allocate(rho(NL),rho_gs(NL))
@@ -1121,6 +1122,7 @@ subroutine prep_Reentrance_Read
 
   read(500) javt(:,:)
   read(500) Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)
+  read(500) Vloc_new(:),Vloc_old(:,:)
   read(500) tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
   read(500) dVloc_G(:,:)
   read(500) rho(:),rho_gs(:)
@@ -1367,6 +1369,7 @@ subroutine prep_Reentrance_write
 
   write(500) javt(:,:)
   write(500) Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)
+  write(500) Vloc_new(:),Vloc_old(:,:)
   write(500) tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
   write(500) dVloc_G(:,:)
   write(500) rho(:),rho_gs(:)
