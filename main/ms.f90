@@ -397,7 +397,7 @@ Program main
 
       call timelog_begin(LOG_K_SHIFT_WF)
 !Adiabatic evolution
-      if (AD_RHO /= 'No' .and. iter/100*100 == iter) then
+      if (AD_RHO /= 'No' .and. mod(iter,100) == 0) then
         call k_shift_wf(Rion_update,2)
         if(NEWRANK == 0)then ! sato
           excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
@@ -487,7 +487,7 @@ Program main
     
     end if
 
-    if (AD_RHO /= 'No' .and. iter/100*100 == 0 ) then 
+    if (AD_RHO /= 'No' .and. mod(iter,100) == 0 ) then 
       call timelog_begin(LOG_ALLREDUCE)
       call MPI_ALLREDUCE(excited_electron_l,excited_electron &
         &,NX_m*NY_m,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
