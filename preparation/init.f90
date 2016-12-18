@@ -108,6 +108,37 @@ Subroutine init
 
 ! make symmetry table
   if(Sym == 1)then
+  else if((Sym == 8).and.(crystal_structure == 'diamond2')) then
+!=== start diamond(8) ====================================================================
+! (x,y,z) -> (-x,y,z)
+      do i=1,NL
+        ix=Lx(i);iy=Ly(i);iz=Lz(i)
+        ixt=-ix;iyt=iy;izt=iz
+        ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+        itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+      end do
+! (x,y,z) -> (x,-y,z)
+      do i=1,NL
+        ix=Lx(i);iy=Ly(i);iz=Lz(i)
+        ixt=ix;iyt=-iy;izt=iz
+        ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+        itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+      end do
+! (x,y,z) -> (x+aLx/2,y+aLy/2,z+aLz/2)
+      do i=1,NL
+        ix=Lx(i);iy=Ly(i);iz=Lz(i)
+        ixt=ix+NLx/2;iyt=iy+NLy/2;izt=iz+NLz/2
+        ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+        itable_sym(3,i)=Lxyz(ixt,iyt,izt)
+    end do
+! (x,y,z) -> (y,-x+aLx/2,z+aLz/4)
+      do i=1,NL
+        ix=Lx(i);iy=Ly(i);iz=Lz(i)
+        ixt=iy;iyt=-ix+NLx/2;izt=iz+NLz/4
+        ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
+        itable_sym(4,i)=Lxyz(ixt,iyt,izt)
+    end do
+!===  end  diamond2(8) ====================================================================
   else if((Sym == 8).and.(crystal_structure == 'diamond')) then
 !=== start diamond(8) ====================================================================
 ! f(r_new)=T_1*f(r_old+t); (r_new=T_1*r_old)
