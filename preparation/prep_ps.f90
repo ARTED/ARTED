@@ -268,7 +268,7 @@ Subroutine prep_ps_periodic(property)
 ! nonlinear core-correction
   rho_nlcc = 0d0
   tau_nlcc = 0d0
-  if(iflag_nlcc == 1)then
+  if(flag_nlcc)then
     if(myrank == 0)write(*,"(A)")"Preparation: Non-linear core correction"
     do a=1,NI
       ik=Kion(a)

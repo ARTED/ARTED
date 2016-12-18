@@ -1203,8 +1203,8 @@ subroutine prep_Reentrance_Read
   read(500) itable_sym(:,:) ! sym
   read(500) rho_l(:),rho_tmp1(:),rho_tmp2(:) !sym
 
-  read(500) iflag_nlcc
-  if(iflag_nlcc /= 0)then
+  read(500) flag_nlcc
+  if(flag_nlcc)then
      allocate(rho_nlcc(NL),tau_nlcc(NL))
      read(500)rho_nlcc(:),tau_nlcc(:)
   end if
@@ -1415,8 +1415,8 @@ subroutine prep_Reentrance_write
   write(500) rho_l(:),rho_tmp1(:),rho_tmp2(:) !sym
 
 
-  write(500) iflag_nlcc
-  if(iflag_nlcc /= 0)then
+  write(500) flag_nlcc
+  if(flag_nlcc)then
      write(500)rho_nlcc(:),tau_nlcc(:)
   end if
 

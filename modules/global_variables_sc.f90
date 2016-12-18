@@ -84,7 +84,7 @@ Module Global_Variables
   real(8),allocatable :: esp_cb_min(:),esp_cb_max(:) !FS set
   real(8),allocatable :: Eall_GS(:),esp_var_ave(:),esp_var_max(:),dns_diff(:)
 !Nonlinear core correction
-  integer :: iflag_nlcc = 0
+  logical :: flag_nlcc = .false.
   real(8),allocatable :: rho_nlcc_tbl(:,:),tau_nlcc_tbl(:,:)
   real(8),allocatable :: rho_nlcc(:),tau_nlcc(:)
 

@@ -18,7 +18,7 @@ Subroutine input_pseudopotential_YS
   use Global_Variables,only : Pi,Zatom,Mass,NE,directory,ierr,Myrank,ps_format,PSmask_option&
        &,Nrmax,Lmax,Mlps,Lref,Zps,NRloc,NRps,inorm&
        &,rad,Rps,vloctbl,udVtbl,radnl,Rloc,anorm,dvloctbl,dudVtbl &
-       &,rho_nlcc_tbl,tau_nlcc_tbl,rho_nlcc,tau_nlcc,iflag_nlcc,NL
+       &,rho_nlcc_tbl,tau_nlcc_tbl,rho_nlcc,tau_nlcc,flag_nlcc,NL
   implicit none
   include 'mpif.h'
   integer,parameter :: Lmax0=4,Nrmax0=50000
@@ -32,10 +32,12 @@ Subroutine input_pseudopotential_YS
   character(2) :: atom_symbol
   character(50) :: ps_file
   character(10) :: ps_postfix
+  logical,allocatable :: flag_nlcc_element(:)
 
 ! Nonlinear core correction
   allocate(rho_nlcc_tbl(Nrmax,NE),tau_nlcc_tbl(Nrmax,NE))
   allocate(rho_nlcc(NL),tau_nlcc(NL))
+  allocate(flag_nlcc_element(NE)); flag_nlcc_element(:) = .false. ;flag_nlcc = .false.
 
   if (Myrank == 0) then
 ! --- Making prefix ---
@@ -148,7 +150,7 @@ Subroutine input_pseudopotential_YS
       case('KY')        ; call Read_PS_KY(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
       case('ABINIT')    ; call Read_PS_ABINIT(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
       case('ABINITFHI') ; call Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,&
-        rhor_nlcc,ik,ps_file)
+        rhor_nlcc,flag_nlcc_element,ik,ps_file)
       case('FHI')       ; call Read_PS_FHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
 !      case('ATOM')      ; call Read_PS_ATOM
       case default ; stop 'Unprepared ps_format is required input_pseudopotential_YS'
@@ -188,6 +190,7 @@ Subroutine input_pseudopotential_YS
       write(*,*) 'anorm(ik,l) =',(anorm(l,ik),l=0,Mlps(ik))
       write(*,*) 'inorm(ik,l) =',(inorm(l,ik),l=0,Mlps(ik))
       write(*,*) 'Mass(ik) =',Mass(ik)
+      write(*,*) 'flag_nlcc_element(ik) =',flag_nlcc_element(ik)
       write(*,*) '=========================================================='
 
       if (PSmask_option == 'y') then
@@ -231,8 +234,8 @@ Subroutine input_pseudopotential_YS
   CALL MPI_BCAST(Mass,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(rho_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(tau_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(iflag_nlcc,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-
+  CALL MPI_BCAST(flag_nlcc,NE,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+  if(myrank == 0)write(*,*)"flag_nlcc = ",flag_nlcc
   return
   contains
 !====
@@ -321,8 +324,10 @@ Subroutine input_pseudopotential_YS
         dudVtbl(1:NRps(ik),l,ik)=dudVtbl(1:NRps(ik),l,ik)/anorm(l,ik)
       enddo
 
-      if(iflag_nlcc /= 1)return
+
+      flag_nlcc = flag_nlcc.or.flag_nlcc_element(ik)
       rho_nlcc_tbl(:,ik)=0d0; tau_nlcc_tbl(:,ik)=0d0
+      if(.not.flag_nlcc_element(ik))return
       do i=1,NRps(ik)
         if(rhor_nlcc(i-1,0)/rhor_nlcc(0,0) < 1d-7)exit
         rho_nlcc_tbl(i,ik)=rhor_nlcc(i-1,0)
@@ -375,8 +380,9 @@ Subroutine input_pseudopotential_YS
         dudVtbl(1:NRps(ik),l,ik)=dudVtbl(1:NRps(ik),l,ik)/anorm(l,ik)
       enddo
 
-      if(iflag_nlcc /= 1)return
+      flag_nlcc = flag_nlcc.or.flag_nlcc_element(ik)
       rho_nlcc_tbl(:,ik)=0d0; tau_nlcc_tbl(:,ik)=0d0
+      if(.not.flag_nlcc_element(ik))return
       do i=1,NRps(ik)
         if(rhor_nlcc(i-1,0)/rhor_nlcc(0,0) < 1d-7)exit
         rho_nlcc_tbl(i,ik)=rhor_nlcc(i-1,0)
@@ -790,10 +796,10 @@ Subroutine Read_PS_ABINIT(Lmax0,Nrmax0,Mr,rRC,upp,vpp,ik,ps_file)
   return
 End Subroutine Read_PS_ABINIT
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,ik,ps_file)
+Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,flag_nlcc_element,ik,ps_file)
 !This is for  FHI pseudopotential listed in abinit web page and not for original FHI98PP.
 !See http://www.abinit.org/downloads/psp-links/lda_fhi
-  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad,iflag_nlcc,pi
+  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad,flag_nlcc,pi,NE
   implicit none
 !argument
   integer,intent(in) :: Lmax0,Nrmax0,ik
@@ -802,6 +808,7 @@ Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,ik,ps_file)
   real(8),intent(out) :: vpp(0:Nrmax0,0:Lmax0),upp(0:Nrmax0,0:Lmax0)
   character(50),intent(in) :: ps_file
   real(8),intent(out) :: rhor_nlcc(0:Nrmax0,0:2)
+  logical,intent(inout) :: flag_nlcc_element(NE)
 !local variable
   character(50) :: temptext
   integer :: i,j
@@ -836,12 +843,12 @@ Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,ik,ps_file)
   end do
 !Nonlinear core-correction
   do i=1,Mr_l(0)
-    read(4,*,err=940) rad(i+1,ik),rhor_nlcc(i,0),rhor_nlcc(i,1),rhor_nlcc(i,2)
+    read(4,*,end=940) rad(i+1,ik),rhor_nlcc(i,0),rhor_nlcc(i,1),rhor_nlcc(i,2)
   end do
   rhor_nlcc(0,:)=rhor_nlcc(1,:)-(rhor_nlcc(2,:)-rhor_nlcc(1,:)) &
     /(rad(3,ik)-rad(2,ik))*(rad(2,ik))
   rhor_nlcc = rhor_nlcc/(4d0*pi)
-  iflag_nlcc = 1
+  flag_nlcc_element(ik) = .true.
 !Nonlinear core-correction
 
 
