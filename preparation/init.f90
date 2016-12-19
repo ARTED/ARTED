@@ -107,6 +107,8 @@ Subroutine init
   end do
 
 ! make symmetry table
+! table gives the relation between an original point "i"
+! and a moved position "j" by a symmetry operation; j <+ T*i
   if(Sym == 1)then
   else if((Sym == 8).and.(crystal_structure == 'diamond2')) then
 !=== start diamond(8) ====================================================================
@@ -115,28 +117,28 @@ Subroutine init
         ix=Lx(i);iy=Ly(i);iz=Lz(i)
         ixt=-ix;iyt=iy;izt=iz
         ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-        itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+        itable_sym(1,Lxyz(ixt,iyt,izt))=i
       end do
 ! (x,y,z) -> (x,-y,z)
       do i=1,NL
         ix=Lx(i);iy=Ly(i);iz=Lz(i)
         ixt=ix;iyt=-iy;izt=iz
         ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-        itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+        itable_sym(2,Lxyz(ixt,iyt,izt))=i
       end do
 ! (x,y,z) -> (x+aLx/2,y+aLy/2,z+aLz/2)
       do i=1,NL
         ix=Lx(i);iy=Ly(i);iz=Lz(i)
         ixt=ix+NLx/2;iyt=iy+NLy/2;izt=iz+NLz/2
         ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-        itable_sym(3,i)=Lxyz(ixt,iyt,izt)
+        itable_sym(3,Lxyz(ixt,iyt,izt))=i
     end do
 ! (x,y,z) -> (y,-x+aLx/2,z+aLz/4)
       do i=1,NL
         ix=Lx(i);iy=Ly(i);iz=Lz(i)
         ixt=iy;iyt=-ix+NLx/2;izt=iz+NLz/4
         ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-        itable_sym(4,i)=Lxyz(ixt,iyt,izt)
+        itable_sym(4,Lxyz(ixt,iyt,izt))=i
     end do
 !===  end  diamond2(8) ====================================================================
   else if((Sym == 8).and.(crystal_structure == 'diamond')) then
@@ -158,28 +160,28 @@ Subroutine init
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=iy;iyt=ix;izt=iz ! R_1
-      itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(1,Lxyz(ixt,iyt,izt))=i
     end do
 ! 2. T_2
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=-iy;iyt=-ix;izt=iz
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(2,Lxyz(ixt,iyt,izt))=i
     end do
 ! 3. T_3
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=-iy+NLx/4;iyt=ix+NLy/4;izt=iz+NLz/4 ! R_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(3,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(3,Lxyz(ixt,iyt,izt))=i
     end do
 ! 4. T_4
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=ix+NLx/2;iyt=iy+NLy/2;izt=iz
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(4,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(4,Lxyz(ixt,iyt,izt))=i
     end do
 ! 5. T_3*T_3
     do i=1,NL
@@ -189,7 +191,7 @@ Subroutine init
       ix=ixt;iy=iyt;iz=izt
       ixt=-iy+NLx/4;iyt=ix+NLy/4;izt=iz+NLz/4 ! T_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(5,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(5,Lxyz(ixt,iyt,izt))=i
     end do
 !===  end  diamond(8) ====================================================================
   else if((Sym == 4).and.(crystal_structure == 'diamond')) then
@@ -212,7 +214,7 @@ Subroutine init
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=-iy+NLx/4;iyt=ix+NLy/4;izt=iz+NLz/4 ! R_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(1,Lxyz(ixt,iyt,izt))=i
     end do
 ! 2. T_3*T_3
     do i=1,NL
@@ -222,7 +224,7 @@ Subroutine init
       ix=ixt;iy=iyt;iz=izt
       ixt=-iy+NLx/4;iyt=ix+NLy/4;izt=iz+NLz/4 ! T_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(2,Lxyz(ixt,iyt,izt))=i
     end do
 !===  end  diamond(4) ====================================================================
   else if((Sym == 8).and.(crystal_structure == 'tetragonal')) then
@@ -240,21 +242,21 @@ Subroutine init
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=iy;iyt=ix;izt=iz ! R_1
-      itable_sym(1,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(1,Lxyz(ixt,iyt,izt))=i
     end do
 ! 2. T_2
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=-iy;iyt=-ix;izt=iz
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(2,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(2,Lxyz(ixt,iyt,izt))=i
     end do
 ! 3. T_3
     do i=1,NL
       ix=Lx(i);iy=Ly(i);iz=Lz(i)
       ixt=-iy;iyt=ix;izt=iz ! R_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(3,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(3,Lxyz(ixt,iyt,izt))=i
     end do
 ! 4. T_3*T_3
     do i=1,NL
@@ -264,7 +266,7 @@ Subroutine init
       ix=ixt;iy=iyt;iz=izt
       ixt=-iy;iyt=ix;izt=iz ! T_3
       ixt=mod(ixt+2*NLx,NLx);iyt=mod(iyt+2*NLy,NLy);izt=mod(izt+2*NLz,NLz)
-      itable_sym(4,i)=Lxyz(ixt,iyt,izt)
+      itable_sym(4,Lxyz(ixt,iyt,izt))=i
     end do
 !===  end  diamond(8) ====================================================================
   else
