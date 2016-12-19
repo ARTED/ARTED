@@ -107,8 +107,8 @@ Subroutine init
   end do
 
 ! make symmetry table
-! table gives the relation between an original point "i"
-! and a moved position "j" by a symmetry operation; j <+ T*i
+! itable_sym(n,j)=i gives the relation between an original point "i"
+! and a moved position "j" by the n-th symmetry operation; j <+ T(n)*i
   if(Sym == 1)then
   else if((Sym == 8).and.(crystal_structure == 'diamond2')) then
 !=== start diamond(8) ====================================================================
