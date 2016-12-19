@@ -1181,8 +1181,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
-           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(4,i),2)
-           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(4,i),1)
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(4,i),2)
+           j_s_l(i,2)=j_s(i,2)-j_s(itable_sym(4,i),1)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
         end do        
 
