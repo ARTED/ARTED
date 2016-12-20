@@ -48,6 +48,7 @@ Subroutine Exc_Cor_PZ()
 !$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
   do i=1,NL
     trho=2*rho_s(i)
@@ -77,6 +78,7 @@ Subroutine Exc_Cor_PZM()
 !$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
   do i=1,NL
     trho=2*rho_s(i)
