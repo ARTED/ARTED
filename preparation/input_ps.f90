@@ -799,7 +799,7 @@ End Subroutine Read_PS_ABINIT
 Subroutine Read_PS_ABINITFHI(Lmax0,Nrmax0,Mr,rRC,upp,vpp,rhor_nlcc,flag_nlcc_element,ik,ps_file)
 !This is for  FHI pseudopotential listed in abinit web page and not for original FHI98PP.
 !See http://www.abinit.org/downloads/psp-links/lda_fhi
-  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad,flag_nlcc,pi,NE
+  use Global_Variables,only : Nrmax,Lmax,Mlps,Zps,rad,pi,NE
   implicit none
 !argument
   integer,intent(in) :: Lmax0,Nrmax0,ik
