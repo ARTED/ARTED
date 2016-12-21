@@ -858,7 +858,7 @@ Subroutine Read_data
 
   call comm_sync_all
 
-  allocate(javt(0:Nt,3)); javt = 0d0
+  allocate(javt(0:Nt,3))
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
 

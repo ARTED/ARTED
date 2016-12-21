@@ -188,7 +188,7 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
   implicit none
   integer    :: ik,ib,iter,ixyz
   integer    :: ia,j,i,ix,iy,iz
-  real(8)    :: kr,dt_t,jav_PC(3)
+  real(8)    :: kr,dt_t
   integer    :: thr_id,omp_get_thread_num,ikb
 
   NVTX_BEG('dt_evolve_omp_KB()',1)
