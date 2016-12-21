@@ -1092,32 +1092,36 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   case("diamond")
      if(Sym == 4)then
         tau_s(:)=tau_s(:)*0.25d0
-        j_s(:,1:2)= 0d0
-        j_s(:,3)=j_s(:,3)*0.25d0
+        j_s(:,1:3)=j_s(:,1:3)*0.25d0
 
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 ! 1.T_3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(1,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(1,i),2)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(1,i),1)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(1,i),3)
         end do
 ! 2.T3*T3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(2,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(2,i),2)
            j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
         end do
 
      else if(Sym == 8)then
         tau_s(:)=tau_s(:)/32d0
-        j_s(:,1:2)= 0d0
-        j_s(:,3)=j_s(:,3)/32d0
+        j_s(:,1:3)=j_s(:,1:3)/32d0
 
 ! 1.T_4
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(4,i),1)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(4,i),2)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
         end do        
 
@@ -1125,6 +1129,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(5,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(5,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(5,i),2)
            j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(5,i),3)
         end do        
         
@@ -1132,6 +1138,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(3,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(3,i),2)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(3,i),1)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(3,i),3)
         end do
 
@@ -1139,6 +1147,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(1,i))
+           j_s(i,1)=j_s_l(i,1)+j_s_l(itable_sym(1,i),2)
+           j_s(i,2)=j_s_l(i,2)+j_s_l(itable_sym(1,i),1)
            j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(1,i),3)
         end do        
 
@@ -1146,6 +1156,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(2,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(2,i),2)
+           j_s_l(i,2)=j_s(i,2)-j_s(itable_sym(2,i),1)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(2,i),3)
         end do        
 
@@ -1153,7 +1165,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)
-           j_s(i,3)=j_s_l(i,3)
+           j_s(i,1:3)=j_s_l(i,1:3)
         end do        
         
      else if(Sym /= 1)then
@@ -1163,31 +1175,38 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   case("diamond2")
      if(Sym == 8)then
         tau_s(:)=tau_s(:)*6.25d-2
-        j_s(:,1:2)= 0d0
-        j_s(:,3)=j_s(:,3)*6.25d-2
+        j_s(:,1:3)=j_s(:,1:3)*6.25d-2
 
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(4,i),2)
+           j_s_l(i,2)=j_s(i,2)-j_s(itable_sym(4,i),1)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
         end do        
 
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(i,1)=j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(2,i),2)
            j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
         end do        
         
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s_l(i)=tau_s(i)+tau_s(itable_sym(3,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(3,i),1)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(3,i),2)
            j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(3,i),3)
         end do
 
 !$omp parallel do  private(i)  
         do i=1,NL
            tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(1,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(1,i),1)
+           j_s(i,2)=j_s_l(i,2)+j_s_l(itable_sym(1,i),2)
            j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(1,i),3)
         end do        
 
