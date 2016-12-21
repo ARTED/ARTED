@@ -48,6 +48,7 @@ Subroutine Exc_Cor_PZ()
 !$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
   do i=1,NL
     trho=2*rho_s(i)
@@ -77,6 +78,7 @@ Subroutine Exc_Cor_PZM()
 !$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
   do i=1,NL
     trho=2*rho_s(i)
@@ -942,6 +944,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 
 !  allocate(tau_s_l_omp(NL,0:NUMBER_THREADS-1),j_s_l_omp(NL,3,0:NUMBER_THREADS-1)) ! sato
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 
   tau_s_l_omp=0d0
   j_s_l_omp=0d0
@@ -1047,6 +1050,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 
   call MPI_ALLREDUCE(tau_s_l,tau_s,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(j_s_l,j_s,NL*3,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+
+  if(flag_nlcc)tau_s = tau_s + 0.5d0*tau_nlcc
 
   select case(Nd)
   case(4)
