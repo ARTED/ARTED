@@ -188,7 +188,7 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
   implicit none
   integer    :: ik,ib,iter,ixyz
   integer    :: ia,j,i,ix,iy,iz
-  real(8)    :: kr,dt_t
+  real(8)    :: kr,dt_t,jav_PC(3)
   integer    :: thr_id,omp_get_thread_num,ikb
 
   NVTX_BEG('dt_evolve_omp_KB()',1)
@@ -241,7 +241,19 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
   Vloc(:) = Vloc_new(:)
 
   if (Longi_Trans == 'Lo') then 
-     stop "AETRS is not available for Longitudinal geometry"
+    if(iter>=2)then
+      jav_PC(:) = 3d0*javt(iter,:) - 3d0*javt(iter-1,:)  + javt(iter-2,:)
+    else if(iter==1)then
+      jav_PC(:) = 2d0*javt(iter,:) - javt(iter-1,:)
+    else 
+      jav_PC(:) = 0d0
+    end if
+    Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*jav_PC(:)*dt_t**2
+    if (Sym /= 1) then
+      Ac_ind(iter+1,1)=0.d0
+      Ac_ind(iter+1,2)=0.d0
+    end if
+    Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
   else if (Longi_Trans == 'Tr') then 
     Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
   end if
