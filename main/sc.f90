@@ -304,6 +304,18 @@ Program main
   etime1=get_wtime()
 !$acc enter data copyin(zu)
   do iter=entrance_iter+1,Nt
+
+    if (Longi_Trans == 'Lo') then 
+      Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
+      if (Sym /= 1) then
+        Ac_ind(iter+1,1)=0.d0
+        Ac_ind(iter+1,2)=0.d0
+      end if
+      Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
+    else if (Longi_Trans == 'Tr') then 
+      Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
+    end if
+
     do ixyz=1,3
       kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
     enddo
@@ -313,7 +325,7 @@ Program main
     call dt_evolve_etrs_omp_KB(iter)
     call current_omp_KB
 
-    javt(iter,:)=jav(:)
+    javt(iter+1,:)=jav(:)
     if (MD_option == 'Y') then
 !$acc update self(zu)
       call Ion_Force_omp(Rion_update,'RT')
@@ -330,16 +342,6 @@ Program main
 
     call timelog_begin(LOG_OTHER)
 
-    if (Longi_Trans == 'Lo') then 
-      Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
-      if (Sym /= 1) then
-        Ac_ind(iter+1,1)=0.d0
-        Ac_ind(iter+1,2)=0.d0
-      end if
-      Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
-    else if (Longi_Trans == 'Tr') then 
-      Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
-    end if
 
     E_ext(iter,:)=-(Ac_ext(iter+1,:)-Ac_ext(iter-1,:))/(2*dt)
     E_ind(iter,:)=-(Ac_ind(iter+1,:)-Ac_ind(iter-1,:))/(2*dt)
@@ -851,7 +853,7 @@ Subroutine Read_data
 
   call comm_sync_all
 
-  allocate(javt(0:Nt,3))
+  allocate(javt(0:Nt,3)); javt = 0d0
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
 

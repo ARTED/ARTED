@@ -240,24 +240,6 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
   Vloc_old(:,1) = Vloc(:)
   Vloc(:) = Vloc_new(:)
 
-  if (Longi_Trans == 'Lo') then 
-    if(iter>=2)then
-      jav_PC(:) = 3d0*javt(iter,:) - 3d0*javt(iter-1,:)  + javt(iter-2,:)
-    else if(iter==1)then
-      jav_PC(:) = 2d0*javt(iter,:) - javt(iter-1,:)
-    else 
-      jav_PC(:) = 0d0
-    end if
-    Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*jav_PC(:)*dt_t**2
-    if (Sym /= 1) then
-      Ac_ind(iter+1,1)=0.d0
-      Ac_ind(iter+1,2)=0.d0
-    end if
-    Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
-  else if (Longi_Trans == 'Tr') then 
-    Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
-  end if
-
   do ixyz=1,3
     kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
   enddo
