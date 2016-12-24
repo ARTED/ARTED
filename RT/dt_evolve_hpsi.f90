@@ -27,7 +27,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 #ifndef ARTED_LBLK
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-subroutine dt_evolve_hpsi
+subroutine dt_evolve_hpsi(flag_current)
   use Global_Variables
   use timelog
   use omp_lib
@@ -37,6 +37,7 @@ subroutine dt_evolve_hpsi
   integer    :: ikb,ik,ib,i
   integer    :: iexp
   complex(8) :: zfac(4)
+  logical, intent(in) :: flag_current
 
   zfac(1)=(-zI*dt)
   do i=2,4
@@ -61,7 +62,7 @@ subroutine dt_evolve_hpsi
     call update(zfac,ztpsi(:,:,tid),zu(:,ib,ik))
 
 #ifdef ARTED_CURRENT_OPTIMIZED
-    call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
+    if(flag_current) call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
 #endif
   end do
 !$omp end do
@@ -120,7 +121,7 @@ end subroutine
 ! ifndef ARTED_LBLK
 #else
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-subroutine dt_evolve_hpsi
+subroutine dt_evolve_hpsi(flag_current)
   use Global_Variables
   use timelog
 #ifdef ARTED_USE_NVTX
@@ -133,6 +134,7 @@ subroutine dt_evolve_hpsi
   complex(8) :: zfac(4)
   integer    :: ikb_s,ikb_e
   integer    :: ikb0,ikb1,num_ikb1
+  logical, intent(in) :: flag_current
 
   zfac(1)=(-zI*dt)
   do i=2,4
@@ -156,7 +158,7 @@ subroutine dt_evolve_hpsi
     call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
 
 #ifdef ARTED_CURRENT_OPTIMIZED
-    call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
+    if(flag_current) call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
 #endif
   end do
 !$acc end data
