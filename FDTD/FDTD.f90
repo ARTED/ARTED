@@ -13,78 +13,52 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-subroutine write_result_all
+
+!===============================================================
+subroutine write_result(index)
   use Global_Variables
   implicit none
-  integer :: iter_t,iter_i
-  integer ix_m,iy_m
-  character(30) wf,citer
-
-  do iter_i=0,Nt/Nstep_write
-
-    if(myrank == mod(iter_i,Nprocs)) then
-      iter_t=iter_i*Nstep_write
-      write(citer,'(I6.6)')iter_t
-      wf=trim(directory)//trim(SYSname) &
-        &//'_Ac_'//trim(citer)//'.out'
-      open(902,file=wf)
-
-      if(NY_m==1) then
-        do ix_m=NXvacL_m,NXvacR_m
-          write(902,'(10e26.16E3)') ix_m*HX_m,data_out(1:9,ix_m,1,iter_i)
-        end do
-      else
-        do iy_m=1,NY_m
-          do ix_m=NXvacL_m,NXvacR_m
-            write(902,'(11e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:9,ix_m,iy_m,iter_i)
-          end do
-        end do
-      end if
-      close(902)
-    end if
-! 1000 format(1x,2(1pe10.3,1x))
+  integer, intent(in) :: index
+  integer :: iter,ix_m,iy_m
+  ! export results of each calculation step
+  ! (written by M.Uemoto on 2016-11-22)
+  iter = Nstep_write * index
+  write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
+  open(902, file=file_ac)
+  select case(FDTDdim)
+  case("1D")
+    write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
+    do ix_m=NXvacL_m,NXvacR_m
+      write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
+    end do
+  case("2D", "2DC")
+    write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
+    do iy_m=NYvacB_m,NYvacT_m
+      do ix_m=NXvacL_m,NXvacR_m
+        write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
+      end do
+    end do
+  end select
+  close(902)
+  return
+end subroutine write_result
+!===============================================================
+subroutine write_result_all()
+  use Global_Variables
+  implicit none
+  integer :: Ndata, Ndata_per_proc, i, index
+  ! export all results by using MPI
+  ! (written by M.Uemoto on 2016-11-22)
+  Ndata = Nt / Nstep_write
+  Ndata_per_proc = ceiling(float(Ndata) / Nprocs)
+  do i=0, Ndata_per_proc-1
+    index = Myrank * Ndata_per_proc + i
+    if (index <= Ndata) then
+      call write_result(index)
+    endif
   end do
   return
 end subroutine write_result_all
-!===============================================================
-subroutine write_result(iter)
-  use Global_Variables
-  implicit none
-  integer i1,i2,i3,i4,i5,i6,i7,i8
-  integer iter,ix_m,iy_m
-  character(30) wf
-  
-  i1=iter/10000
-  i2=mod(iter,10000)
-  i3=i2/1000
-  i4=mod(i2,1000)
-  i5=i4/100
-  i6=mod(i4,100)
-  i7=i6/10
-  i8=mod(i6,10)
-  wf=trim(directory)//trim(SYSname) &
-       &//'_Ac_'//char(48+i1)//char(48+i3)//char(48+i5)//char(48+i7)//char(48+i8)//'.out'
-  open(902,file=wf)
-
-  if(NY_m==1) then
-    do ix_m=NXvacL_m,NXvacR_m
-      write(902,'(10e26.16E3)') ix_m*HX_m,Ac_new_m(2,ix_m,1),Ac_new_m(3,ix_m,1) &
-        &,Elec(2,ix_m,1),Elec(3,ix_m,1),j_m(2,ix_m,1),j_m(3,ix_m,1) &
-        &,energy_elemag(ix_m,1),energy_elec(ix_m,1),energy_total(ix_m,1)
-    end do
-  else
-    do iy_m=1,NY_m
-      do ix_m=NXvacL_m,NXvacR_m
-        write(902,'(11e26.16E3)') ix_m*HX_m,iy_m*HY_m,Ac_new_m(2,ix_m,iy_m),Ac_new_m(3,ix_m,iy_m) &
-          &,Elec(2,ix_m,iy_m),Elec(3,ix_m,iy_m),j_m(2,ix_m,iy_m),j_m(3,ix_m,iy_m) &
-          &,energy_elemag(ix_m,iy_m),energy_elec(ix_m,iy_m),energy_total(ix_m,iy_m) 
-      end do
-    end do
-  end if
-  close(902)
-! 1000 format(1x,2(1pe10.3,1x))
-  return
-end subroutine write_result
 !===============================================================
 subroutine write_energy(iter)
   use Global_Variables
@@ -142,6 +116,23 @@ subroutine write_excited_electron(iter)
   return
 end subroutine write_excited_electron
 !===============================================================
+subroutine init_Ac_ms_2dc()
+  use Global_variables
+  implicit none
+  ! initialization for 2D cylinder mode
+  ! (written by M.Uemoto on 2016-11-22)
+  Elec=0d0
+  Bmag=0d0
+  j_m=0d0
+  jmatter_m=0d0
+  jmatter_m_l=0d0
+  energy_joule=0d0
+  call incident_bessel_beam()
+  
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  return
+end subroutine init_Ac_ms_2dc
+!===============================================================
 subroutine init_Ac_ms
   use Global_variables
   implicit none
@@ -180,6 +171,7 @@ subroutine init_Ac_ms
   j_m=0d0
   jmatter_m=0d0
   jmatter_m_l=0d0      
+  energy_joule=0.0
       
   Ac_m=0d0
   Ac_old_m=0d0
@@ -346,60 +338,264 @@ subroutine init_Ac_ms
   case default
     stop 'boundary condition is not good'
   end select
-  
-
   return
 end subroutine init_Ac_ms
+!===========================================================
+subroutine dt_evolve_Ac_1d
+  use Global_variables, only: Ac_old_m, Ac_m, Ac_new_m, &
+                            & NXvacL_m,NXvacR_m, HX_m, dt, &
+                            & j_m, c_light, pi, c_light  
+  implicit none
+  integer :: ix_m
+  real(8) :: RR(3) ! rot rot Ac
+
+  Ac_old_m=Ac_m
+  Ac_m=Ac_new_m
+  do ix_m=NXvacL_m,NXvacR_m
+    RR(1) = 0.0d0
+    RR(2) = -(Ac_m(2,ix_m+1,1) - 2*Ac_m(2,ix_m,1) + Ac_m(2,ix_m-1,1)) * (1.0 / HX_m**2) 
+    RR(3) = -(Ac_m(3,ix_m+1,1) - 2*Ac_m(3,ix_m,1) + Ac_m(3,ix_m-1,1)) * (1.0 / HX_m**2) 
+    Ac_new_m(:,ix_m,1) = (2*Ac_m(:,ix_m,1) - Ac_old_m(:,ix_m,1) &
+      & - j_m(:,ix_m,1)*4.0d0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+  end do
+  return
+end subroutine dt_evolve_Ac_1d
+!===========================================================
+subroutine dt_evolve_Ac_2d
+  use Global_variables, only: Ac_old_m, Ac_m, Ac_new_m, &
+                            & NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m, TwoD_shape, &
+                            & HX_m, HY_m, dt, j_m, c_light, pi, c_light
+  implicit none
+  integer :: ix_m,iy_m
+  real(8) :: RR(3) ! rot rot Ac
+  ! (written by M.Uemoto on 2016-11-22)
+  Ac_old_m=Ac_m
+  Ac_m=Ac_new_m
+  do iy_m=NYvacB_m,NYvacT_m
+    do ix_m=NXvacL_m,NXvacR_m
+      RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1) &
+            & +(+2.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m+1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1)
+      RR(2) = +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m-1, iy_m) &
+            & +(+2.00d0/HX_m**2) * Ac_m(2, ix_m, iy_m) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m+1, iy_m)
+      RR(3) = +(-1.00d0/HX_m**2) * Ac_m(3, ix_m-1, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m-1) &
+            & +(+2.00d0/HY_m**2 +2.00d0/HX_m**2) * Ac_m(3, ix_m, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m+1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(3, ix_m+1, iy_m)
+      Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
+        & -j_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+    end do
+  end do
+  ! Boundary Condition
+  select case(TwoD_shape)
+  case('periodic')
+    Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacT_m)
+    Ac_new_m(:,:,NYvacT_m+1)=Ac_new_m(:,:,NYvacB_m)
+  case('isolated')
+    Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
+    Ac_new_m(:,:,NYvacT_m+1)=0.0d0
+  end select
+  return
+end subroutine dt_evolve_Ac_2d
+!===========================================================
+subroutine dt_evolve_Ac_2dc()
+  use Global_variables, only: Ac_old_m, Ac_m, Ac_new_m, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & HX_m, HY_m, dt, j_m, c_light, pi, c_light
+  implicit none
+  integer :: ix_m, iy_m
+  real(8) :: Y, RR(3) ! rot rot Ac
+  ! (written by M.Uemoto on 2016-11-22)
+  Ac_old_m=Ac_m
+  Ac_m=Ac_new_m
+  do iy_m=NYvacB_m,NYvacT_m
+    Y = (iy_m - 0.50d0) * HY_m
+    do ix_m=NXvacL_m,NXvacR_m
+      RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
+            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1) &
+            & -0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m-1,iy_m+0) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m+1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m-1) &
+            & +0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m+1,iy_m+0) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m+1)
+      RR(2) = +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m-1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m+1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m-1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m+1) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m-1,iy_m+0) &
+            & +2.00d0*(1.00d0/HX_m**2)*Ac_m(2,ix_m+0,iy_m+0) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m+1,iy_m+0)
+      RR(3) = -(1.00d0/HX_m**2)*Ac_m(3,ix_m-1,iy_m+0) &
+            & +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m-1) &
+            & +(+(1.00d0/Y**2)+2.00d0*(1.00d0/HX_m**2)+2.00d0*(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+0) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+1) &
+            & -(1.00d0/HX_m**2)*Ac_m(3,ix_m+1,iy_m+0)
+      Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
+        & -J_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+    end do
+  end do
+  ! Boundary condition
+  Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
+  Ac_new_m(:,:,NYvacT_m+1)=0.0d0
+  return
+end subroutine dt_evolve_Ac_2dc
 !===========================================================
 subroutine dt_evolve_Ac
   use Global_variables
   use timelog
   implicit none
-  integer ix_m,iy_m
-
+  ! (written by M.Uemoto on 2016-11-22)
   call timelog_begin(LOG_DT_EVOLVE_AC)
-
-  Ac_old_m=Ac_m
-  Ac_m=Ac_new_m
-
-
-!  if(iter/=0)then
-    do iy_m=1,NY_m
-      do ix_m=NXvacL_m+1,NXvacR_m-1
-        Ac_new_m(2,ix_m,iy_m)=2d0*Ac_m(2,ix_m,iy_m)-Ac_old_m(2,ix_m,iy_m)+(c_light*dt/HX_m)**2 &
-          &*(Ac_m(2,ix_m+1,iy_m)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m-1,iy_m))+(c_light*dt/HY_m)**2 &
-          &*(Ac_m(2,ix_m,iy_m+1)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m-1))-4*pi*dt*dt*j_m(2,ix_m,iy_m)
-
-        Ac_new_m(3,ix_m,iy_m)=2d0*Ac_m(3,ix_m,iy_m)-Ac_old_m(3,ix_m,iy_m)+(c_light*dt/HX_m)**2 &
-          &*(Ac_m(3,ix_m+1,iy_m)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m-1,iy_m))+(c_light*dt/HY_m)**2 &
-          &*(Ac_m(3,ix_m,iy_m+1)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m-1))-4*pi*dt*dt*j_m(3,ix_m,iy_m)
-      end do
-    enddo
-!  else
-!    do iy_m=1,NY_m
-!      do ix_m=NXvacL_m+1,NXvacR_m-1
-!        Ac_new_m(2,ix_m,iy_m)=Ac_m(2,ix_m,iy_m)+dt*g(2,ix_m,iy_m)+0.5d0*(c*dt/HX_m)**2 &
-!          *(Ac_m(2,ix_m+1,iy_m)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m-1,iy_m))+0.5d0*(c*dt/HY_m)**2 &
-!          *(Ac_m(2,ix_m,iy_m+1)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m-1))-4*pi*dt*dt*j_m(2,ix_m,iy_m) 
-!
-!        Ac_new_m(3,ix_m,iy_m)=Ac_m(3,ix_m,iy_m)+dt*g(3,ix_m,iy_m)+0.5d0*(c*dt/HX_m)**2 &
-!          *(Ac_m(3,ix_m+1,iy_m)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m-1,iy_m))+0.5d0*(c*dt/HY_m)**2 &
-!          *(Ac_m(3,ix_m,iy_m+1)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m-1))-4*pi*dt*dt*j_m(3,ix_m,iy_m) 
-!      end do
-!    enddo
-!  end if
-      
-      
-  select case(TwoD_shape)
-  case('periodic')
-    Ac_new_m(:,:,0)=Ac_new_m(:,:,NY_m)
-    Ac_new_m(:,:,NY_m+1)=Ac_new_m(:,:,1)
-  case('isolated')
-    Ac_new_m(:,:,0)=Ac_new_m(:,:,1)
-    Ac_new_m(:,:,NY_m+1)=0d0
+  
+  select case(FDTDdim)
+  case('1D')
+    call dt_evolve_Ac_1d()
+  case('2D')
+    call dt_evolve_Ac_2d()
+  case('2DC')
+    call dt_evolve_Ac_2dc()
   end select
-
+  
   call timelog_end(LOG_DT_EVOLVE_AC)
       
   return
 end subroutine dt_evolve_Ac
+!===========================================================
+subroutine calc_elec_field()
+  use Global_variables, only: Ac_old_m, Ac_new_m, Elec, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & dt
+  implicit none
+  integer ix_m,iy_m
+  ! calculate the electric field from the vector potential Ac
+  ! (written by M.Uemoto on 2016-11-22)
+  do iy_m=NYvacB_m, NYvacT_m
+    do ix_m=NXvacL_m, NXvacR_m
+      Elec(:,ix_m,iy_m)=-(Ac_new_m(:,ix_m,iy_m)-Ac_old_m(:,ix_m,iy_m))/(2d0*dt)
+    end do
+  end do
+end subroutine calc_elec_field
+!===========================================================
+subroutine calc_bmag_field_1d()
+  use Global_variables, only: Ac_m, Bmag, NXvacL_m, NXvacR_m, HX_m, c_light
+  implicit none
+  integer :: ix_m
+  real(8) :: Rc(3)  ! rot Ac
+  ! calculate the magnetic field from the vector potential (1D case)
+  ! (written by M.Uemoto on 2016-11-22)
+  do ix_m=NXvacL_m, NXvacR_m
+    Rc(1) = 0.0d0
+    Rc(2) = - (Ac_m(3,ix_m+1,1) - Ac_m(3,ix_m-1,1)) / (2 * HX_m)
+    Rc(3) = + (Ac_m(2,ix_m+1,1) - Ac_m(2,ix_m-1,1)) / (2 * HX_m)
+    Bmag(:,ix_m,1) = Rc(:) * c_light
+  end do
+  return
+end subroutine calc_bmag_field_1d
+!===========================================================
+subroutine calc_bmag_field_2d()
+  use Global_variables, only: Ac_m, Bmag, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & HX_m, HY_m, c_light
+  implicit none
+  integer :: ix_m,iy_m
+  real(8) :: rc(3)  ! rot Ac
+  ! calculate the magnetic field from the vector potential (2D case)
+  ! (written by M.Uemoto on 2016-11-22)
+  do iy_m=NYvacB_m, NYvacT_m
+    do ix_m=NXvacL_m, NXvacR_m
+      Rc(1) = + (Ac_m(3, ix_m, iy_m+1) - Ac_m(3, ix_m, iy_m-1)) / (2*HY_m)
+      Rc(2) = - (Ac_m(3, ix_m+1, iy_m) - Ac_m(3, ix_m-1, iy_m)) / (2*HX_m)
+      Rc(3) = + (Ac_m(2, ix_m+1, iy_m) - Ac_m(2, ix_m-1, iy_m)) / (2*HX_m) &
+            & - (Ac_m(1, ix_m, iy_m+1) - Ac_m(1, ix_m, iy_m-1)) / (2*HY_m)
+      Bmag(:,ix_m,iy_m) = Rc(:) * c_light
+    end do
+  end do
+  return
+end subroutine calc_bmag_field_2d
+!===========================================================
+subroutine calc_bmag_field_2dc()
+  use Global_variables, only: Ac_m, Bmag, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & HX_m, HY_m, c_light
+  implicit none
+  integer :: ix_m,iy_m
+  real(8) :: Y, Rc(3)  ! rot Ac
+  ! calculate the magnetic field from the vector potential (2D cylindal case)
+  ! (written by M.Uemoto on 2016-11-22)
+  do iy_m=NYvacB_m, NYvacT_m
+    Y = (iy_m-0.5d0) * HY_m
+    do ix_m=NXvacL_m, NXvacR_m
+      Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
+            & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0) &
+            & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
+      Rc(2) = +0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m-1,iy_m+0) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m+1,iy_m+0)
+      Rc(3) = +0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m-1) &
+            & -0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m+1) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m-1,iy_m+0) &
+            & +0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m+1,iy_m+0)
+      Bmag(:,ix_m,iy_m) = Rc(:) * c_light
+    end do
+  end do
+  return
+end subroutine calc_bmag_field_2dc
+!===========================================================
+subroutine calc_bmag_field()
+  use Global_variables
+  implicit none
+  select case(FDTDdim)
+  case('1D')
+    call calc_bmag_field_1d()
+  case('2D')
+    call calc_bmag_field_2d()
+  case('2DC')
+    call calc_bmag_field_2dc()
+  end select
+  return
+end subroutine calc_bmag_field
+!===========================================================
+subroutine calc_energy_joule()
+  use Global_variables, only: energy_joule, Elec, j_m, dt, aLxyz, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, pi
+  implicit none
+  integer :: ix_m,iy_m
+  ! calculate the Ohmic losses in the media
+  ! (written by M.Uemoto on 2016-11-22)
+  do iy_m=NYvacB_m,NYvacT_m
+    do ix_m=NXvacL_m,NXvacR_m
+      energy_joule(ix_m, iy_m) = energy_joule(ix_m, iy_m) &
+          & + sum(-j_m(:,ix_m,iy_m) * Elec(:,ix_m,iy_m)) * dt * aLxyz
+    end do
+  end do
+  return
+end subroutine calc_energy_joule
+!===========================================================
+subroutine calc_energy_elemag()
+  use Global_variables, only: Elec, Bmag, energy_elemag, aLxyz, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, pi
+  implicit none
+  integer :: ix_m,iy_m
+  real(8) :: e2, b2
+  ! calculate the total electromagnetic energy
+  ! (written by M.Uemoto on 2016-11-22)
+  do iy_m=NYvacB_m,NYvacT_m
+    do ix_m=NXvacL_m,NXvacR_m
+      e2 = sum(Elec(:, ix_m, iy_m) ** 2)
+      b2 = sum(Bmag(:, ix_m, iy_m) ** 2)
+      energy_elemag(ix_m, iy_m) = (1.0 / (8.0 * pi)) * aLxyz * (e2 + b2)
+    end do
+  end do
+  return
+end subroutine calc_energy_elemag

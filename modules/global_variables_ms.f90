@@ -130,6 +130,12 @@ Module Global_Variables
   character(50) :: file_DoS,file_band
   character(50) :: file_dns,file_ovlp,file_nex
   character(50) :: file_kw ! non-uniform k-grid 
+  character(50) :: file_energy_transfer ! 940
+  character(50) :: file_ac_vac          ! 941
+  character(50) :: file_ac_vac_back     ! 942
+  character(50) :: file_ac_m            ! 943
+  character(50) :: file_ac              ! 902
+  
   character(2) :: ext_field
   character(2) :: Longi_Trans
   character(1) :: FSset_option,MD_option
@@ -185,7 +191,7 @@ Module Global_Variables
 
   real(8) :: HX_m,HY_m
   integer :: NX_m,NXvacL_m,NXvacR_m
-  integer :: NY_m
+  integer :: NY_m,NYvacT_m,NYvacB_m
   real(8),allocatable :: Ac_m(:,:,:),Ac_new_m(:,:,:),Ac_old_m(:,:,:)
   real(8),allocatable :: Elec(:,:,:),Bmag(:,:,:)
   real(8),allocatable :: j_m(:,:,:)
@@ -201,6 +207,7 @@ Module Global_Variables
   real(8),allocatable :: Eexc_m(:,:)
   real(8),allocatable :: Vloc_m(:,:)
   real(8),allocatable :: rho_m(:,:)
+  real(8),allocatable :: energy_joule(:,:)
   real(8),allocatable :: energy_elec_Matter_l(:,:)
   real(8),allocatable :: energy_elec_Matter(:,:)
   real(8),allocatable :: energy_elec(:,:)
