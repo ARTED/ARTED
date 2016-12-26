@@ -433,16 +433,15 @@ Program main
     call timelog_begin(LOG_OTHER)
 !write section ================================================================================
     if(myrank == 0) then
-      write(941,'(3e26.16E3)')iter*dt,Ac_new_m(2,0,1),Ac_new_m(3,0,1)
+      write(941,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,0,1)
     end if
     if(myrank == 1) then
       ix_m=min(NXvacR_m,NX_m+1)
-      write(942,'(3e26.16E3)')iter*dt,Ac_new_m(2,ix_m,1),Ac_new_m(3,ix_m,1)
+      write(942,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1)
     end if
     if(newrank == 0) then
       ix_m=NX_table(NXY_s)
-      write(943,'(5e26.16E3)')iter*dt,Ac_new_m(2,ix_m,1),Ac_new_m(3,ix_m,1) &
-        &,j_m(2,ix_m,1),j_m(3,ix_m,1)
+      write(943,'(7e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1), j_m(1:3,ix_m,1)
     end if
     
     call calc_elec_field()

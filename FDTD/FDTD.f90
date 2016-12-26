@@ -51,7 +51,7 @@ subroutine write_result_all()
   ! (written by M.Uemoto on 2016-11-22)
   Ndata = Nt / Nstep_write
   Ndata_per_proc = ceiling(float(Ndata) / Nprocs)
-  do i=0, Ndata_per_proc
+  do i=0, Ndata_per_proc-1
     index = Myrank * Ndata_per_proc + i
     if (index <= Ndata) then
       call write_result(index)
@@ -126,7 +126,7 @@ subroutine init_Ac_ms_2dc()
   j_m=0d0
   jmatter_m=0d0
   jmatter_m_l=0d0
-  energy_joule=0.0
+  energy_joule=0d0
   call incident_bessel_beam()
   
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -352,11 +352,11 @@ subroutine dt_evolve_Ac_1d
   Ac_old_m=Ac_m
   Ac_m=Ac_new_m
   do ix_m=NXvacL_m,NXvacR_m
-    RR(1) = 0.0
+    RR(1) = 0.0d0
     RR(2) = -(Ac_m(2,ix_m+1,1) - 2*Ac_m(2,ix_m,1) + Ac_m(2,ix_m-1,1)) * (1.0 / HX_m**2) 
     RR(3) = -(Ac_m(3,ix_m+1,1) - 2*Ac_m(3,ix_m,1) + Ac_m(3,ix_m-1,1)) * (1.0 / HX_m**2) 
     Ac_new_m(:,ix_m,1) = (2*Ac_m(:,ix_m,1) - Ac_old_m(:,ix_m,1) &
-      & - j_m(:,ix_m,1)*4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+      & - j_m(:,ix_m,1)*4.0d0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
   end do
   return
 end subroutine dt_evolve_Ac_1d
@@ -373,25 +373,25 @@ subroutine dt_evolve_Ac_2d
   Ac_m=Ac_new_m
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
-      RR(1) = +(-1.00/HY_m**2) * Ac_m(1, ix_m, iy_m-1) &
-            & +(+2.00/HY_m**2) * Ac_m(1, ix_m, iy_m) &
-            & +(-1.00/HY_m**2) * Ac_m(1, ix_m, iy_m+1) &
-            & +(+0.25/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1) &
-            & +(-0.25/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1) &
-            & +(-0.25/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1) &
-            & +(+0.25/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1)
-      RR(2) = +(+0.25/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1) &
-            & +(-0.25/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1) &
-            & +(-0.25/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1) &
-            & +(+0.25/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1) &
-            & +(-1.00/HX_m**2) * Ac_m(2, ix_m-1, iy_m) &
-            & +(+2.00/HX_m**2) * Ac_m(2, ix_m, iy_m) &
-            & +(-1.00/HX_m**2) * Ac_m(2, ix_m+1, iy_m)
-      RR(3) = +(-1.00/HX_m**2) * Ac_m(3, ix_m-1, iy_m) &
-            & +(-1.00/HY_m**2) * Ac_m(3, ix_m, iy_m-1) &
-            & +(+2.00/HY_m**2 +2.00/HX_m**2) * Ac_m(3, ix_m, iy_m) &
-            & +(-1.00/HY_m**2) * Ac_m(3, ix_m, iy_m+1) &
-            & +(-1.00/HX_m**2) * Ac_m(3, ix_m+1, iy_m)
+      RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1) &
+            & +(+2.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m+1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1)
+      RR(2) = +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m-1, iy_m) &
+            & +(+2.00d0/HX_m**2) * Ac_m(2, ix_m, iy_m) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m+1, iy_m)
+      RR(3) = +(-1.00d0/HX_m**2) * Ac_m(3, ix_m-1, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m-1) &
+            & +(+2.00d0/HY_m**2 +2.00d0/HX_m**2) * Ac_m(3, ix_m, iy_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m+1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(3, ix_m+1, iy_m)
       Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
         & -j_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
@@ -403,7 +403,7 @@ subroutine dt_evolve_Ac_2d
     Ac_new_m(:,:,NYvacT_m+1)=Ac_new_m(:,:,NYvacB_m)
   case('isolated')
     Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
-    Ac_new_m(:,:,NYvacT_m+1)=0.0
+    Ac_new_m(:,:,NYvacT_m+1)=0.0d0
   end select
   return
 end subroutine dt_evolve_Ac_2d
@@ -419,36 +419,36 @@ subroutine dt_evolve_Ac_2dc()
   Ac_old_m=Ac_m
   Ac_m=Ac_new_m
   do iy_m=NYvacB_m,NYvacT_m
-    Y = (iy_m - 0.5) * HY_m
+    Y = (iy_m - 0.50d0) * HY_m
     do ix_m=NXvacL_m,NXvacR_m
-      RR(1) = +(+0.50*(1.00/HY_m)*(1.00/Y)-(1.00/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
-            & +2.00*(1.00/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
-            & +(-0.50*(1.00/HY_m)*(1.00/Y)-(1.00/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
-            & +0.25*(1.00/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1) &
-            & -0.50*(1.00/HX_m)*(1.00/Y)*Ac_m(2,ix_m-1,iy_m+0) &
-            & -0.25*(1.00/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m+1) &
-            & -0.25*(1.00/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m-1) &
-            & +0.50*(1.00/HX_m)*(1.00/Y)*Ac_m(2,ix_m+1,iy_m+0) &
-            & +0.25*(1.00/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m+1)
-      RR(2) = +0.25*(1.00/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m-1) &
-            & -0.25*(1.00/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m+1) &
-            & -0.25*(1.00/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m-1) &
-            & +0.25*(1.00/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m+1) &
-            & -(1.00/HX_m**2)*Ac_m(2,ix_m-1,iy_m+0) &
-            & +2.00*(1.00/HX_m**2)*Ac_m(2,ix_m+0,iy_m+0) &
-            & -(1.00/HX_m**2)*Ac_m(2,ix_m+1,iy_m+0)
-      RR(3) = -(1.00/HX_m**2)*Ac_m(3,ix_m-1,iy_m+0) &
-            & +(+0.50*(1.00/HY_m)*(1.00/Y)-(1.00/HY_m**2))*Ac_m(3,ix_m+0,iy_m-1) &
-            & +(+(1.00/Y**2)+2.00*(1.00/HX_m**2)+2.00*(1.00/HY_m**2))*Ac_m(3,ix_m+0,iy_m+0) &
-            & +(-0.50*(1.00/HY_m)*(1.00/Y)-(1.00/HY_m**2))*Ac_m(3,ix_m+0,iy_m+1) &
-            & -(1.00/HX_m**2)*Ac_m(3,ix_m+1,iy_m+0)
+      RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
+            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1) &
+            & -0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m-1,iy_m+0) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m+1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m-1) &
+            & +0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m+1,iy_m+0) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m+1)
+      RR(2) = +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m-1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m+1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m-1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m+1) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m-1,iy_m+0) &
+            & +2.00d0*(1.00d0/HX_m**2)*Ac_m(2,ix_m+0,iy_m+0) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m+1,iy_m+0)
+      RR(3) = -(1.00d0/HX_m**2)*Ac_m(3,ix_m-1,iy_m+0) &
+            & +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m-1) &
+            & +(+(1.00d0/Y**2)+2.00d0*(1.00d0/HX_m**2)+2.00d0*(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+0) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+1) &
+            & -(1.00d0/HX_m**2)*Ac_m(3,ix_m+1,iy_m+0)
       Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
         & -J_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
   ! Boundary condition
   Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
-  Ac_new_m(:,:,NYvacT_m+1)=0.0
+  Ac_new_m(:,:,NYvacT_m+1)=0.0d0
   return
 end subroutine dt_evolve_Ac_2dc
 !===========================================================
@@ -496,7 +496,7 @@ subroutine calc_bmag_field_1d()
   ! calculate the magnetic field from the vector potential (1D case)
   ! (written by M.Uemoto on 2016-11-22)
   do ix_m=NXvacL_m, NXvacR_m
-    Rc(1) = 0.0
+    Rc(1) = 0.0d0
     Rc(2) = - (Ac_m(3,ix_m+1,1) - Ac_m(3,ix_m-1,1)) / (2 * HX_m)
     Rc(3) = + (Ac_m(2,ix_m+1,1) - Ac_m(2,ix_m-1,1)) / (2 * HX_m)
     Bmag(:,ix_m,1) = Rc(:) * c_light
@@ -535,17 +535,17 @@ subroutine calc_bmag_field_2dc()
   ! calculate the magnetic field from the vector potential (2D cylindal case)
   ! (written by M.Uemoto on 2016-11-22)
   do iy_m=NYvacB_m, NYvacT_m
-    Y = (iy_m-0.5) * HY_m
+    Y = (iy_m-0.5d0) * HY_m
     do ix_m=NXvacL_m, NXvacR_m
-      Rc(1) = -0.50*(1.00/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
-            & +1.00*(1.00/Y)*Ac_m(3,ix_m+0,iy_m+0) &
-            & +0.50*(1.00/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
-      Rc(2) = +0.50*(1.00/HX_m)*Ac_m(3,ix_m-1,iy_m+0) &
-            & -0.50*(1.00/HX_m)*Ac_m(3,ix_m+1,iy_m+0)
-      Rc(3) = +0.50*(1.00/HY_m)*Ac_m(1,ix_m+0,iy_m-1) &
-            & -0.50*(1.00/HY_m)*Ac_m(1,ix_m+0,iy_m+1) &
-            & -0.50*(1.00/HX_m)*Ac_m(2,ix_m-1,iy_m+0) &
-            & +0.50*(1.00/HX_m)*Ac_m(2,ix_m+1,iy_m+0)
+      Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
+            & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0) &
+            & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
+      Rc(2) = +0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m-1,iy_m+0) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m+1,iy_m+0)
+      Rc(3) = +0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m-1) &
+            & -0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m+1) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m-1,iy_m+0) &
+            & +0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m+1,iy_m+0)
       Bmag(:,ix_m,iy_m) = Rc(:) * c_light
     end do
   end do

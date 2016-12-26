@@ -25,7 +25,7 @@ real(8) function bessel_j1(x)
   c = 0.5 * x
   s = c
   do m = 1, 30
-    c = -0.25 * x * x / (m * (m + 1)) * c
+    c = -0.25d0 * x * x / (m * (m + 1)) * c
     s = s + c
   end do
   bessel_j1 = s
@@ -43,7 +43,7 @@ real(8) function sin2cos(t, tw, omega, cep)
     theta2 = omega * t + 2 * pi * cep
     sin2cos = sin(theta1) ** 2 * cos(theta2)
   else
-    sin2cos = 0.0
+    sin2cos = 0.0d0
   endif
   return
 end function sin2cos
@@ -70,7 +70,7 @@ subroutine incident_bessel_beam()
   lx = (NXvacR_m-NXvacL_m) * HX_m
   ly = NYvacT_m * HY_m
 
-  ky = 3.8317 / ly
+  ky = 3.8317d0 / ly
   k = omega_1 / c_light
   
   if (ky > k) then
@@ -85,7 +85,7 @@ subroutine incident_bessel_beam()
   do iy_m = NYvacB_m, NYvacT_m
      y = HY_m * (iy_m - 0.5)
      j = bessel_j1(ky * y)
-     f = j * f0_1 / 0.58186 * Epdir_1
+     f = j * f0_1 / 0.58186d0 * Epdir_1
      do ix_m = NXvacL_m-1, 0
        x = ix_m * HX_m
        ! Ac_new_m
