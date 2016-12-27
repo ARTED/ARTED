@@ -287,6 +287,8 @@ Program main
     end if
   endif
 
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
 !$acc enter data copyin(ik_table,ib_table)
 !$acc enter data copyin(lapx,lapy,lapz)
 !$acc enter data copyin(nabx,naby,nabz)
@@ -419,9 +421,9 @@ Program main
 
 
 !Timer
+    etime2=MPI_WTIME()
+    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
     if (iter/1000*1000 == iter.and.Myrank == 0) then
-      etime2=MPI_WTIME()
-      call timelog_set(LOG_DYNAMICS, etime2 - etime1)
       call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
       call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
       call timelog_show_min ('Hartree time       :', LOG_HARTREE)
@@ -451,10 +453,10 @@ Program main
 #ifdef ARTED_USE_PAPI
   call papi_end
 #endif
+  call timelog_set(LOG_DYNAMICS, etime2 - etime1)
   call timelog_disable_verbose
 
   if(Myrank == 0) then
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
 #ifdef ARTED_USE_PAPI
     call papi_result(timelog_get(LOG_DYNAMICS))
 #endif
@@ -472,8 +474,9 @@ Program main
     call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
     call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
     call timelog_show_min ('Other time         :', LOG_OTHER)
+    call timelog_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
-  call show_performance
+  call write_performance(trim(directory)//'sc_performance')
 
   if(Myrank == 0) then
     close(7)

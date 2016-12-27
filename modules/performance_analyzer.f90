@@ -16,11 +16,16 @@
 module performance_analyzer
   implicit none
 
-  public  print_stencil_size, show_performance
+  public  write_performance
+  public  print_stencil_size
   public  get_hamiltonian_performance
+
+  private write_hamiltonian
+  private write_loadbalance
 
   private summation_threads, get_gflops, get_hamiltonian_chunk_size
   private get_stencil_FLOP, get_pseudo_pt_FLOP, get_update_FLOP
+  private get_filename
 
 contains
   subroutine print_stencil_size
@@ -43,16 +48,42 @@ contains
     call summation_threads(lgflops)
   end subroutine
 
-  subroutine show_performance
+  function get_filename(filename)
+    implicit none
+    character(*),intent(in) :: filename
+    character(100) :: get_filename
+    character(8)   :: d
+    character(10)  :: t
+    call date_and_time(date=d,time=t)
+
+    write (get_filename,'(A)') filename//'_'//d//'_'//t(1:6)//'.log'
+  end function
+
+  subroutine write_hamiltonian(iounit)
     use global_variables
     use timelog
     implicit none
-    real(8) :: lgflops(4), tgflops(4)
+    integer,intent(in) :: iounit
+
+    type reduce_type
+      real(8) :: value
+      integer :: rank
+    end type
+    character(*),parameter :: f = '(A,4(f15.6))'
+
+    type(reduce_type) :: tin,tout
+    real(8)           :: lgflops(4), pgflops(4), tgflops(4)
 #ifdef ARTED_MS
-    real(8) :: sgflops(4)
+    real(8)           :: sgflops(4)
 #endif
 
     call summation_threads(lgflops)
+    pgflops = lgflops
+
+    tin%rank  = Myrank
+    tin%value = lgflops(4)
+    call MPI_ALLREDUCE(tin,tout,1,MPI_DOUBLE_INT,MPI_MAXLOC,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(pgflops,4,MPI_REAL8,tout%rank,MPI_COMM_WORLD,ierr)
 
 #ifdef ARTED_MS
     call MPI_ALLREDUCE(lgflops,sgflops,4,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
@@ -60,27 +91,79 @@ contains
     call MPI_ALLREDUCE(lgflops,tgflops,4,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
 
     if(Myrank == 0) then
-      print *, '###'
-      print *, 'Performance [GFLOPS]'
-      print *, '  Processor'
-      print *, '    hamiltonian  :', lgflops(4)
-      print *, '    - stencil    :', lgflops(1)
-      print *, '    - pseudo pt. :', lgflops(2)
-      print *, '    - update     :', lgflops(3)
+      write (iounit,'(A)') 'Performance [GFLOPS]'
+      write (iounit,'(A,4(A15))') 'Type           ', 'Hamiltonian', 'Stencil', 'Pseudo-Pt', 'Update'
+      write (iounit,f)            'Processor      ', lgflops(4), lgflops(1), lgflops(2), lgflops(3)
+      write (iounit,f)            'Processor(max) ', pgflops(4), pgflops(1), pgflops(2), pgflops(3)
 #ifdef ARTED_MS
-      print *, '  Macroscopic grid point'
-      print *, '    hamiltonian  :', sgflops(4)
-      print *, '    - stencil    :', sgflops(1)
-      print *, '    - pseudo pt. :', sgflops(2)
-      print *, '    - update     :', sgflops(3)
+      write (iounit,f)            'Macro-grid(sum)', sgflops(4), sgflops(1), sgflops(2), sgflops(3)
 #endif
-      print *, '  System total'
-      print *, '    hamiltonian  :', tgflops(4)
-      print *, '    - stencil    :', tgflops(1)
-      print *, '    - pseudo pt. :', tgflops(2)
-      print *, '    - update     :', tgflops(3)
-      print *, '###'
-    endif
+      write (iounit,f)            'System(sum)    ', tgflops(4), tgflops(1), tgflops(2), tgflops(3)
+    end if
+  end subroutine
+
+  subroutine write_loadbalance(iounit)
+    use global_variables
+    use timelog
+    implicit none
+    integer,intent(in) :: iounit
+
+    integer,parameter      :: LOG_SIZE=12
+    character(*),parameter :: f = "(A,3(F12.4),F12.2)"
+
+    real(8) :: src(LOG_SIZE), rmin(LOG_SIZE), rmax(LOG_SIZE), diff(LOG_SIZE), rel(LOG_SIZE)
+
+    src( 1) = timelog_get(LOG_DT_EVOLVE)
+    src( 2) = timelog_get(LOG_HPSI)
+    src( 3) = timelog_get(LOG_PSI_RHO)
+    src( 4) = timelog_get(LOG_HARTREE)
+    src( 5) = timelog_get(LOG_CURRENT)
+    src( 6) = timelog_get(LOG_TOTAL_ENERGY)
+    src( 7) = timelog_get(LOG_ION_FORCE)
+    src( 8) = timelog_get(LOG_DT_EVOLVE_AC)
+    src( 9) = timelog_get(LOG_K_SHIFT_WF)
+    src(10) = timelog_get(LOG_OTHER)
+    src(11) = timelog_get(LOG_ALLREDUCE)
+    src(12) = timelog_get(LOG_DYNAMICS)
+
+    call MPI_ALLREDUCE(src,rmin,LOG_SIZE,MPI_REAL8,MPI_MIN,MPI_COMM_WORLD,ierr)
+    call MPI_ALLREDUCE(src,rmax,LOG_SIZE,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
+
+    diff(:) = rmax(:) - rmin(:)
+    rel(:)  = rmax(:) / rmin(:)
+
+    if (Myrank == 0) then
+      write (iounit,'(A)') 'Load balance check [sec]'
+      write (iounit,'(A,4(A12))') 'Function    ','min','max','diff','rel'
+      write (iounit,f)            'dt_evolve   ',rmin( 1),rmax( 1),diff( 1),rel( 1)
+      write (iounit,f)            'hpsi        ',rmin( 2),rmax( 2),diff( 2),rel( 2)
+      write (iounit,f)            'psi_rho     ',rmin( 3),rmax( 3),diff( 3),rel( 3)
+      write (iounit,f)            'hartree     ',rmin( 4),rmax( 4),diff( 4),rel( 4)
+      write (iounit,f)            'current     ',rmin( 5),rmax( 5),diff( 5),rel( 5)
+      write (iounit,f)            'total_energy',rmin( 6),rmax( 6),diff( 6),rel( 6)
+      write (iounit,f)            'ion_force   ',rmin( 7),rmax( 7),diff( 7),rel( 7)
+      write (iounit,f)            'dt_evolve_ac',rmin( 8),rmax( 8),diff( 8),rel( 8)
+      write (iounit,f)            'k_shift_wf  ',rmin( 9),rmax( 9),diff( 9),rel( 9)
+      write (iounit,f)            'other       ',rmin(10),rmax(10),diff(10),rel(10)
+      write (iounit,f)            'allreduce   ',rmin(11),rmax(11),diff(11),rel(11)
+      write (iounit,f)            'dynamics    ',rmin(12),rmax(12),diff(12),rel(12)
+    end if
+  end subroutine
+
+  subroutine write_performance(filename)
+    use global_variables
+    implicit none
+    character(*),intent(in) :: filename
+
+    integer,parameter :: iounit = 999
+
+    if(Myrank == 0) open(iounit, file=get_filename(filename))
+    call write_hamiltonian(iounit)
+    if(Myrank == 0) write (iounit,'(A)') '==='
+    call write_loadbalance(iounit)
+    if(Myrank == 0) close(iounit)
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   end subroutine
 
   subroutine summation_threads(lgflops)

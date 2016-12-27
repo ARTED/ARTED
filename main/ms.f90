@@ -316,6 +316,8 @@ Program main
     open(943,file=file_ac_m ,position = position_option)
   end if
 
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
 !$acc enter data copyin(ik_table,ib_table)
 !$acc enter data copyin(lapx,lapy,lapz)
 !$acc enter data copyin(nabx,naby,nabz)
@@ -451,11 +453,15 @@ Program main
     
     if (mod(iter, Nstep_write) == 0) then
       index = iter / Nstep_write
+
+      call timelog_end(LOG_OTHER)
       
       call timelog_begin(LOG_ALLREDUCE)
       call MPI_ALLREDUCE(energy_elec_Matter_l,energy_elec_Matter &
         &,NX_m*NY_m,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
       call timelog_end(LOG_ALLREDUCE)
+
+      call timelog_begin(LOG_OTHER)
 
       energy_elec(1:NX_m,1:NY_m)=energy_elec_Matter(1:NX_m,1:NY_m) 
       energy_total=energy_elemag+energy_elec
@@ -482,8 +488,8 @@ Program main
 !        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
 !          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
       end if
-    
     end if
+    call timelog_end(LOG_OTHER)
 
     if (AD_RHO /= 'No' .and. mod(iter,100) == 0 ) then 
       call timelog_begin(LOG_ALLREDUCE)
@@ -499,7 +505,7 @@ Program main
       if(myrank == 0)call write_excited_electron(iter)
     end if
 
-
+    call timelog_begin(LOG_OTHER)
     if (reentrance_switch == 1) then 
       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
       write(*,*) Myrank,'iter =',iter
@@ -510,10 +516,10 @@ Program main
     end if
 
 !Timer
+    etime2=MPI_WTIME()
+    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
     if (iter/1000*1000 == iter.and.Myrank == 0) then
-      etime2=MPI_WTIME()
       write(*,*) 'iter =',iter
-      call timelog_set(LOG_DYNAMICS, etime2 - etime1)
       call timelog_show_hour('dynamics time     :', LOG_DYNAMICS)
     end if
 
@@ -533,10 +539,10 @@ Program main
   enddo RTiteratopm !end of RT iteraction========================
 !$acc exit data copyout(zu)
   etime2=MPI_WTIME()
+  call timelog_set(LOG_DYNAMICS, etime2 - etime1)
   call timelog_disable_verbose
 
   if(Myrank == 0) then
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
     call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
     call timelog_show_min ('dt_evolve_Ac time  :', LOG_DT_EVOLVE_AC)
     call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
@@ -554,7 +560,7 @@ Program main
     call timelog_show_min ('k_shift_wf time    :', LOG_K_SHIFT_WF)
     call timelog_show_min ('Other time         :', LOG_OTHER)
   end if
-  call show_performance
+  call write_performance(trim(directory)//'ms_performance')
 
   if(Myrank == 0) write(*,*) 'This is the start of write section'
   etime1=MPI_WTIME()

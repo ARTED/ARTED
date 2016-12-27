@@ -165,16 +165,15 @@ contains
     end do
 !$omp end do nowait
 !$omp end parallel
-
-    !summarize
-    if (Rion_update == 'on') then
-      call timelog_begin(LOG_ALLREDUCE)
-      call MPI_ALLREDUCE(Eion_l,Eion_tmp2,1,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-      Eion=Eion_tmp1+Eion_tmp2
-      call timelog_end(LOG_ALLREDUCE)
-    end if
+    call timelog_end(LOG_TOTAL_ENERGY)
 
     call timelog_begin(LOG_ALLREDUCE)
+    !summarize
+    if (Rion_update == 'on') then
+      call MPI_ALLREDUCE(Eion_l,Eion_tmp2,1,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+      Eion=Eion_tmp1+Eion_tmp2
+    end if
+
     sum_tmp(1) = Ekin_l
     sum_tmp(2) = Eh_l
     sum_tmp(3) = Enl_l
@@ -192,6 +191,5 @@ contains
     Eall=Ekin+Eloc+Enl+Exc+Eh+Eion
     call timelog_end(LOG_ALLREDUCE)
 
-    call timelog_end(LOG_TOTAL_ENERGY)
   end subroutine
 end subroutine Total_Energy_omp
