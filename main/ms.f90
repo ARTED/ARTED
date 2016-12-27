@@ -752,6 +752,18 @@ Subroutine Read_data
 
 !sym ---
   select case(crystal_structure)
+  case("diamond2")
+     if(functional == "PZ" .or. functional == "PZM" .or. functional == "TBmBJ")then
+        if(Sym == 8)then
+           if((mod(NLx,2)+mod(NLy,2)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
+           if(NLx /= NLy)call err_finalize('Bad grid point: NLx /= NLy')
+           if(NKx /= NKy)call err_finalize('NKx /= NKy')
+        else if(Sym /=1)then
+           call err_finalize('Bad crystal structure')
+        end if
+     else
+        if(Sym /= 1)call err_finalize('Bad crystal structure')
+     end if
   case("diamond")
      if(functional == "PZ" .or. functional == "PZM" .or. functional == "TBmBJ")then
         if(Sym == 8)then
