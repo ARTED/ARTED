@@ -261,11 +261,12 @@ Program main
 !====RT calculation============================
 
   call init_Ac
-  if (Longi_Trans == 'Lo' .and. ext_field == 'LR') then 
-!     call current_omp_KB
-!     javt(0,:)=jav(:)*0.5d0
-     javt(0,:)=0.5d0*dble(Nelec)*Ac_ext(0,:)/aLxyz
-  end if
+  do ixyz=1,3
+    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
+  enddo
+  call current0_omp_KB
+  javt(0,:)=jav(:)
+
   Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! yabana
 !  kAc0=kAc
