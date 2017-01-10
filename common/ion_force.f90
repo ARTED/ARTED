@@ -132,12 +132,12 @@ contains
       ftmp_l(:,:)=ftmp_l(:,:)+ftmp_l_kl(:,:,ik)
     end do
 
+    call timelog_end(LOG_ION_FORCE)
+
     call timelog_begin(LOG_ALLREDUCE)
     call MPI_ALLREDUCE(ftmp_l,fnl,3*NI,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-    call timelog_end(LOG_ALLREDUCE)
-
     force=Floc+Fnl+Fion
-    call timelog_end(LOG_ION_FORCE)
+    call timelog_end(LOG_ALLREDUCE)
   end subroutine
 end subroutine Ion_Force_omp
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130

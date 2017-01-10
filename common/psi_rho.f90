@@ -79,12 +79,12 @@ subroutine psi_rho_impl(zutmp,zu_NB)
   case default
     call err_finalize('Bad Symmetry')
   end select
+  call timelog_end(LOG_PSI_RHO)
 
   call timelog_begin(LOG_ALLREDUCE)
   call MPI_ALLREDUCE(rho_l,rho,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
   call timelog_end(LOG_ALLREDUCE)
 
-  call timelog_end(LOG_PSI_RHO)
 
 contains
   subroutine reduce(tid,zfac,zutmp,zu_NB)

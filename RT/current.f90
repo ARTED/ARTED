@@ -72,8 +72,8 @@ Subroutine current_GS_omp_KB
 
   call timelog_begin(LOG_CURRENT)
   call current_GS_omp_KB_impl(zu_GS,jx,jy,jz)
-  call current_result_impl(jx,jy,jz)
   call timelog_end(LOG_CURRENT)
+  call current_result_impl(jx,jy,jz)
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_omp_KB
@@ -92,8 +92,8 @@ Subroutine current_omp_KB
 #else
   call current_acc_KB_impl(zu,jx,jy,jz)
 #endif
-  call current_result_impl(jx,jy,jz)
   call timelog_end(LOG_CURRENT)
+  call current_result_impl(jx,jy,jz)
   NVTX_END()
 end Subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
