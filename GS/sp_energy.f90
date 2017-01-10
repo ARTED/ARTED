@@ -17,37 +17,6 @@
 !This file contain one subroutine.
 !SUBROUTINE sp_energy
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine sp_energy
-  use Global_Variables
-  implicit none
-  integer :: ik,ib
-  real(8) :: esp_l(NB,NK)
-! sato
-  integer :: ia,j,i,ix,iy,iz
-  real(8) :: kr
-
-  esp_l=0.d0
-  do ik=NK_s,NK_e
-!Constructing nonlocal part ! sato
-  do ia=1,NI
-    do j=1,Mps(ia)
-      i=Jxyz(j,ia); ix=Jxx(j,ia); iy=Jyy(j,ia); iz=Jzz(j,ia)
-      kr=kAc(ik,1)*(Lx(i)*Hx-ix*aLx)+kAc(ik,2)*(Ly(i)*Hy-iy*aLy)+kAc(ik,3)*(Lz(i)*Hz-iz*aLz)
-      ekr(j,ia)=exp(zI*kr)
-    enddo
-  enddo
-    do ib=1,NB
-      tpsi(1:NL)=zu_GS(1:NL,ib,ik)
-      call hpsi(ik)
-      esp_l(ib,ik)=sum(conjg(zu_GS(:,ib,ik))*htpsi)*Hxyz
-    enddo
-  enddo
-
-  CALL MPI_ALLREDUCE(esp_l,esp,NB*NK,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-
-  return
-End Subroutine sp_energy
-!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine sp_energy_omp
   use Global_Variables
   use timelog
