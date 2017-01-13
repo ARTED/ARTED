@@ -316,7 +316,7 @@ contains
     STENCIL_BLOCKING_Y = ceil_power_of_two(min(sq, PNLy))
   end subroutine
 
-  subroutine symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,Myrank,Nprocs)
+  subroutine symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,procid,nprocs)
     use environment
     implicit none
     integer,intent(in)    :: NK
@@ -324,8 +324,8 @@ contains
     integer,intent(inout) :: NK_s
     integer,intent(inout) :: NK_e
     integer,intent(inout) :: NK_remainder
-    integer,intent(in)    :: Myrank
-    integer,intent(in)    :: Nprocs
+    integer,intent(in)    :: procid
+    integer,intent(in)    :: nprocs
 
     integer :: NScpu,NSmic,NPcpu,NPmic,NPtotal
     integer :: np,npr,pos
@@ -334,7 +334,7 @@ contains
     NPmic   = MIC_PROCESS_PER_NODE
     NPtotal = NPcpu + NPmic
 
-    if (Myrank == 0 .and. CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE) then
+    if (procid == 0 .and. CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE) then
       call err_finalize('CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE')
     end if
 
@@ -344,8 +344,8 @@ contains
 
     NK_remainder = NK - (NScpu * (Nprocs/2) + NSmic * (Nprocs/2))
 
-    np  = myrank / NPtotal * NPtotal
-    npr = mod(myrank, NPtotal)
+    np  = procid / NPtotal * NPtotal
+    npr = mod(procid, NPtotal)
     pos = (np / 2) * NScpu &
     &   + (np / 2) * NSmic
 
@@ -361,41 +361,36 @@ contains
 #else
     NK_e = pos + NScpu
 #endif
-    if (Myrank+1 == Nprocs .and. NK_remainder /= 0) then
+    if (procid+1 == nprocs .and. NK_remainder /= 0) then
       NK_e = NK_e + NK_remainder
     end if
     NK_s = NK_s + 1
 
     ! Error check
-    if(Myrank == Nprocs-1 .and. NK_e /= NK) then
+    if(procid == nprocs-1 .and. NK_e /= NK) then
       call err_finalize('prep. NK_e error')
     end if
   end subroutine
 
   function is_symmetric_mode()
     use global_variables
+    use communication
     implicit none
-    integer             :: is_symmetric_mode
-    integer             :: arch, ret, i
-    integer,allocatable :: results(:)
-
-    allocate(results(Nprocs))
+    integer :: is_symmetric_mode
+    logical :: arch, ret
 
 #ifdef __MIC__
-    arch = 1
+    arch = .TRUE.
 #else
-    arch = 2
+    arch = .FALSE.
 #endif
 
-    call MPI_Allgather(arch,1,MPI_INT,results,1,MPI_INT,MPI_COMM_WORLD,ierr)
+    call comm_logical_and(arch, ret, proc_group(1))
 
-    do i=2,Nprocs
-      if(results(1) /= results(i)) then
-        ret = 1
-        exit
-      end if
-    end do
-
-    is_symmetric_mode = ret
+    if(ret) then
+      is_symmetric_mode = 1
+    else
+      is_symmetric_mode = 0
+    end if
   end function
 end module opt_variables

@@ -69,9 +69,6 @@ subroutine err_finalize(err_message)
   use Global_Variables
   implicit none
   character(*),intent(in) :: err_message
-  if (Myrank == 0) then
-    write(*,*) err_message
-  endif
-  call MPI_FINALIZE(ierr)
+  write(*,*) err_message
   stop
 end subroutine err_finalize

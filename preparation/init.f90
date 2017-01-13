@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine init
   use Global_Variables
+  use communication, only: comm_is_root
   implicit none
   integer :: i,n,ix,iy,iz,nx,ny,nz,ib,ik
   integer :: ixt,iyt,izt
@@ -92,7 +93,7 @@ Subroutine init
   enddo
   if (NBoccmax < NB) occ(NBoccmax+1:NB,:)=0.d0
   Ne_tot=sum(occ)
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     write(*,*) 'Ne_tot',Ne_tot
   endif
 
@@ -332,12 +333,13 @@ end subroutine
 
 subroutine init_non_uniform_k_grid()
   use Global_Variables
+  use communication
   implicit none
   integer :: i,j,ik
   integer :: nk_dummy, nkxyz_dummy
   real(8) :: temp(4)
 
-  if (myrank == 0) then
+  if (comm_is_root()) then
     ! Read coordinates from file_kw
     open(410, file=file_kw, status="old")
     read(410, *) nk_dummy, nkxyz_dummy
@@ -350,12 +352,12 @@ subroutine init_non_uniform_k_grid()
     enddo
     close(410)
   endif
-  call MPI_BCAST(kAc,3*NK,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(wk,NK,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call comm_bcast(kAc,proc_group(1))
+  call comm_bcast(wk,proc_group(1))
   if (abs(sum(wk) - NKxyz) > NKxyz*0.01) then
     call err_finalize('NKxyz must be an integer which equals to the summention of WK')
   endif
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
   kAc0=kAc  ! Store initial k-point coordinates
 end subroutine
 

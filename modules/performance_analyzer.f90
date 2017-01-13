@@ -61,36 +61,33 @@ contains
 
   subroutine write_hamiltonian(iounit)
     use global_variables
+    use communication
     use timelog
     implicit none
     integer,intent(in) :: iounit
 
-    type reduce_type
-      real(8) :: value
-      integer :: rank
-    end type
     character(*),parameter :: f = '(A,4(f15.6))'
 
-    type(reduce_type) :: tin,tout
-    real(8)           :: lgflops(4), pgflops(4), tgflops(4)
+    type(comm_maxloc_type) :: tin,tout
+    real(8)                :: lgflops(4), pgflops(4), tgflops(4)
 #ifdef ARTED_MS
-    real(8)           :: sgflops(4)
+    real(8)                :: sgflops(4)
 #endif
 
     call summation_threads(lgflops)
     pgflops = lgflops
 
-    tin%rank  = Myrank
-    tin%value = lgflops(4)
-    call MPI_ALLREDUCE(tin,tout,1,MPI_DOUBLE_INT,MPI_MAXLOC,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(pgflops,4,MPI_REAL8,tout%rank,MPI_COMM_WORLD,ierr)
+    tin%rank = procid(1)
+    tin%val  = lgflops(4)
+    call comm_get_max(tin, tout, proc_group(1))
+    call comm_bcast(pgflops, proc_group(1), tout%rank)
 
 #ifdef ARTED_MS
-    call MPI_ALLREDUCE(lgflops,sgflops,4,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+    call comm_summation(lgflops, sgflops, 4, proc_group(1))
 #endif
-    call MPI_ALLREDUCE(lgflops,tgflops,4,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call comm_summation(lgflops, tgflops, 4, proc_group(1))
 
-    if(Myrank == 0) then
+    if(comm_is_root()) then
       write (iounit,'(A)') 'Performance [GFLOPS]'
       write (iounit,'(A,4(A15))') 'Type           ', 'Hamiltonian', 'Stencil', 'Pseudo-Pt', 'Update'
       write (iounit,f)            'Processor      ', lgflops(4), lgflops(1), lgflops(2), lgflops(3)
@@ -104,6 +101,7 @@ contains
 
   subroutine write_loadbalance(iounit)
     use global_variables
+    use communication
     use timelog
     implicit none
     integer,intent(in) :: iounit
@@ -126,13 +124,13 @@ contains
     src(11) = timelog_get(LOG_ALLREDUCE)
     src(12) = timelog_get(LOG_DYNAMICS)
 
-    call MPI_ALLREDUCE(src,rmin,LOG_SIZE,MPI_REAL8,MPI_MIN,MPI_COMM_WORLD,ierr)
-    call MPI_ALLREDUCE(src,rmax,LOG_SIZE,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,ierr)
+    call comm_get_min(src,rmin,LOG_SIZE,proc_group(1))
+    call comm_get_max(src,rmax,LOG_SIZE,proc_group(1))
 
     diff(:) = rmax(:) - rmin(:)
     rel(:)  = rmax(:) / rmin(:)
 
-    if (Myrank == 0) then
+    if (comm_is_root()) then
       write (iounit,'(A)') 'Load balance check [sec]'
       write (iounit,'(A,4(A12))') 'Function    ','min','max','diff','rel'
       write (iounit,f)            'dt_evolve   ',rmin( 1),rmax( 1),diff( 1),rel( 1)
@@ -152,18 +150,19 @@ contains
 
   subroutine write_performance(filename)
     use global_variables
+    use communication
     implicit none
     character(*),intent(in) :: filename
 
     integer,parameter :: iounit = 999
 
-    if(Myrank == 0) open(iounit, file=get_filename(filename))
+    if(comm_is_root()) open(iounit, file=get_filename(filename))
     call write_hamiltonian(iounit)
-    if(Myrank == 0) write (iounit,'(A)') '==='
+    if(comm_is_root()) write (iounit,'(A)') '==='
     call write_loadbalance(iounit)
-    if(Myrank == 0) close(iounit)
+    if(comm_is_root()) close(iounit)
 
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    call comm_sync_all
   end subroutine
 
   subroutine summation_threads(lgflops)

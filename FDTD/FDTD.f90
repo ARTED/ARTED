@@ -45,14 +45,15 @@ end subroutine write_result
 !===============================================================
 subroutine write_result_all()
   use Global_Variables
+  use communication
   implicit none
   integer :: Ndata, Ndata_per_proc, i, index
   ! export all results by using MPI
   ! (written by M.Uemoto on 2016-11-22)
   Ndata = Nt / Nstep_write
-  Ndata_per_proc = ceiling(float(Ndata) / Nprocs)
+  Ndata_per_proc = ceiling(float(Ndata) / nprocs(1))
   do i=0, Ndata_per_proc-1
-    index = Myrank * Ndata_per_proc + i
+    index = procid(1) * Ndata_per_proc + i
     if (index <= Ndata) then
       call write_result(index)
     endif
@@ -118,6 +119,7 @@ end subroutine write_excited_electron
 !===============================================================
 subroutine init_Ac_ms_2dc()
   use Global_variables
+  use communication
   implicit none
   ! initialization for 2D cylinder mode
   ! (written by M.Uemoto on 2016-11-22)
@@ -129,12 +131,13 @@ subroutine init_Ac_ms_2dc()
   energy_joule=0d0
   call incident_bessel_beam()
   
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
   return
 end subroutine init_Ac_ms_2dc
 !===============================================================
 subroutine init_Ac_ms
   use Global_variables
+  use communication
   implicit none
   real(8) x,y
   integer ix_m,iy_m
@@ -146,8 +149,8 @@ subroutine init_Ac_ms
   real(8) length_y
 
   
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  if(myrank == 0)write(*,*)'ok8-1-1'
+  call comm_sync_all
+  if(comm_is_root())write(*,*)'ok8-1-1'
 
 !  BC_my='isolated'
 !  BC_my='periodic'
@@ -179,7 +182,7 @@ subroutine init_Ac_ms
 
 
 
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
 
   select case(FDTDdim)
   case('1D')
@@ -317,8 +320,8 @@ subroutine init_Ac_ms
 
 
   
-  if(Myrank == 0)write(*,*)'ok fdtd 02'
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  if(comm_is_root()) write(*,*)'ok fdtd 02'
+  call comm_sync_all
 
   select case(TwoD_shape)
   case('periodic')

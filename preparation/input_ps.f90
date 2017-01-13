@@ -15,12 +15,12 @@
 !
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine input_pseudopotential_YS
-  use Global_Variables,only : Pi,Zatom,Mass,NE,directory,ierr,Myrank,ps_format,PSmask_option&
+  use Global_Variables,only : Pi,Zatom,Mass,NE,directory,ps_format,PSmask_option&
        &,Nrmax,Lmax,Mlps,Lref,Zps,NRloc,NRps,inorm&
        &,rad,Rps,vloctbl,udVtbl,radnl,Rloc,anorm,dvloctbl,dudVtbl &
        &,rho_nlcc_tbl,tau_nlcc_tbl,rho_nlcc,tau_nlcc,flag_nlcc,NL
+  use communication
   implicit none
-  include 'mpif.h'
   integer,parameter :: Lmax0=4,Nrmax0=50000
   real(8),parameter :: Eps0=1d-10
   integer :: ik,Mr,l,i
@@ -39,7 +39,7 @@ Subroutine input_pseudopotential_YS
   allocate(rho_nlcc(NL),tau_nlcc(NL))
   allocate(flag_nlcc_element(NE)); flag_nlcc_element(:) = .false. ;flag_nlcc = .false.
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
 ! --- Making prefix ---
     select case (ps_format)
     case('KY')        ; ps_postfix = '_rps.dat'
@@ -217,25 +217,25 @@ Subroutine input_pseudopotential_YS
     enddo
   endif
 
-  CALL MPI_BCAST(Zps,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(Mlps,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(Rps,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(NRps,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(NRloc,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(Rloc,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(anorm,(Lmax+1)*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(inorm,(Lmax+1)*NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(rad,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(radnl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(vloctbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(dvloctbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(udVtbl,Nrmax*(Lmax+1)*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(dudVtbl,Nrmax*(Lmax+1)*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(Mass,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(rho_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(tau_nlcc_tbl,Nrmax*NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  CALL MPI_BCAST(flag_nlcc,NE,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
-  if(myrank == 0)write(*,*)"flag_nlcc = ",flag_nlcc
+  call comm_bcast(Zps,proc_group(1))
+  call comm_bcast(Mlps,proc_group(1))
+  call comm_bcast(Rps,proc_group(1))
+  call comm_bcast(NRps,proc_group(1))
+  call comm_bcast(NRloc,proc_group(1))
+  call comm_bcast(Rloc,proc_group(1))
+  call comm_bcast(anorm,proc_group(1))
+  call comm_bcast(inorm,proc_group(1))
+  call comm_bcast(rad,proc_group(1))
+  call comm_bcast(radnl,proc_group(1))
+  call comm_bcast(vloctbl,proc_group(1))
+  call comm_bcast(dvloctbl,proc_group(1))
+  call comm_bcast(udVtbl,proc_group(1))
+  call comm_bcast(dudVtbl,proc_group(1))
+  call comm_bcast(Mass,proc_group(1))
+  call comm_bcast(rho_nlcc_tbl,proc_group(1))
+  call comm_bcast(tau_nlcc_tbl,proc_group(1))
+  call comm_bcast(flag_nlcc,proc_group(1))
+  if(comm_is_root()) write(*,*)"flag_nlcc = ",flag_nlcc
   return
   contains
 !====

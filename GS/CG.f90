@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine CG_omp(iter_cg_max)
   use Global_Variables
+  use communication
   use timelog
   implicit none
   real(8),parameter :: delta_cg=1.d-15
@@ -112,7 +113,7 @@ Subroutine CG_omp(iter_cg_max)
 !$omp end parallel
 
   call timelog_begin(LOG_ALLREDUCE)
-  call MPI_ALLREDUCE(esp_var_l,esp_var,NB*NK,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(esp_var_l,esp_var,NB*NK,proc_group(2))
   call timelog_end(LOG_ALLREDUCE)
 
   call timelog_end(LOG_CG)
