@@ -152,11 +152,11 @@ contains
 #endif
   end subroutine
 
-  function get_elapse_time()
+  function get_wtime()
     implicit none
-    real(8) :: get_elapse_time
+    real(8) :: get_wtime
     real(8) :: omp_get_wtime
-    get_elapse_time = omp_get_wtime()
+    get_wtime = omp_get_wtime()
   end function
 
   subroutine timelog_begin(e)
@@ -167,7 +167,7 @@ contains
     call tlog_log_(e)
 #endif
     id = e - LOG_ID_OFFSET
-    log_temp(id) = get_elapse_time()
+    log_temp(id) = get_wtime()
   end subroutine
 
   subroutine timelog_end(e)
@@ -178,7 +178,7 @@ contains
     call tlog_log_(e + LOG_OUT_OFFSET)
 #endif
     id = e - LOG_ID_OFFSET
-    log_time(id) = log_time(id) + get_elapse_time() - log_temp(id)
+    log_time(id) = log_time(id) + get_wtime() - log_temp(id)
   end subroutine
 
   subroutine timelog_thread_begin(e)
@@ -191,7 +191,7 @@ contains
       call timelog_begin(e)
     end if
     id  = e - LOG_ID_OFFSET
-    log_temp_t(id,tid) = get_elapse_time()
+    log_temp_t(id,tid) = get_wtime()
   end subroutine
 
   subroutine timelog_thread_end(e)
@@ -204,7 +204,7 @@ contains
       call timelog_end(e)
     end if
     id = e - LOG_ID_OFFSET
-    log_time_t(id,tid) = log_time_t(id,tid) + get_elapse_time() - log_temp_t(id,tid)
+    log_time_t(id,tid) = log_time_t(id,tid) + get_wtime() - log_temp_t(id,tid)
   end subroutine
 
   subroutine timelog_show_hour(str, e)

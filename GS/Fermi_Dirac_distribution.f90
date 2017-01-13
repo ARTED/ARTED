@@ -16,6 +16,7 @@
 Subroutine Fermi_Dirac_distribution
   use Global_Variables
   use communication
+  use timelog
   implicit none
   real(8) :: chemical_potential
   real(8) :: chem_max,chem_min,elec_num
@@ -25,7 +26,7 @@ Subroutine Fermi_Dirac_distribution
   integer :: ik,ib
   real(8) :: timer1,timer2
   
-  timer1=MPI_WTIME()
+  timer1=get_wtime()
   beta_FD=1d0/(KbTev/(2d0*Ry))
   allocate(occ_l(NB,NK),esp_l(NB,NK),esp_temp(NB,NK))
   occ_l=0d0 ; esp_l=0d0
@@ -67,7 +68,7 @@ Subroutine Fermi_Dirac_distribution
   st=sum(occ_l(Nelec/2+1:NB,NK_s:NK_e))
   call comm_summation(st,s,proc_group(2))
 
-  timer2=MPI_WTIME()
+  timer2=get_wtime()
   if(comm_is_root())then
     write(*,*)'Fermi-Dirac dist. time=',timer2-timer1,'sec'
     write(*,*)'chemical potential =',chemical_potential

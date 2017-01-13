@@ -51,8 +51,8 @@ Program main
 
   if(comm_is_root())write(*,*)'NUMBER_THREADS = ',NUMBER_THREADS
 
-  etime1=MPI_WTIME()
-  Time_start=MPI_WTIME() !reentrance
+  etime1=get_wtime()
+  Time_start=get_wtime() !reentrance
   call comm_bcast(Time_start,proc_group(1))
   Rion_update='on'
 
@@ -171,14 +171,14 @@ Program main
       write(*,*) 'var_ave,var_max=',esp_var_ave(iter),esp_var_max(iter)
       write(*,*) 'dns. difference =',dns_diff(iter)
       if (iter/20*20 == iter) then
-         etime2=MPI_WTIME()
+         etime2=get_wtime()
          write(*,*) '====='
          write(*,*) 'elapse time=',etime2-etime1,'sec=',(etime2-etime1)/60,'min'
       end if
       write(*,*) '-----------------------------------------------'
     end if
   end do
-  etime2 = MPI_WTIME()
+  etime2 = get_wtime()
 
   if(comm_is_root()) then
     call timelog_set(LOG_DYNAMICS, etime2 - etime1)
@@ -217,7 +217,7 @@ Program main
   Eall0=Eall
   if(comm_is_root()) write(*,*) 'Eall =',Eall
 
-  etime2=MPI_WTIME()
+  etime2=get_wtime()
   if (comm_is_root()) then
     write(*,*) '-----------------------------------------------'
     write(*,*) 'static time=',etime2-etime1,'sec=', (etime2-etime1)/60,'min'
@@ -301,7 +301,7 @@ Program main
 #ifdef ARTED_USE_PAPI
   call papi_begin
 #endif
-  etime1=MPI_WTIME()
+  etime1=get_wtime()
 !$acc enter data copyin(zu)
   do iter=entrance_iter+1,Nt
     do ixyz=1,3
@@ -419,7 +419,7 @@ Program main
 
 
 !Timer
-    etime2=MPI_WTIME()
+    etime2=get_wtime()
     call timelog_set(LOG_DYNAMICS, etime2 - etime1)
     if (iter/1000*1000 == iter.and.comm_is_root()) then
       call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
@@ -429,7 +429,7 @@ Program main
     end if
 !Timer for shutdown
     if (iter/10*10 == iter) then
-      Time_now=MPI_WTIME()
+      Time_now=get_wtime()
       call comm_bcast(Time_now,proc_group(1))
       if (comm_is_root() .and. iter/100*100 == iter) then
         write(*,*) 'Total time =',(Time_now-Time_start)
@@ -447,7 +447,7 @@ Program main
     call timelog_end(LOG_OTHER)
   enddo !end of RT iteraction========================
 !$acc exit data copyout(zu)
-  etime2=MPI_WTIME()
+  etime2=get_wtime()
 #ifdef ARTED_USE_PAPI
   call papi_end
 #endif
@@ -499,7 +499,7 @@ Program main
   call comm_sync_all
 
   if (comm_is_root()) write(*,*) 'This is the end of all calculation'
-  Time_now=MPI_WTIME()
+  Time_now=get_wtime()
   if (comm_is_root() ) write(*,*) 'Total time =',(Time_now-Time_start)
 
 1 if(comm_is_root()) write(*,*)  'This calculation is shutdown successfully!'
@@ -940,14 +940,14 @@ End Subroutine Read_data
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_Read
   use Global_Variables
-  use timelog,       only: timelog_reentrance_read
+  use timelog,       only: timelog_reentrance_read, get_wtime
   use opt_variables, only: opt_vars_initialize_p1, opt_vars_initialize_p2
   use communication
   implicit none
   real(8) :: time_in,time_out
 
   call comm_sync_all
-  time_in=MPI_WTIME()
+  time_in=get_wtime()
 
   if(comm_is_root()) then
     read(*,*) directory
@@ -1218,7 +1218,7 @@ subroutine prep_Reentrance_Read
   close(500)
 
   call comm_sync_all
-  time_out=MPI_WTIME()
+  time_out=get_wtime()
 
   if(comm_is_root())write(*,*)'Reentrance time read =',time_out-time_in,' sec'
 
@@ -1227,13 +1227,13 @@ end subroutine prep_Reentrance_Read
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_write
   use Global_Variables
-  use timelog, only: timelog_reentrance_write
+  use timelog, only: timelog_reentrance_write, get_wtime
   use communication
   implicit none
   real(8) :: time_in,time_out
 
   call comm_sync_all
-  time_in=MPI_WTIME()
+  time_in=get_wtime()
 
   if (comm_is_root()) then
     open(501,file=trim(directory)//trim(SYSname)//'_re.dat')
@@ -1424,7 +1424,7 @@ subroutine prep_Reentrance_write
 
   close(500)
   call comm_sync_all
-  time_out=MPI_WTIME()
+  time_out=get_wtime()
 
   if(comm_is_root())write(*,*)'Reentrance time write =',time_out-time_in,' sec'
 
