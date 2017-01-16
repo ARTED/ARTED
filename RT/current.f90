@@ -512,6 +512,7 @@ end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine current_result_impl(jx,jy,jz)
   use Global_Variables
+  use communication
   use timelog
   implicit none
   real(8),intent(in) :: jx,jy,jz
@@ -523,6 +524,6 @@ Subroutine current_result_impl(jx,jy,jz)
   jav_l(2)=jy
   jav_l(3)=jz
 
-  call MPI_ALLREDUCE(jav_l,jav,3,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(jav_l,jav,3,proc_group(2))
   call timelog_end(LOG_ALLREDUCE)
 end Subroutine

@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
   use Global_Variables
+  use communication
   implicit none
   integer :: iter_GS,iter_GS_max,ik,ib1,ib2
   character(3) :: atomic_position_update_switch
@@ -34,7 +35,7 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
     call Gram_Schmidt
     call Total_Energy_omp(atomic_position_update_switch,'GS')
     call Ion_Force_omp(atomic_position_update_switch,'GS')
-    if (Myrank == 0) then
+    if (comm_is_root()) then
       write(*,'(1x,a15,i3,f20.14,f15.8)')'iter_GS, Eall =',iter_GS,Eall-Eall0,force(3,1)
     end if
   end do
@@ -48,7 +49,7 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
       enddo
     enddo
   enddo
-  call MPI_ALLREDUCE(ovlp_occ_l,ovlp_occ,NK*NB,MPI_REAL8, MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(ovlp_occ_l,ovlp_occ,NK*NB,proc_group(2))
 
   if(AD_RHO == 'GS')then
     Vloc(:)=Vloc_t(:)
@@ -61,6 +62,7 @@ End Subroutine k_shift_wf
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max)
   use Global_Variables
+  use communication
   implicit none
   integer :: iter_GS,iter_GS_max,ik,ib1,ib2,ib,ia
   character(3) :: atomic_position_update_switch
@@ -77,14 +79,14 @@ Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max)
     call Gram_Schmidt
     call Total_Energy_omp(atomic_position_update_switch,'GS')
     call Ion_Force_omp(atomic_position_update_switch,'GS')
-    if (Myrank == 0) then
+    if (comm_is_root()) then
       write(*,'(1x,a15,i3,f20.14,f15.8)')'iter_GS, Eall =',iter_GS,Eall-Eall0,force(3,1)
     end if
   end do
 
   esp=0d0
   call diag_omp
-  call MPI_ALLREDUCE(esp,esp_all,NK*NB,MPI_REAL8, MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(esp,esp_all,NK*NB,proc_group(2))
 
   ovlp_occ_l=0.d0
 !$omp parallel do private(ik,ib1,ib2)
@@ -95,11 +97,11 @@ Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max)
       enddo
     enddo
   enddo
-  call MPI_ALLREDUCE(ovlp_occ_l,ovlp_occ,NK*NB,MPI_REAL8, MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(ovlp_occ_l,ovlp_occ,NK*NB,proc_group(2))
 
   
   file_nex=trim(directory)//trim(SYSname)//'_last_band_map.out'
-  if (Myrank == 0)then
+  if (comm_is_root()) then
     open(409,file=file_nex,position = position_option) 
     do ik=1,NK
       write(409,'(1x,i5,1000e26.16E3)')ik,(esp_all(ib,ik),ovlp_occ(ib,ik)*NKxyz,ib=1,NB)

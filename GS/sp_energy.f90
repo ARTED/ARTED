@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine sp_energy_omp
   use Global_Variables
+  use communication
   use timelog
   implicit none
   integer :: ik,ib
@@ -54,7 +55,7 @@ Subroutine sp_energy_omp
 !$omp end parallel
 
   call timelog_begin(LOG_ALLREDUCE)
-  CALL MPI_ALLREDUCE(esp_l,esp,NB*NK,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(esp_l,esp,NB*NK,proc_group(2))
   call timelog_end(LOG_ALLREDUCE)
 
   call timelog_end(LOG_SP_ENERGY)

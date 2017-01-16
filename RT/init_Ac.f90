@@ -16,6 +16,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine init_Ac
   use Global_Variables
+  use communication
   implicit none
   integer :: iter
   real(8) :: tt
@@ -94,14 +95,14 @@ Subroutine init_Ac
       enddo
     case('input')
       Ac_ext=0d0
-      if(Myrank==0)then
+      if(comm_is_root())then
         open(899,file='input_Ac.dat')
         do iter=0,Nt
           read(899,*)Ac_ext(iter,1),Ac_ext(iter,2),Ac_ext(iter,3)
         end do
         close(899)
       end if
-      call MPI_BCAST(Ac_ext,(Nt+3)*3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+      call comm_bcast(Ac_ext,proc_group(1))
 
     case('Asin2_cw')
 ! pulse shape : A(t)=f0/omega*sin(Pi t/T)**2 *cos (omega t+phi_CEP*2d0*pi) 

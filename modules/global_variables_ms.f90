@@ -145,10 +145,6 @@ Module Global_Variables
   real(8) :: cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
 !yabana
 
-! MPI
-  include 'mpif.h'
-  integer :: Myrank,Nprocs,ierr
-  integer :: NEW_COMM_WORLD,NEWPROCS,NEWRANK ! sato
   integer :: NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   integer :: NK_remainder,NG_remainder
   real(8) :: etime1,etime2

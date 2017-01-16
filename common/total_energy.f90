@@ -16,6 +16,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine Total_Energy_omp(Rion_update,GS_RT)
   use Global_Variables, only: zu,zu_GS,NB,NBoccmax
+  use communication
   implicit none
   character(3),intent(in) :: Rion_update
   character(2),intent(in) :: GS_RT
@@ -170,7 +171,7 @@ contains
     call timelog_begin(LOG_ALLREDUCE)
     !summarize
     if (Rion_update == 'on') then
-      call MPI_ALLREDUCE(Eion_l,Eion_tmp2,1,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+      call comm_summation(Eion_l,Eion_tmp2,proc_group(2))
       Eion=Eion_tmp1+Eion_tmp2
     end if
 
@@ -179,7 +180,7 @@ contains
     sum_tmp(3) = Enl_l
     sum_tmp(4) = Eloc_l1
     sum_tmp(5) = Eloc_l2
-    call MPI_ALLREDUCE(sum_tmp,sum_result,5,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+    call comm_summation(sum_tmp,sum_result,5,proc_group(2))
     Ekin = sum_result(1)
     Eh   = sum_result(2)
     Enl  = sum_result(3)

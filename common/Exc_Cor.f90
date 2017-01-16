@@ -934,6 +934,7 @@ End Subroutine PZMxc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   use Global_Variables
+  use communication
   implicit none
   character(2) :: GS_RT
   real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
@@ -1048,8 +1049,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
     end do
   end do
 
-  call MPI_ALLREDUCE(tau_s_l,tau_s,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(j_s_l,j_s,NL*3,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(tau_s_l,tau_s,NL,proc_group(2))
+  call comm_summation(j_s_l,j_s,NL*3,proc_group(2))
 
   if(flag_nlcc)tau_s = tau_s + 0.5d0*tau_nlcc
 

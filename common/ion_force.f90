@@ -29,6 +29,7 @@ subroutine Ion_Force_omp(Rion_update,GS_RT)
 contains
   subroutine impl(Rion_update,zutmp,zu_NB)
     use Global_Variables
+    use communication
     use timelog
     implicit none
     character(3),intent(in)  :: Rion_update
@@ -135,7 +136,7 @@ contains
     call timelog_end(LOG_ION_FORCE)
 
     call timelog_begin(LOG_ALLREDUCE)
-    call MPI_ALLREDUCE(ftmp_l,fnl,3*NI,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+    call comm_summation(ftmp_l,fnl,3*NI,proc_group(2))
     force=Floc+Fnl+Fion
     call timelog_end(LOG_ALLREDUCE)
   end subroutine

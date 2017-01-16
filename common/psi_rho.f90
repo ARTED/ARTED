@@ -47,6 +47,7 @@ subroutine psi_rho_impl(zutmp,zu_NB)
   use global_variables
   use timelog
   use opt_variables
+  use communication
 #ifdef ARTED_USE_NVTX
   use nvtx
 #endif
@@ -82,7 +83,7 @@ subroutine psi_rho_impl(zutmp,zu_NB)
   call timelog_end(LOG_PSI_RHO)
 
   call timelog_begin(LOG_ALLREDUCE)
-  call MPI_ALLREDUCE(rho_l,rho,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(rho_l,rho,NL,proc_group(2))
   call timelog_end(LOG_ALLREDUCE)
 
 
