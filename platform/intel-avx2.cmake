@@ -2,7 +2,7 @@
 set(TARGET_SUFFIX               ".cpu")
 
 set(ARCH                        "-xCORE-AVX2")
-set(SIMD_SET                    "AVX2")
+set(SIMD_SET                    "AVX")
 set(OPENMP_FLAGS                "-qopenmp")
 set(LAPACK_FLAGS                "-mkl=parallel")
 set(ADDITIONAL_MACRO            "")
@@ -18,7 +18,7 @@ set(CMAKE_C_COMPILER            "mpiicc")
 set(CMAKE_C_FLAGS_DEBUG         "-O2 -g")
 set(CMAKE_C_FLAGS_RELEASE       "-ansi-alias -fno-alias -O3")
 
-set(ENABLE_REDUCE_FOR_MANYCORE 1)
+set(ENABLE_REDUCE_FOR_MANYCORE ON)
 
 
 ########
