@@ -40,3 +40,13 @@ function (check_mpi_compiler COMPILER_NAME RESULT)
   endif ()
   set(${RESULT} ${RET} PARENT_SCOPE)
 endfunction (check_mpi_compiler)
+
+# option_set(ENV_VAL, HELP_STR, DEFAULT_VAL)
+#   If option is not declare, this command initializes the option with ${DEFAULT_VAL}
+macro (option_set ENV_VAL HELP_STR DEFAULT_VAL)
+  if (${${ENV_VAL}})
+    option(${ENV_VAL} ${HELP_STR} ${${ENV_VAL}})
+  else ()
+    option(${ENV_VAL} ${HELP_STR} ${DEFAULT_VAL})
+  endif()
+endmacro (option_set)
