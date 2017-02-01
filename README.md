@@ -40,14 +40,14 @@ Center for Computational Sciences, University of Tsukuba.
 
 We use [CMake](https://cmake.org/) cross-platform build tools.
 
-CMake detects the below configurations automatically,
+CMake detects the following configurations automatically,
 
 - MPI Fortran/C compiler
 - OpenMP compile flag
 - LAPACK(/BLAS) libraries
 
-CMake software version **must** be 2.8 and newer.
-We recommend *3.0* and newer versions.
+CMake software version **must** be 2.8 or later.
+We recommend *3.0* or later versions.
 
 ### for your computer
 
@@ -59,7 +59,7 @@ We recommend *3.0* and newer versions.
     $ cd build_temp
     $ cmake .. && make
 
-You can specifies the compiler and/or the compiler options.
+You can specify compilers and/or compiler options.
 
     $ ../configure.py FC=mpiifort CC=mpiicc FFLAGS="-xAVX" CFLAGS="-restrict -xAVX"
 
@@ -75,7 +75,7 @@ We provide the build configuration of the systems with CMake cross-compile mode.
     $ cd build_temp
     $ cmake -D CMAKE_TOOLCHAIN_FILE=<COMPILER>-<SYSTEM> .. && make
 
-For example, below command builds the application for K-computer.
+For example, the following command builds the application for K-computer.
 
     $ ../configure.py --arch=fujitsu-k
 
@@ -84,8 +84,8 @@ If you want execution at the system that configuration file is not provided, you
 
 ### Select the simulation mode
 
-ARTED provides two simulation mode, Single-cell (sc) and Multi-scale (ms).
-The default target is sc mode, you can select the target with `-t TARGET, --target=TARGET` option in `configure.py` script.
+ARTED provides two simulation modes, Single-cell (sc) and Multi-scale (ms).
+The default target is sc mode. You can select a target with `-t TARGET, --target=TARGET` option in `configure.py` script.
 For help type `./configure.py -h`.
 
     $ ../configure.py -t sc        # build for SC (default)
