@@ -51,52 +51,45 @@ We recommend *3.0* and newer versions.
 
 ### for your computer
 
-    $ ./build
+    $ mkdir ./build_temp
+    $ cd build_temp
+    $ ../configure.py && make
     or
-    $ mkdir build_dir
-    $ cd build_dir
+    $ mkdir build_temp
+    $ cd build_temp
     $ cmake .. && make
 
-### for Intel Knights Landing
+You can specifies the compiler and/or the compiler options.
 
-    $ ./build -t sc intel knl
+    $ ../configure.py FC=mpiifort CC=mpiicc FFLAGS="-xAVX" CFLAGS="-restrict -xAVX"
+
+### for Supercomputer systems and clusters
+
+We provide the build configuration of the systems with CMake cross-compile mode.
+
+    $ mkdir build_temp
+    $ cd build_temp
+    $ ../configure.py --arch=<COMPILER>-<SYSTEM> && make
     or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knl .. && make
+    $ mkdir build_temp
+    $ cd build_temp
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=<COMPILER>-<SYSTEM> .. && make
 
-### for Intel Xeon CPU (Ivy-Bridge) with Intel Knights Corner
+For example, below command builds the application for K-computer.
 
-    $ ./build -t sc intel avx knc
-    or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-knc .. && make
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=intel-avx .. && make
+    $ ../configure.py --arch=fujitsu-k
 
-### for x86-64 CPUs with NVIDIA GPUs (Kepler and newer GPUs)
+CMake searches the cross-compile configuration files below `platform` directory.
+If you want execution at the system that configuration file is not provided, you can create it yourself.
 
-    $ ./build -t sc pgi openacc
-    or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=pgi-openacc .. && make
+### Select the simulation mode
 
-### for K-computer at RIKEN AICS
+ARTED provides two simulation mode, Single-cell (sc) and Multi-scale (ms).
+The default target is sc mode, you can select the target with `-t TARGET, --target=TARGET` option in `configure.py` script.
+For help type `./configure.py -h`.
 
-    $ ./build -t sc fujitsu k
-    or
-    $ mkdir build_dir
-    $ cd build_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-k .. && make
-
-### for FX100 system at Nagoya University
-
-    $ ./build fujitsu fx100
-    or
-    $ mkdir build_dir
-    $ cd build_dir
-    $ cmake -D CMAKE_TOOLCHAIN_FILE=fujitsu-fx100 .. && make
+    $ ../configure.py -t sc        # build for SC (default)
+    $ ../configure.py --target=ms  # build for MS
 
 
 ## Execution
