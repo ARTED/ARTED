@@ -142,6 +142,8 @@ endif ()
 
 add_definitions("${ADDITIONAL_MACRO}")
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/workaround.cmake)
+
 ### Build target
 add_subdirectory(${MODULE_LIB})
 add_subdirectory(${PREP_LIB})
@@ -181,5 +183,3 @@ get_directory_property(MACRO_LOG COMPILE_DEFINITIONS)
 foreach(_macro ${MACRO_LOG})
   message(STATUS "  ${_macro}")
 endforeach()
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/workaround.cmake)
