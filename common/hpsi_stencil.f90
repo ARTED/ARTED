@@ -15,7 +15,7 @@
 !
 subroutine hpsi1_tuned(A,B,C,D,E,F,G)
   use global_variables, only: NLx,NLy,NLz,zI
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   use opt_variables, only: LBX => STENCIL_BLOCKING_X, LBY => STENCIL_BLOCKING_Y
 #endif
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
@@ -29,7 +29,7 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
   complex(8),intent(out) :: F(0:NLz-1,0:NLy-1,0:NLx-1)
   complex(8),intent(out) :: G(0:NLz-1,0:NLy-1,0:NLx-1)
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   integer    :: bx,by
 #endif
   integer    :: ix,iy,iz
@@ -68,7 +68,7 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
 #endif
 
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   do bx=0,NLx-1,LBX
   do by=0,NLy-1,LBY
   do ix=bx,min(bx+LBX-1,NLx-1)
@@ -176,7 +176,7 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
   end do
   end do
   end do
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   end do
   end do
 #endif

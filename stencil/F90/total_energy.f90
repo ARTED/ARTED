@@ -19,7 +19,7 @@
 
 subroutine total_energy_stencil(A,C,D,E,F)
   use global_variables, only: NLx,NLy,NLz,zI
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   use opt_variables, only: LBX => STENCIL_BLOCKING_X, LBY => STENCIL_BLOCKING_Y
 #endif
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
@@ -31,7 +31,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
   complex(8),intent(in)  :: E(0:NLz-1,0:NLy-1,0:NLx-1)
   complex(8),intent(out) :: F
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   integer    :: bx,by
 #endif
   integer    :: ix,iy,iz
@@ -69,7 +69,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
 
   F = 0
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   do bx=0,NLx-1,LBX
   do by=0,NLy-1,LBY
   do ix=bx,min(bx+LBX-1,NLx-1)
@@ -176,7 +176,7 @@ subroutine total_energy_stencil(A,C,D,E,F)
   end do
   end do
   end do
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   end do
   end do
 #endif
