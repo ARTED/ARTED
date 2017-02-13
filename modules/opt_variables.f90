@@ -187,7 +187,7 @@ contains
     call init_for_padding
 #endif
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
     call auto_blocking
 #endif
   end subroutine
