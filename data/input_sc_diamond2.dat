@@ -22,7 +22,7 @@
 'Tr'                        ! Longi_Trans 'longitudinal' or 'transverse'
 'N'                                ! MD_option 'Y' or 'N'
 'No'                                ! AD_RHO 'TD', 'GS' or 'No'
-75000  0.02                         ! Nt,dt real-time parameter
+37500  0.04                         ! Nt,dt real-time parameter
 0.001879483                               ! dAc (initial distortion in response)
 2000  0.001                         ! Nomega,domega :response
 'input'                          ! AE_shape 'Asin2cos' or 'Esin2sin'
