@@ -327,8 +327,11 @@ Program main
     enddo
 !$acc update device(kAc)
 
-!    call dt_evolve_omp_KB(iter)
+#ifdef ARTED_USE_OLD_PROPAGATOR
+    call dt_evolve_omp_KB(iter)
+#else
     call dt_evolve_etrs_omp_KB(iter)
+#endif
     call current_omp_KB
 
     javt(iter+1,:)=jav(:)

@@ -353,7 +353,12 @@ Program main
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
       
+#ifdef ARTED_USE_OLD_PROPAGATOR
       call dt_evolve_omp_KB_MS
+#else
+      !call dt_evolve_etrs_omp_KB_MS
+      call dt_evolve_omp_KB_MS
+#endif
 
       call timelog_begin(LOG_OTHER)
 ! sato ---------------------------------------
