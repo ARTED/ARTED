@@ -166,13 +166,26 @@ contains
   end subroutine
 
   subroutine summation_threads(lgflops)
-    use global_variables, only: NUMBER_THREADS
+    use global_variables, only: NUMBER_THREADS, functional
     use timelog
     implicit none
     real(8), intent(out) :: lgflops(4)
     real(8) :: hflop(3), htime(4)
     integer :: i, cnt
     integer :: chunk_size(0:NUMBER_THREADS-1)
+    integer :: ncalls_in_loop
+
+    select case(functional)
+      case('VS98','TPSS','TBmBJ')
+        ncalls_in_loop = 3
+      case default
+        ncalls_in_loop = 2
+    end select
+#ifdef ARTED_SC
+#ifdef ARTED_USE_OLD_PROPAGATOR
+    ncalls_in_loop = ncalls_in_loop - 1
+#endif
+#endif
 
     call get_hamiltonian_chunk_size(chunk_size)
 
@@ -184,9 +197,9 @@ contains
 #endif
       cnt = chunk_size(i)
 
-      hflop(1) = get_stencil_FLOP(cnt)
-      hflop(2) = get_pseudo_pt_FLOP(cnt)
-      hflop(3) = get_update_FLOP(cnt)
+      hflop(1) = get_stencil_FLOP(cnt)   * ncalls_in_loop
+      hflop(2) = get_pseudo_pt_FLOP(cnt) * ncalls_in_loop
+      hflop(3) = get_update_FLOP(cnt)    * ncalls_in_loop
 
       htime(1) = timelog_thread_get(LOG_HPSI_STENCIL, i)
       htime(2) = timelog_thread_get(LOG_HPSI_PSEUDO, i)
