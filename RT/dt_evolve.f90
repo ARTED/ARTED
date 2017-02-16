@@ -178,6 +178,8 @@ Subroutine dt_evolve_omp_KB(iter)
   return
 End Subroutine dt_evolve_omp_KB
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+!***If you created the ETRS propagator for multi-scale mode, please remove following directive.
+#ifdef ARTED_SC
 Subroutine dt_evolve_etrs_omp_KB(iter)
   use Global_Variables
   use timelog
@@ -357,6 +359,8 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
 
   return
 End Subroutine dt_evolve_etrs_omp_KB
+!***If you created the ETRS propagator for multi-scale mode, please remove following directive.
+#endif
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine dt_evolve_omp_KB_MS
   use Global_Variables
