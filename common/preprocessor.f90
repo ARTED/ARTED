@@ -44,8 +44,8 @@ subroutine print_optimize_message
 #ifdef ARTED_STENCIL_PADDING
   print *, '  ARTED_STENCIL_PADDING'
 #endif
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
-  print *, '  ARTED_STENCIL_LOOP_BLOCKING'
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
+  print *, '  ARTED_STENCIL_ENABLE_LOOP_BLOCKING'
 #endif
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
   print *, '  ARTED_DOMAIN_POWER_OF_TWO'
@@ -55,5 +55,8 @@ subroutine print_optimize_message
 #endif
 #ifdef ARTED_ENABLE_SOFTWARE_PREFETCH
   print *, '  ARTED_ENABLE_SOFTWARE_PREFETCH'
+#endif
+#ifdef ARTED_USE_OLD_PROPAGATOR
+  print *, '  ARTED_USE_OLD_PROPAGATOR'
 #endif
 end subroutine

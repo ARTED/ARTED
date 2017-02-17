@@ -69,6 +69,7 @@ Module Global_Variables
   real(8) :: Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
   real(8),allocatable :: javt(:,:)
   real(8),allocatable :: Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)!yabana
+  real(8),allocatable :: Vloc_new(:),Vloc_old(:,:)
   real(8),allocatable :: tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
 !yabana
   complex(8),allocatable :: dVloc_G(:,:)

@@ -75,6 +75,7 @@ option_set(ENABLE_LOOP_BLOCKING           "Enable loop blocking at the stencil" 
 option_set(ENABLE_SWPREFETCH              "Enable software prefetch in the explicit vec of stencil"  OFF)
 option_set(ENABLE_REDUCE_FOR_MANYCORE     "Enable optimized reduction code for many-core processor"  OFF)
 option_set(ENABLE_LARGE_BLOCKING          "Enable large blocking for accelerator"                    OFF)
+option_set(USE_OLD_PROPAGATOR             "Use old propagator for comparing to past results"         OFF)
 
 if (${BUILD_TARGET} STREQUAL "ms")
   add_definitions(-DARTED_MS)
@@ -126,6 +127,7 @@ endif ()
 add_definitions_if(OPT_CURRENT                -DARTED_CURRENT_OPTIMIZED)
 add_definitions_if(ENABLE_REDUCE_FOR_MANYCORE -DARTED_REDUCE_FOR_MANYCORE)
 add_definitions_if(ENABLE_LARGE_BLOCKING      -DARTED_LBLK)
+add_definitions_if(USE_OLD_PROPAGATOR         -DARTED_USE_OLD_PROPAGATOR)
 
 if (OPT_STENCIL)
   add_definitions(-DARTED_STENCIL_OPTIMIZED)
@@ -141,6 +143,8 @@ else ()
 endif ()
 
 add_definitions("${ADDITIONAL_MACRO}")
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/workaround.cmake)
 
 ### Build target
 add_subdirectory(${MODULE_LIB})
@@ -181,5 +185,3 @@ get_directory_property(MACRO_LOG COMPILE_DEFINITIONS)
 foreach(_macro ${MACRO_LOG})
   message(STATUS "  ${_macro}")
 endforeach()
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/workaround.cmake)

@@ -99,7 +99,7 @@ contains
       modz(iz) = mod(iz,NLz)
     end do
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
     call auto_blocking
 #endif
   end subroutine
