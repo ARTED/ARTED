@@ -15,7 +15,7 @@
 !
 Module Global_Variables
 !ARTED version
-  character(50),parameter :: ARTED_ver='ARTED_ms.1.6.0 (based on ms.2014.08.10.2)'
+  character(50),parameter :: ARTED_ver='ARTED.1.6.0 (based on 2014.08.10.2)'
 
 ! constants
   real(8),parameter :: Pi=3.141592653589793d0
@@ -70,6 +70,7 @@ Module Global_Variables
   real(8) :: Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
   real(8),allocatable :: javt(:,:)
   real(8),allocatable :: Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)!yabana
+  real(8),allocatable :: Vloc_new(:),Vloc_old(:,:)
   real(8),allocatable :: tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
 !yabana
   complex(8),allocatable :: dVloc_G(:,:)
@@ -135,7 +136,7 @@ Module Global_Variables
   character(50) :: file_ac_vac_back     ! 942
   character(50) :: file_ac_m            ! 943
   character(50) :: file_ac              ! 902
-  
+
   character(2) :: ext_field
   character(2) :: Longi_Trans
   character(1) :: FSset_option,MD_option
@@ -217,6 +218,7 @@ Module Global_Variables
   integer :: Nstep_write=100
 
   integer :: reentrance_switch
+
 
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
