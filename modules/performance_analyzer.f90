@@ -70,9 +70,7 @@ contains
 
     type(comm_maxloc_type) :: tin,tout
     real(8)                :: lgflops(4), pgflops(4), tgflops(4)
-#ifdef ARTED_MS
     real(8)                :: sgflops(4)
-#endif
 
     call summation_threads(lgflops)
     pgflops = lgflops
@@ -82,9 +80,9 @@ contains
     call comm_get_max(tin, tout, proc_group(1))
     call comm_bcast(pgflops, proc_group(1), tout%rank)
 
-#ifdef ARTED_MS
+    if (cfunction == "arted_ms") then
     call comm_summation(lgflops, sgflops, 4, proc_group(1))
-#endif
+    end if
     call comm_summation(lgflops, tgflops, 4, proc_group(1))
 
     if(comm_is_root()) then
@@ -92,9 +90,9 @@ contains
       write (iounit,'(A,4(A15))') 'Type           ', 'Hamiltonian', 'Stencil', 'Pseudo-Pt', 'Update'
       write (iounit,f)            'Processor      ', lgflops(4), lgflops(1), lgflops(2), lgflops(3)
       write (iounit,f)            'Processor(max) ', pgflops(4), pgflops(1), pgflops(2), pgflops(3)
-#ifdef ARTED_MS
+if (cfunction == "arted_ms") then
       write (iounit,f)            'Macro-grid(sum)', sgflops(4), sgflops(1), sgflops(2), sgflops(3)
-#endif
+endif
       write (iounit,f)            'System(sum)    ', tgflops(4), tgflops(1), tgflops(2), tgflops(3)
     end if
   end subroutine
@@ -166,7 +164,7 @@ contains
   end subroutine
 
   subroutine summation_threads(lgflops)
-    use global_variables, only: NUMBER_THREADS, functional
+    use global_variables, only: NUMBER_THREADS, functional, cfunction
     use timelog
     implicit none
     real(8), intent(out) :: lgflops(4)
@@ -181,11 +179,11 @@ contains
       case default
         ncalls_in_loop = 2
     end select
-#ifdef ARTED_SC
+if (cfunction == "arted_sc") then
 #ifdef ARTED_USE_OLD_PROPAGATOR
     ncalls_in_loop = ncalls_in_loop - 1
 #endif
-#endif
+endif
 
     call get_hamiltonian_chunk_size(chunk_size)
 

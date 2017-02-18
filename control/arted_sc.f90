@@ -18,7 +18,10 @@
 !PROGRAM main
 !SUBROUTINE err_finalize(err_message)
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Program main
+module arted_sc
+  implicit none
+contains
+subroutine main
   use Global_Variables
   use timelog
   use opt_variables
@@ -517,7 +520,7 @@ Program main
 1 if(comm_is_root()) write(*,*)  'This calculation is shutdown successfully!'
   call comm_finalize
 
-End Program Main
+end subroutine Main
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Read_data
   use Global_Variables
@@ -1446,17 +1449,5 @@ subroutine prep_Reentrance_write
 
   return
 end subroutine prep_Reentrance_write
-
+end module arted_sc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine err_finalize(err_message)
-  use Global_Variables
-  use communication
-  implicit none
-  character(*),intent(in) :: err_message
-  if (comm_is_root()) then
-    write(*,*) err_message
-  endif
-  call comm_finalize
-
-  stop
-End Subroutine Err_finalize

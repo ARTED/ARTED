@@ -218,6 +218,8 @@ Module Global_Variables
   integer :: Nstep_write=100
 
   integer :: reentrance_switch
+  
+  character(100) :: cfunction
 
 
 #if defined(__KNC__) || defined(__AVX512F__)

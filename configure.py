@@ -51,7 +51,7 @@ parser.add_option('-v', '--verbose', action='store_true', default=False, dest='v
 
 group = OptionGroup(parser, 'Build target')
 group.add_option('-a', '--arch',   action='store', default=None, dest='arch',   help='cross compile mode. ARCH format should be <COMPILER>-<SYSTEM>')
-group.add_option('-t', '--target', action='store', default='sc', dest='target', help='build target. sc (Single-cell) or ms (Multi-scale), default sc')
+#group.add_option('-t', '--target', action='store', default='sc', dest='target', help='build target. sc (Single-cell) or ms (Multi-scale), default sc')
 parser.add_option_group(group)
 
 group = OptionGroup(parser, 'Optimization options')
@@ -81,15 +81,15 @@ parser.add_option_group(group)
 (options, args) = parser.parse_args()
 
 ### check build target
-if options.target != 'sc' and options.target != 'ms':
-  print 'invalid target : {0}'.format(options.target)
-  print ''
-  parser.print_help()
-  exit(-1)
+#if options.target != 'sc' and options.target != 'ms':
+#  print 'invalid target : {0}'.format(options.target)
+#  print ''
+#  parser.print_help()
+#  exit(-1)
 
 ### check options
 dict = {}
-dict['BUILD_TARGET']               = options.target.lower()
+# dict['BUILD_TARGET']               = "sc" options.target.lower()
 if options.arch is not None:
   dict['CMAKE_TOOLCHAIN_FILE']     = options.arch.lower()
 dict['CMAKE_BUILD_TYPE']           = debug_or_release(options.debug)

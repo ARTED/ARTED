@@ -207,9 +207,8 @@ contains
   subroutine hpsi1_LBLK(tpsi,htpsi, ikb_s,ikb_e)
     use Global_Variables
     use opt_variables
-#ifdef ARTED_SC
     use timelog
-#endif
+
     implicit none
     integer :: ikb_s,ikb_e
     complex(8),intent(in)  ::  tpsi(0:PNL-1, ikb_s:ikb_e)
