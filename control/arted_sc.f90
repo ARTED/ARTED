@@ -13,10 +13,8 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-!This file is "main.f90"
-!This file contains main program and four subroutines.
-!PROGRAM main
-!SUBROUTINE err_finalize(err_message)
+!This file is "arted_sc.f90"
+!This file contains sc-mode program
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 module arted_sc
   implicit none
@@ -33,8 +31,6 @@ subroutine main
   character(3) :: Rion_update
   character(10) :: functional_t
 !$ integer :: omp_get_max_threads  
-
-  call comm_init
 
   call timelog_initialize
   call load_environments

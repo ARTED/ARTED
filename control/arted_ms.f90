@@ -13,10 +13,8 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-!This file is "main.f90"
-!This file contains main program and four subroutines.
-!PROGRAM main
-!SUBROUTINE err_finalize(err_message)
+!This file is "arted_ms.f90"
+!This file contains ms-mode program
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 module arted_ms
   implicit none
@@ -35,8 +33,6 @@ subroutine main
   integer :: ix_m,iy_m,ixy_m
   integer :: index
 !$ integer :: omp_get_max_threads  
-
-  call comm_init
 
   call timelog_initialize
   call load_environments
