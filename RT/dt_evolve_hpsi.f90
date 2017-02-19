@@ -61,7 +61,7 @@ subroutine dt_evolve_hpsi(flag_current)
     call hpsi_omp_KB_RT(ik,ztpsi(:,3,tid),ztpsi(:,4,tid))
     call update(zfac,ztpsi(:,:,tid),zu(:,ib,ik))
 
-#ifdef ARTED_CURRENT_OPTIMIZED
+#ifdef ARTED_CURRENT_PREPROCESSING
     if(flag_current) call current_omp_KB_ST(ib,ik,zu(:,ib,ik))
 #endif
   end do
@@ -157,7 +157,7 @@ subroutine dt_evolve_hpsi(flag_current)
     call hpsi_acc_KB_RT_LBLK(ztpsi(:,:,3),ztpsi(:,:,4), ikb_s,ikb_e)
     call update_LBLK(zfac,ztpsi(:,:,:),zu(:,:,:), ikb_s,ikb_e)
 
-#ifdef ARTED_CURRENT_OPTIMIZED
+#ifdef ARTED_CURRENT_PREPROCESSING
     if(flag_current) call current_acc_KB_ST_LBLK(zu(:,:,:), ikb_s,ikb_e)
 #endif
   end do
