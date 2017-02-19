@@ -14,6 +14,7 @@
 !  limitations under the License.
 !
 module timelog
+  use misc_routines, only: get_wtime
   implicit none
 
   integer,public,parameter :: LOG_DT_EVOLVE    = 0
@@ -50,8 +51,6 @@ module timelog
 
   public :: timelog_reentrance_read, timelog_reentrance_write
   public :: timelog_write, timelog_thread_write
-
-  public :: get_wtime
 
 
   integer,private,parameter   :: LOG_SIZE = 30
@@ -202,12 +201,5 @@ contains
     integer,intent(in) :: id,tid
     real(8)            :: timelog_thread_get
     timelog_thread_get = log_time_t(id,tid)
-  end function
-
-  function get_wtime()
-    implicit none
-    real(8) :: get_wtime
-    real(8) :: omp_get_wtime
-    get_wtime = omp_get_wtime()
   end function
 end module timelog

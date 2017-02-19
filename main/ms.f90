@@ -25,6 +25,7 @@ Program main
   use environment
   use performance_analyzer
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   integer :: iter,ik,ib,ia
   character(3) :: Rion_update
@@ -1128,9 +1129,10 @@ End Subroutine Read_data
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_Read
   use Global_Variables
-  use timelog,       only: timelog_reentrance_read, get_wtime
+  use timelog,       only: timelog_reentrance_read
   use opt_variables, only: opt_vars_initialize_p1, opt_vars_initialize_p2
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   real(8) :: time_in,time_out
 
@@ -1381,8 +1383,9 @@ end subroutine prep_Reentrance_Read
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_write
   use Global_Variables
-  use timelog, only: timelog_reentrance_write, get_wtime
+  use timelog, only: timelog_reentrance_write
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   real(8) :: time_in,time_out
 

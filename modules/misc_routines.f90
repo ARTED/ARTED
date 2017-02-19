@@ -18,6 +18,7 @@ module misc_routines
 
   public :: floor_pow2, ceiling_pow2
   public :: gen_logfilename
+  public :: get_wtime
 
 private
 contains
@@ -59,5 +60,12 @@ contains
     call date_and_time(date=d,time=t)
 
     write (gen_logfilename,'(A)') filename//'_'//d//'_'//t(1:6)//'.log'
+  end function
+
+  function get_wtime()
+    implicit none
+    real(8) :: get_wtime
+    real(8) :: omp_get_wtime
+    get_wtime = omp_get_wtime()
   end function
 end module
