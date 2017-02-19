@@ -327,7 +327,6 @@ Program main
 !$acc enter data create(kAc)
 
   call timelog_reset
-  call timelog_enable_verbose
   etime1=get_wtime()
 !$acc enter data copyin(zu)
   RTiteratopm : do iter=entrance_iter+1,Nt ! sato
@@ -541,7 +540,6 @@ Program main
 !$acc exit data copyout(zu)
   etime2=get_wtime()
   call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-  call timelog_disable_verbose
 
   if(comm_is_root(1)) then
     call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)

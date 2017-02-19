@@ -303,7 +303,6 @@ Program main
 !$acc enter data create(kAc)
 
   call timelog_reset
-  call timelog_enable_verbose
 #ifdef ARTED_USE_PAPI
   call papi_begin
 #endif
@@ -464,7 +463,6 @@ Program main
   call papi_end
 #endif
   call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-  call timelog_disable_verbose
 
   if(comm_is_root()) then
 #ifdef ARTED_USE_PAPI

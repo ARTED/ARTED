@@ -74,7 +74,6 @@ parser.add_option_group(group)
 group = OptionGroup(parser, 'Debug options')
 group.add_option('-d', '--debug', action='store_true', default=False, dest='debug', help='enable debug build.')
 group.add_option('--papi',        action='store_true',                dest='papi',  help='use PAPI profiling (SC only).')
-group.add_option('--tlog',        action='store_true',                dest='tlog',  help='use TLOG profiling.')
 group.add_option('--nvtx',        action='store_true',                dest='nvtx',  help='use NVIDIA Tools Extention Library.')
 parser.add_option_group(group)
 
@@ -95,7 +94,6 @@ if options.arch is not None:
 dict['CMAKE_BUILD_TYPE']           = debug_or_release(options.debug)
 dict['CMAKE_VERBOSE_MAKEFILE']     = on_or_off(options.verbose)
 
-add_option(dict, 'USE_TLOG',                   options.tlog)
 add_option(dict, 'USE_PAPI',                   options.papi)
 add_option(dict, 'USE_NVTX',                   options.nvtx)
 add_option(dict, 'OPT_STENCIL',                options.stencil_optimized)
