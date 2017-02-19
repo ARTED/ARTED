@@ -73,37 +73,9 @@ module opt_variables
 #endif
 
 contains
-  function ceil_power_of_two(n)
-    implicit none
-    integer,intent(in) :: n
-    integer            :: ceil_power_of_two
-    integer :: x
-    x = n
-    x = ior(x, ishft(x, 1))
-    x = ior(x, ishft(x, 2))
-    x = ior(x, ishft(x, 4))
-    x = ior(x, ishft(x, 8))
-    x = ior(x, ishft(x, 16))
-    ceil_power_of_two = x - ishft(x, 1)
-  end function
-
-  function roundup_pow2(n)
-    implicit none
-    integer,intent(in) :: n
-    integer            :: roundup_pow2,k
-
-    k = n - 1
-    k = ior(k, ishft(k,-1))
-    k = ior(k, ishft(k,-2))
-    k = ior(k, ishft(k,-4))
-    k = ior(k, ishft(k,-8))
-    k = ior(k, ishft(k,-16))
-
-    roundup_pow2 = k + 1
-  end function roundup_pow2
-
   subroutine opt_vars_initialize_p1
     use global_variables
+    use misc_routines, only: ceiling_pow2
     implicit none
     integer :: tid_range
 
@@ -113,7 +85,7 @@ contains
     end select
 
 #ifdef ARTED_REDUCE_FOR_MANYCORE
-    tid_range = roundup_pow2(NUMBER_THREADS) - 1
+    tid_range = ceiling_pow2(NUMBER_THREADS) - 1
 #else
     tid_range = 0
 #endif
@@ -303,6 +275,7 @@ contains
 #endif
 
   subroutine auto_blocking
+    use misc_routines, only: floor_pow2
     implicit none
     integer,parameter :: L1cache_size =  8 * 1024
     integer,parameter :: value_size   = 24
@@ -312,8 +285,8 @@ contains
     nyx = dble(L1cache_size) / (PNLz * value_size)
     sq  = int(floor(sqrt(nyx)))
 
-    STENCIL_BLOCKING_X = ceil_power_of_two(min(sq, PNLx))
-    STENCIL_BLOCKING_Y = ceil_power_of_two(min(sq, PNLy))
+    STENCIL_BLOCKING_X = floor_pow2(min(sq, PNLx))
+    STENCIL_BLOCKING_Y = floor_pow2(min(sq, PNLy))
   end subroutine
 
   subroutine symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,procid,nprocs)

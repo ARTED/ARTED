@@ -11,6 +11,7 @@ set(SOURCES
     papi_wrap.c
     nvtx.f90
     communication.f90
+    misc_routines.f90
     )
 #if (USE_NVTX)
 #   set(SOURCES ${SOURCES} nvtx.f90)

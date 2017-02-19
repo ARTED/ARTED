@@ -25,7 +25,6 @@ module performance_analyzer
 
   private summation_threads, get_gflops, get_hamiltonian_chunk_size
   private get_stencil_FLOP, get_pseudo_pt_FLOP, get_update_FLOP
-  private get_filename
 
 contains
   subroutine print_stencil_size
@@ -47,17 +46,6 @@ contains
     real(8) :: lgflops(4)
     call summation_threads(lgflops)
   end subroutine
-
-  function get_filename(filename)
-    implicit none
-    character(*),intent(in) :: filename
-    character(100) :: get_filename
-    character(8)   :: d
-    character(10)  :: t
-    call date_and_time(date=d,time=t)
-
-    write (get_filename,'(A)') filename//'_'//d//'_'//t(1:6)//'.log'
-  end function
 
   subroutine write_hamiltonian(iounit)
     use global_variables
@@ -151,12 +139,13 @@ contains
   subroutine write_performance(filename)
     use global_variables
     use communication
+    use misc_routines, only: gen_logfilename
     implicit none
     character(*),intent(in) :: filename
 
     integer,parameter :: iounit = 999
 
-    if(comm_is_root()) open(iounit, file=get_filename(filename))
+    if(comm_is_root()) open(iounit, file=gen_logfilename(filename))
     call write_hamiltonian(iounit)
     if(comm_is_root()) write (iounit,'(A)') '==='
     call write_loadbalance(iounit)
