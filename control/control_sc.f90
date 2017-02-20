@@ -13,10 +13,10 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-!This file is "arted_sc.f90"
+!This file is "control_sc.f90"
 !This file contains sc-mode program
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-module arted_sc
+module control_sc
   implicit none
 contains
 subroutine main
@@ -1445,5 +1445,5 @@ subroutine prep_Reentrance_write
 
   return
 end subroutine prep_Reentrance_write
-end module arted_sc
+end module control_sc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130

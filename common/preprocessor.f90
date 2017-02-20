@@ -15,16 +15,8 @@
 !
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine print_optimize_message
-  use Global_Variables, only: cfunction
   implicit none
   print *, 'Preprocessor: '
-
-select case(cfunction)
-case ("arted_sc")
-  print *, ' arted_sc'
-case ("arted_ms")
-  print *, 'arted_ms'
-end select
 
 #ifdef ARTED_USE_TLOG
   print *, '  ARTED_USE_TLOG'

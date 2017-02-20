@@ -80,7 +80,7 @@ contains
     call comm_get_max(tin, tout, proc_group(1))
     call comm_bcast(pgflops, proc_group(1), tout%rank)
 
-    if (cfunction == "arted_ms") then
+    if (calc_mode == calc_mode_ms) then
     call comm_summation(lgflops, sgflops, 4, proc_group(1))
     end if
     call comm_summation(lgflops, tgflops, 4, proc_group(1))
@@ -90,7 +90,7 @@ contains
       write (iounit,'(A,4(A15))') 'Type           ', 'Hamiltonian', 'Stencil', 'Pseudo-Pt', 'Update'
       write (iounit,f)            'Processor      ', lgflops(4), lgflops(1), lgflops(2), lgflops(3)
       write (iounit,f)            'Processor(max) ', pgflops(4), pgflops(1), pgflops(2), pgflops(3)
-if (cfunction == "arted_ms") then
+if (calc_mode == calc_mode_ms) then
       write (iounit,f)            'Macro-grid(sum)', sgflops(4), sgflops(1), sgflops(2), sgflops(3)
 endif
       write (iounit,f)            'System(sum)    ', tgflops(4), tgflops(1), tgflops(2), tgflops(3)
@@ -164,7 +164,7 @@ endif
   end subroutine
 
   subroutine summation_threads(lgflops)
-    use global_variables, only: NUMBER_THREADS, functional, cfunction
+    use global_variables, only: NUMBER_THREADS, functional, calc_mode, calc_mode_sc
     use timelog
     implicit none
     real(8), intent(out) :: lgflops(4)
@@ -179,11 +179,12 @@ endif
       case default
         ncalls_in_loop = 2
     end select
-if (cfunction == "arted_sc") then
+
 #ifdef ARTED_USE_OLD_PROPAGATOR
+if (calc_mode == calc_mode_sc) then
     ncalls_in_loop = ncalls_in_loop - 1
-#endif
 endif
+#endif
 
     call get_hamiltonian_chunk_size(chunk_size)
 

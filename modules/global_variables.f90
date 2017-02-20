@@ -219,7 +219,9 @@ Module Global_Variables
 
   integer :: reentrance_switch
   
-  character(100) :: cfunction
+  character(30) :: calc_mode
+  character(30), parameter :: calc_mode_sc = 'singlecell'
+  character(30), parameter :: calc_mode_ms = 'multiscale'
 
 
 #if defined(__KNC__) || defined(__AVX512F__)

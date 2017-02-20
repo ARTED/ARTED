@@ -13,10 +13,10 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-!This file is "arted_ms.f90"
+!This file is "control_ms.f90"
 !This file contains ms-mode program
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-module arted_ms
+module control_ms
   implicit none
 contains
 subroutine main
@@ -1560,5 +1560,5 @@ subroutine prep_Reentrance_write
 
   return
 end subroutine prep_Reentrance_write
-end module arted_ms
+end module control_ms
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
