@@ -90,9 +90,9 @@ contains
       write (iounit,'(A,4(A15))') 'Type           ', 'Hamiltonian', 'Stencil', 'Pseudo-Pt', 'Update'
       write (iounit,f)            'Processor      ', lgflops(4), lgflops(1), lgflops(2), lgflops(3)
       write (iounit,f)            'Processor(max) ', pgflops(4), pgflops(1), pgflops(2), pgflops(3)
-if (calc_mode == calc_mode_ms) then
-      write (iounit,f)            'Macro-grid(sum)', sgflops(4), sgflops(1), sgflops(2), sgflops(3)
-endif
+      if (calc_mode == calc_mode_ms) then
+        write (iounit,f)            'Macro-grid(sum)', sgflops(4), sgflops(1), sgflops(2), sgflops(3)
+      endif
       write (iounit,f)            'System(sum)    ', tgflops(4), tgflops(1), tgflops(2), tgflops(3)
     end if
   end subroutine
@@ -181,9 +181,9 @@ endif
     end select
 
 #ifdef ARTED_USE_OLD_PROPAGATOR
-if (calc_mode == calc_mode_sc) then
-    ncalls_in_loop = ncalls_in_loop - 1
-endif
+    if (calc_mode == calc_mode_sc) then
+        ncalls_in_loop = ncalls_in_loop - 1
+    endif
 #endif
 
     call get_hamiltonian_chunk_size(chunk_size)

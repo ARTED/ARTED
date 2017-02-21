@@ -80,16 +80,8 @@ parser.add_option_group(group)
 
 (options, args) = parser.parse_args()
 
-### check build target
-#if options.target != 'sc' and options.target != 'ms':
-#  print 'invalid target : {0}'.format(options.target)
-#  print ''
-#  parser.print_help()
-#  exit(-1)
-
 ### check options
 dict = {}
-# dict['BUILD_TARGET']               = "sc" options.target.lower()
 if options.arch is not None:
   dict['CMAKE_TOOLCHAIN_FILE']     = options.arch.lower()
 dict['CMAKE_BUILD_TYPE']           = debug_or_release(options.debug)

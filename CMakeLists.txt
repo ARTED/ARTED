@@ -77,14 +77,6 @@ option_set(ENABLE_REDUCE_FOR_MANYCORE     "Enable optimized reduction code for m
 option_set(ENABLE_LARGE_BLOCKING          "Enable large blocking for accelerator"                    OFF)
 option_set(USE_OLD_PROPAGATOR             "Use old propagator for comparing to past results"         OFF)
 
-##if (${BUILD_TARGET} STREQUAL "ms")
-##  add_definitions(-DARTED_MS)
-##  message(STATUS "Build target is Multi-Scale (MS)")
-##else ()
-#  add_definitions(-DARTED_SC)
-#  message(STATUS "Build target is Single-Cell (SC)")
-##endif ()
-
 set(BINARY_DIR             "bin")
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/${BINARY_DIR}")
 set(TARGET_NAME            "ARTED${TARGET_SUFFIX}")
