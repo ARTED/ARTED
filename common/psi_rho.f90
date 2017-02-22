@@ -90,7 +90,8 @@ subroutine psi_rho_impl(zutmp,zu_NB)
 contains
   subroutine reduce(tid,zfac,zutmp,zu_NB)
     use global_variables
-    use opt_variables, only: zrhotmp, roundup_pow2
+    use opt_variables, only: zrhotmp
+    use misc_routines, only: ceiling_pow2
     use omp_lib, only: omp_get_thread_num
     implicit none
     integer,intent(in)    :: tid
@@ -115,7 +116,7 @@ contains
     end do
 !$omp end do
 
-    i = roundup_pow2(NUMBER_THREADS/2)
+    i = ceiling_pow2(NUMBER_THREADS/2)
     do while(i > 0)
       if(mytid < i) then
         zrhotmp(0:NL-1,mytid) = zrhotmp(0:NL-1,mytid) + zrhotmp(0:NL-1,mytid + i)

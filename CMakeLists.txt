@@ -62,7 +62,6 @@ message(STATUS "user-defined CFLAGS = ${CMAKE_C_FLAGS}")
 
 ### Set optimize options
 set       (BUILD_TARGET "sc" CACHE STRING "Build target, sc (Single-cell) or ms (Multi-scale)")
-option_set(USE_TLOG                       "Use TLOG library"                                         OFF)
 option_set(USE_PAPI                       "Use Performance API"                                      OFF)
 option_set(USE_NVTX                       "Use NVIDIA Tools Extension Library"                       OFF)
 option_set(OPT_CURRENT                    "Optimize current code with RT"                            OFF)
@@ -103,12 +102,6 @@ set(FDTD_LIB      FDTD)
 set(PERFCHECK_EXT perfcheck)
 
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR})
-
-### TLOG time profiler from CCS, Univ. TSUKUBA
-if (USE_TLOG)
-  add_definitions(-DARTED_USE_TLOG)
-  set(EXTERNAL_LIBS ${EXTERNAL_LIBS} tlog)
-endif ()
 
 ### Performance API from ICL, Univ. TENNESSEE
 if (USE_PAPI)
