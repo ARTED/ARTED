@@ -17,12 +17,7 @@
 subroutine print_optimize_message
   implicit none
   print *, 'Preprocessor: '
-#ifdef ARTED_SC
-  print *, '  ARTED_SC'
-#endif
-#ifdef ARTED_MS
-  print *, '  ARTED_MS'
-#endif
+
 #ifdef ARTED_USE_TLOG
   print *, '  ARTED_USE_TLOG'
 #endif

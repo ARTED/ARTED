@@ -61,7 +61,6 @@ message(STATUS "user-defined CFLAGS = ${CMAKE_C_FLAGS}")
 
 
 ### Set optimize options
-set       (BUILD_TARGET "sc" CACHE STRING "Build target, sc (Single-cell) or ms (Multi-scale)")
 option_set(USE_TLOG                       "Use TLOG library"                                         OFF)
 option_set(USE_PAPI                       "Use Performance API"                                      OFF)
 option_set(USE_NVTX                       "Use NVIDIA Tools Extension Library"                       OFF)
@@ -77,17 +76,9 @@ option_set(ENABLE_REDUCE_FOR_MANYCORE     "Enable optimized reduction code for m
 option_set(ENABLE_LARGE_BLOCKING          "Enable large blocking for accelerator"                    OFF)
 option_set(USE_OLD_PROPAGATOR             "Use old propagator for comparing to past results"         OFF)
 
-if (${BUILD_TARGET} STREQUAL "ms")
-  add_definitions(-DARTED_MS)
-  message(STATUS "Build target is Multi-Scale (MS)")
-else ()
-  add_definitions(-DARTED_SC)
-  message(STATUS "Build target is Single-Cell (SC)")
-endif ()
-
 set(BINARY_DIR             "bin")
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/${BINARY_DIR}")
-set(TARGET_NAME            "ARTED_${BUILD_TARGET}${TARGET_SUFFIX}")
+set(TARGET_NAME            "ARTED${TARGET_SUFFIX}")
 
 set(CMAKE_Fortran_FLAGS    "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_Fortran_FLAGS}")
 set(CMAKE_C_FLAGS          "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${ADDITIONAL_OPTIMIZE_FLAGS} ${CMAKE_C_FLAGS}")
@@ -101,6 +92,7 @@ set(COMMON_LIB    common)
 set(STENCIL_LIB   stencil)
 set(FDTD_LIB      FDTD)
 set(PERFCHECK_EXT perfcheck)
+set(CONTROL_LIB   control)
 
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR})
 
@@ -154,29 +146,39 @@ add_subdirectory(${RT_LIB})
 add_subdirectory(${COMMON_LIB})
 add_subdirectory(${STENCIL_LIB})
 add_subdirectory(${PERFCHECK_EXT})
-add_executable(${TARGET_NAME} main/${BUILD_TARGET}.f90)
+add_subdirectory(${FDTD_LIB})
+add_subdirectory(${CONTROL_LIB})
 
-add_dependencies(${TARGET_NAME} ${MODULE_LIB} ${STENCIL_LIB})
+add_executable(${TARGET_NAME} main.f90)
+
+add_dependencies(${TARGET_NAME} ${CONTROL_LIB})
+add_dependencies(${CONTROL_LIB} 
+  ${MODULE_LIB}
+  ${PREP_LIB}
+  ${GS_LIB}
+  ${RT_LIB}
+  ${COMMON_LIB}
+  ${STENCIL_LIB}
+  ${PERFCHECK_EXT}
+  ${FDTD_LIB}
+)
 add_dependencies(${PREP_LIB}    ${MODULE_LIB})
 add_dependencies(${GS_LIB}      ${MODULE_LIB})
 add_dependencies(${RT_LIB}      ${MODULE_LIB})
 add_dependencies(${COMMON_LIB}  ${MODULE_LIB})
 add_dependencies(${STENCIL_LIB} ${MODULE_LIB})
+add_dependencies(${FDTD_LIB}    ${MODULE_LIB})
 
 set(LIBRARIES
+    ${CONTROL_LIB}
     ${PREP_LIB}
     ${GS_LIB}
     ${RT_LIB}
     ${COMMON_LIB}
     ${STENCIL_LIB}
     ${MODULE_LIB}
+    ${FDTD_LIB}
     )
-
-if (${BUILD_TARGET} STREQUAL "ms")
-  add_subdirectory(${FDTD_LIB})
-  add_dependencies(${FDTD_LIB} ${MODULE_LIB})
-  set(LIBRARIES ${LIBRARIES} ${FDTD_LIB})
-endif ()
 
 target_link_libraries(${TARGET_NAME} ${LIBRARIES} ${EXTERNAL_LIBS})
 

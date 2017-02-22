@@ -13,12 +13,13 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-!This file is "main.f90"
-!This file contains main program and four subroutines.
-!PROGRAM main
-!SUBROUTINE err_finalize(err_message)
+!This file is "control_ms.f90"
+!This file contains ms-mode program
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Program main
+module control_ms
+  implicit none
+contains
+subroutine main
   use Global_Variables
   use timelog
   use opt_variables
@@ -32,8 +33,6 @@ Program main
   integer :: ix_m,iy_m,ixy_m
   integer :: index
 !$ integer :: omp_get_max_threads  
-
-  call comm_init
 
   call timelog_initialize
   call load_environments
@@ -599,7 +598,7 @@ Program main
   end if
   call comm_finalize
 
-End Program Main
+End subroutine Main
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Read_data
   use Global_Variables
@@ -1561,17 +1560,5 @@ subroutine prep_Reentrance_write
 
   return
 end subroutine prep_Reentrance_write
-
+end module control_ms
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine err_finalize(err_message)
-  use Global_Variables
-  use communication
-  implicit none
-  character(*),intent(in) :: err_message
-  if (comm_is_root()) then
-    write(*,*) err_message
-  endif
-  call comm_finalize
-
-  stop
-End Subroutine Err_finalize

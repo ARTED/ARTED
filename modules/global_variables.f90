@@ -218,6 +218,10 @@ Module Global_Variables
   integer :: Nstep_write=100
 
   integer :: reentrance_switch
+  
+  character(30) :: calc_mode
+  character(30), parameter :: calc_mode_sc = 'singlecell'
+  character(30), parameter :: calc_mode_ms = 'multiscale'
 
 
 #if defined(__KNC__) || defined(__AVX512F__)
