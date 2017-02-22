@@ -29,8 +29,8 @@ subroutine print_optimize_message
 #ifdef ARTED_USE_PAPI
   print *, '  ARTED_USE_PAPI'
 #endif
-#ifdef ARTED_CURRENT_OPTIMIZED
-  print *, '  ARTED_CURRENT_OPTIMIZED'
+#ifdef ARTED_CURRENT_PREPROCESSING
+  print *, '  ARTED_CURRENT_PREPROCESSING'
 #endif
 #ifdef ARTED_STENCIL_ORIGIN
   print *, '  ARTED_STENCIL_ORIGIN'

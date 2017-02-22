@@ -110,7 +110,7 @@ Subroutine dt_evolve_omp_KB(iter)
   end if
 
   if (Longi_Trans == 'Lo') then 
-    call current_omp_KB
+    call current
     javt(iter,:)=jav(:)
     Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
     if (Sym /= 1) then

@@ -156,7 +156,7 @@ Program main
     call Total_Energy_omp(Rion_update,'GS')
     call Ion_Force_omp(Rion_update,'GS')
     call sp_energy_omp
-    call current_GS_omp_KB
+    call current_GS
     Eall_GS(iter)=Eall
     esp_var_ave(iter)=sum(esp_var(:,:))/(NK*Nelec/2)
     esp_var_max(iter)=maxval(esp_var(:,:))
@@ -376,7 +376,7 @@ Program main
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
 
-      call current_omp_KB
+      call current_RT
 
       call timelog_begin(LOG_OTHER)
 ! sato ---------------------------------------
