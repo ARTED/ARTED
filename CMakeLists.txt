@@ -61,7 +61,6 @@ message(STATUS "user-defined CFLAGS = ${CMAKE_C_FLAGS}")
 
 
 ### Set optimize options
-#set       (BUILD_TARGET "sc" CACHE STRING "Build target, sc (Single-cell) or ms (Multi-scale)")
 option_set(USE_TLOG                       "Use TLOG library"                                         OFF)
 option_set(USE_PAPI                       "Use Performance API"                                      OFF)
 option_set(USE_NVTX                       "Use NVIDIA Tools Extension Library"                       OFF)

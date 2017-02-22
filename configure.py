@@ -51,7 +51,6 @@ parser.add_option('-v', '--verbose', action='store_true', default=False, dest='v
 
 group = OptionGroup(parser, 'Build target')
 group.add_option('-a', '--arch',   action='store', default=None, dest='arch',   help='cross compile mode. ARCH format should be <COMPILER>-<SYSTEM>')
-#group.add_option('-t', '--target', action='store', default='sc', dest='target', help='build target. sc (Single-cell) or ms (Multi-scale), default sc')
 parser.add_option_group(group)
 
 group = OptionGroup(parser, 'Optimization options')
