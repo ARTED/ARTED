@@ -26,6 +26,7 @@ subroutine main
   use environment
   use performance_analyzer
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   integer :: iter,ik,ib,ia
   character(3) :: Rion_update
@@ -154,7 +155,7 @@ subroutine main
     call Total_Energy_omp(Rion_update,'GS')
     call Ion_Force_omp(Rion_update,'GS')
     call sp_energy_omp
-    call current_GS_omp_KB
+    call current_GS
     Eall_GS(iter)=Eall
     esp_var_ave(iter)=sum(esp_var(:,:))/(NK*Nelec/2)
     esp_var_max(iter)=maxval(esp_var(:,:))
@@ -326,7 +327,6 @@ subroutine main
 !$acc enter data create(kAc)
 
   call timelog_reset
-  call timelog_enable_verbose
   etime1=get_wtime()
 !$acc enter data copyin(zu)
   RTiteratopm : do iter=entrance_iter+1,Nt ! sato
@@ -375,7 +375,7 @@ subroutine main
 ! sato ---------------------------------------
       call timelog_end(LOG_OTHER)
 
-      call current_omp_KB
+      call current_RT
 
       call timelog_begin(LOG_OTHER)
 ! sato ---------------------------------------
@@ -540,7 +540,6 @@ subroutine main
 !$acc exit data copyout(zu)
   etime2=get_wtime()
   call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-  call timelog_disable_verbose
 
   if(comm_is_root(1)) then
     call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
@@ -1129,9 +1128,10 @@ End Subroutine Read_data
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_Read
   use Global_Variables
-  use timelog,       only: timelog_reentrance_read, get_wtime
+  use timelog,       only: timelog_reentrance_read
   use opt_variables, only: opt_vars_initialize_p1, opt_vars_initialize_p2
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   real(8) :: time_in,time_out
 
@@ -1382,8 +1382,9 @@ end subroutine prep_Reentrance_Read
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_write
   use Global_Variables
-  use timelog, only: timelog_reentrance_write, get_wtime
+  use timelog, only: timelog_reentrance_write
   use communication
+  use misc_routines, only: get_wtime
   implicit none
   real(8) :: time_in,time_out
 
