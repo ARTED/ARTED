@@ -611,16 +611,9 @@ Subroutine Read_data
   if (comm_is_root()) then
     write(*,*) 'Nprocs=',nprocs(1)
     write(*,*) 'procid(1)=0:  ',procid(1)
-
-    read(*,*) entrance_option
     write(*,*) 'entrance_option=',entrance_option
-    read(*,*) Time_shutdown
     write(*,*) 'Time_shutdown=',Time_shutdown,'sec'
-
   end if
-
-  call comm_bcast(entrance_option,proc_group(1))
-  call comm_bcast(Time_shutdown,proc_group(1))
 
   if(entrance_option == 'reentrance') then
     call err_finalize('Re-entrance function does not work now!')
@@ -633,30 +626,6 @@ Subroutine Read_data
 
 
   if(comm_is_root())then
-    read(*,*) entrance_iter
-    read(*,*) SYSname
-    read(*,*) directory
-!yabana
-    read(*,*) functional, cval
-!yabana
-    read(*,*) ps_format !shinohara
-    read(*,*) PSmask_option !shinohara
-    read(*,*) alpha_mask, gamma_mask, eta_mask !shinohara
-    read(*,*) aL,ax,ay,az
-    read(*,*) Sym,crystal_structure ! sym
-    read(*,*) Nd,NLx,NLy,NLz,NKx,NKy,NKz
-    if((NKx <= 0).or.(NKy <= 0).or.(NKz <= 0)) then
-      read(*,*) file_kw
-    endif
-    read(*,*) FDTDdim ! sato
-    read(*,*) TwoD_shape ! sato
-    read(*,*) NX_m,NY_m ! sato
-    read(*,*) HX_m,HY_m ! sato
-    read(*,*) NKsplit,NXYsplit ! sato
-    read(*,*) NXvacL_m,NXvacR_m ! sato
-    read(*,*) NEwald, aEwald
-    read(*,*) KbTev ! sato
-
     write(*,*) 'entrance_iter=',entrance_iter
     write(*,*) SYSname
     write(*,*) directory
@@ -691,19 +660,6 @@ Subroutine Read_data
     write(*,*) 'KbTev=',KbTev ! sato
   end if
 
-  call comm_bcast(SYSname,proc_group(1))
-  call comm_bcast(directory,proc_group(1))
-!yabana
-  call comm_bcast(functional,proc_group(1))
-  call comm_bcast(cval,proc_group(1))
-!yabana
-
-  call comm_bcast(ps_format,proc_group(1))!shinohara
-  call comm_bcast(PSmask_option,proc_group(1))!shinohara
-  call comm_bcast(alpha_mask,proc_group(1)) !shinohara
-  call comm_bcast(gamma_mask,proc_group(1)) !shinohara
-  call comm_bcast(eta_mask,proc_group(1)) !shinohara
-
   call comm_bcast(file_GS,proc_group(1))
   call comm_bcast(file_RT,proc_group(1))
   call comm_bcast(file_epst,proc_group(1))
@@ -716,32 +672,6 @@ Subroutine Read_data
   call comm_bcast(file_ovlp,proc_group(1))
   call comm_bcast(file_nex,proc_group(1))
   call comm_bcast(file_kw,proc_group(1))
-  call comm_bcast(aL,proc_group(1))
-  call comm_bcast(ax,proc_group(1))
-  call comm_bcast(ay,proc_group(1))
-  call comm_bcast(az,proc_group(1))
-  call comm_bcast(Sym,proc_group(1)) !sym
-  call comm_bcast(crystal_structure,proc_group(1))
-  call comm_bcast(Nd,proc_group(1))
-  call comm_bcast(NLx,proc_group(1))
-  call comm_bcast(NLy,proc_group(1))
-  call comm_bcast(NLz,proc_group(1))
-  call comm_bcast(NKx,proc_group(1))
-  call comm_bcast(NKy,proc_group(1))
-  call comm_bcast(NKz,proc_group(1))
-  call comm_bcast(FDTDdim,proc_group(1)) ! sato
-  call comm_bcast(TwoD_shape,proc_group(1)) ! sato
-  call comm_bcast(NX_m,proc_group(1)) ! sato
-  call comm_bcast(NY_m,proc_group(1)) ! sato
-  call comm_bcast(HX_m,proc_group(1)) ! sato
-  call comm_bcast(HY_m,proc_group(1)) ! sato
-  call comm_bcast(NKsplit,proc_group(1)) ! sato
-  call comm_bcast(NXYsplit,proc_group(1)) ! sato
-  call comm_bcast(NXvacL_m,proc_group(1)) ! sato
-  call comm_bcast(NXvacR_m,proc_group(1)) ! sato
-  call comm_bcast(NEwald,proc_group(1))
-  call comm_bcast(aEwald,proc_group(1))
-  call comm_bcast(KbTev,proc_group(1)) ! sato
 
   if(FDTDdim == '1D' .and. TwoD_shape /= 'periodic') then
      if(comm_is_root())write(*,*)'Warning !! 1D calculation ! TwoD_shape is not good'
@@ -930,7 +860,6 @@ Subroutine Read_data
   allocate(rho_l(NL),rho_tmp1(NL),rho_tmp2(NL)) !sym
 
   if (comm_is_root()) then
-    read(*,*) NB,Nelec
     write(*,*) 'NB,Nelec=',NB,Nelec
   endif
   if( kbTev < 0d0 )then ! sato
@@ -940,8 +869,6 @@ Subroutine Read_data
   end if
 
 
-  call comm_bcast(Nelec,proc_group(1)) ! sato
-  call comm_bcast(NB,proc_group(1))
   call comm_bcast(NBoccmax,proc_group(1))
   call comm_sync_all
   NKB=(NK_e-NK_s+1)*NBoccmax ! sato
@@ -957,18 +884,6 @@ Subroutine Read_data
   allocate(esp_vb_min(NK),esp_vb_max(NK)) !redistribution
   allocate(esp_cb_min(NK),esp_cb_max(NK)) !redistribution
   if (comm_is_root()) then
-    read(*,*) FSset_option
-    read(*,*) Ncg
-    read(*,*) Nmemory_MB,alpha_MB
-    read(*,*) NFSset_start,NFSset_every
-    read(*,*) Nscf
-!    read(*,*) ext_field
-!    read(*,*) Longi_Trans
-    Longi_Trans='Tr'
-    read(*,*) MD_option
-    read(*,*) AD_RHO
-    read(*,*) Nt,dt
-
     write(*,*) 'FSset_option =',FSset_option
     write(*,*) 'Ncg=',Ncg
     write(*,*) 'Nmemory_MB,alpha_MB =',Nmemory_MB,alpha_MB
@@ -980,22 +895,6 @@ Subroutine Read_data
     write(*,*) 'AD_RHO =', AD_RHO
     write(*,*) 'Nt,dt=',Nt,dt
   endif
-  call comm_bcast(FSset_option,proc_group(1))
-  call comm_bcast(Ncg,proc_group(1))
-  call comm_bcast(Nmemory_MB,proc_group(1))
-  call comm_bcast(alpha_MB,proc_group(1))
-  call comm_bcast(NFSset_start,proc_group(1))
-  call comm_bcast(NFSset_every,proc_group(1))
-  call comm_bcast(Nscf,proc_group(1))
-!  call comm_bcast(ext_field,proc_group(1))
-  call comm_bcast(Longi_Trans,proc_group(1))
-  call comm_bcast(MD_option,proc_group(1))
-  call comm_bcast(AD_RHO,proc_group(1))
-  call comm_bcast(Nt,proc_group(1))
-  call comm_bcast(dt,proc_group(1))
-  call comm_bcast(entrance_option,proc_group(1))
-!  call comm_bcast(Time_shutdown,proc_group(1))
-  call comm_bcast(entrance_iter,proc_group(1))
   call comm_sync_all
 !  if(ext_field /= 'LF' .and. ext_field /= 'LR' ) call err_finalize('incorrect option for ext_field')
 !  if(Longi_Trans /= 'Lo' .and. Longi_Trans /= 'Tr' ) call err_finalize('incorrect option for Longi_Trans')
@@ -1042,16 +941,6 @@ Subroutine Read_data
 ! sato ---------------------------------------------------------------------------------------
 
   if (comm_is_root()) then
-    read(*,*) dAc
-    read(*,*) Nomega,domega
-    read(*,*) AE_shape
-    read(*,*) IWcm2_1,tpulsefs_1,omegaev_1,phi_CEP_1
-    read(*,*) Epdir_1(1),Epdir_1(2),Epdir_1(3)
-    read(*,*) IWcm2_2,tpulsefs_2,omegaev_2,phi_CEP_2
-    read(*,*) Epdir_2(1),Epdir_2(2),Epdir_2(3)
-    read(*,*) T1_T2fs
-    read(*,*) NI,NE
-
     write(*,*) 'dAc=',dAc
     write(*,*) 'Nomega,etep=',Nomega,domega
     write(*,*) 'AE_shape=',AE_shape
@@ -1064,33 +953,17 @@ Subroutine Read_data
     write(*,*) '===========ion configuration================'
     write(*,*) 'NI,NE=',NI,NE
   endif
-  call comm_bcast(dAc,proc_group(1))
-  call comm_bcast(Nomega,proc_group(1))
-  call comm_bcast(domega,proc_group(1))
-  call comm_bcast(AE_shape,proc_group(1))
-  call comm_bcast(IWcm2_1,proc_group(1))
-  call comm_bcast(tpulsefs_1,proc_group(1))
-  call comm_bcast(omegaev_1,proc_group(1))
-  call comm_bcast(phi_CEP_1,proc_group(1))
-  call comm_bcast(Epdir_1,proc_group(1))
-  call comm_bcast(IWcm2_2,proc_group(1))
-  call comm_bcast(tpulsefs_2,proc_group(1))
-  call comm_bcast(omegaev_2,proc_group(1))
-  call comm_bcast(phi_CEP_2,proc_group(1))
-  call comm_bcast(Epdir_2,proc_group(1))
-  call comm_bcast(T1_T2fs,proc_group(1))
-  call comm_bcast(NI,proc_group(1))
-  call comm_bcast(NE,proc_group(1))
   call comm_sync_all
+
   if(AE_shape /= 'Asin2cos' .and. AE_shape /= 'Esin2sin' &
     &.and. AE_shape /= 'input' .and. AE_shape /= 'Asin2_cw' ) call err_finalize('incorrect option for AE_shape')
 
 
-  allocate(Zatom(NE),Kion(NI),Rps(NE),NRps(NE))
-  allocate(Rion(3,NI),Rion_eq(3,NI),dRion(3,NI,-1:Nt+1))
+  allocate(Rps(NE),NRps(NE))
+  allocate(Rion_eq(3,NI),dRion(3,NI,-1:Nt+1))
   allocate(Zps(NE),NRloc(NE),Rloc(NE),Mass(NE),force(3,NI))
   allocate(dVloc_G(NG_s:NG_e,NE),force_ion(3,NI))
-  allocate(Mps(NI),Lref(NE),Mlps(NE))
+  allocate(Mps(NI),Mlps(NE))
   allocate(anorm(0:Lmax,NE),inorm(0:Lmax,NE))
   allocate(rad(Nrmax,NE),vloctbl(Nrmax,NE),dvloctbl(Nrmax,NE))
   allocate(radnl(Nrmax,NE))
@@ -1098,12 +971,6 @@ Subroutine Read_data
   allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))                         
 
   if (comm_is_root()) then
-    read(*,*) (Zatom(j),j=1,NE)
-    read(*,*) (Lref(j),j=1,NE)
-    do ia=1,NI
-      read(*,*) i,(Rion(j,ia),j=1,3),Kion(ia)
-    enddo
-
     write(*,*) 'Zatom=',(Zatom(j),j=1,NE)
     write(*,*) 'Lref=',(Lref(j),j=1,NE)
     write(*,*) 'i,Kion(ia)','(Rion(j,a),j=1,3)'
@@ -1112,11 +979,6 @@ Subroutine Read_data
       write(*,'(3f12.8)') (Rion(j,ia),j=1,3)
     end do
   endif
-
-  call comm_bcast(Zatom,proc_group(1))
-  call comm_bcast(Kion,proc_group(1))
-  call comm_bcast(Lref,proc_group(1))
-  call comm_bcast(Rion,proc_group(1))
   call comm_sync_all
 
   Rion(1,:)=Rion(1,:)*aLx
@@ -1137,11 +999,6 @@ subroutine prep_Reentrance_Read
 
   call comm_sync_all
   time_in=get_wtime()
-
-  if(comm_is_root()) then
-    read(*,*) directory
-  end if
-  call comm_bcast(directory,proc_group(1))
 
   write(cMyrank,'(I5.5)')procid(1)
   file_reentrance=trim(directory)//'tmp_re.'//trim(cMyrank)

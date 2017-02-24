@@ -165,7 +165,7 @@ subroutine init_Ac_ms
   wpulse_2=2*pi/tpulse_2
   T1_T2=T1_T2fs/0.02418d0 ! pulse_duration in a.u.
 
-  aY=40000d0
+!  aY=40000d0
 
   
   Elec=0d0

@@ -41,12 +41,17 @@ Program main
                             & proc_group              
   use control_sc,       only: main_sc => main
   use control_ms,       only: main_ms => main
+  use inputfile,        only: read_input, &
+                            & dump_inputdata
   implicit none
   
   call comm_init()
   if (comm_is_root()) read(*,*) calc_mode
   call comm_bcast_character(calc_mode, proc_group(1))
   
+  call read_input
+  !call dump_inputdata
+
   select case(calc_mode)
   case (calc_mode_sc)
     call main_sc
