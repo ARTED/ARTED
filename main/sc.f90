@@ -328,14 +328,14 @@ Program main
       kAc(:,ixyz)=kAc0(:,ixyz)+0.5d0*(Ac_tot(iter,ixyz) + Ac_tot(iter+1,ixyz) )
     enddo
 !$acc update device(kAc)
-    call dt_evolve_omp_KB(iter)
+    call dt_evolve_omp_KB
 #else
     do ixyz=1,3
       kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
       kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
     enddo
 !$acc update device(kAc,kAc_new)
-    call dt_evolve_etrs_omp_KB(iter)
+    call dt_evolve_etrs_omp_KB
 #endif
 
     do ixyz=1,3
