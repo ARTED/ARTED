@@ -322,16 +322,26 @@ Program main
       Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
     end if
 
-    do ixyz=1,3
-      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
-    enddo
-!$acc update device(kAc)
 
 #ifdef ARTED_USE_OLD_PROPAGATOR
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+0.5d0*(Ac_tot(iter,ixyz) + Ac_tot(iter+1,ixyz) )
+    enddo
+!$acc update device(kAc)
     call dt_evolve_omp_KB(iter)
 #else
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
+      kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
+    enddo
+!$acc update device(kAc,kAc_new)
     call dt_evolve_etrs_omp_KB(iter)
 #endif
+
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
+    enddo
+!$acc update device(kAc,kAc_new)
     call current_RT
 
     javt(iter+1,:)=jav(:)
@@ -758,7 +768,7 @@ Subroutine Read_data
   allocate(Lx(NL),Ly(NL),Lz(NL),Gx(NG),Gy(NG),Gz(NG))
   allocate(Lxyz(0:NLx-1,0:NLy-1,0:NLz-1))
   allocate(ifdx(-Nd:Nd,1:NL),ifdy(-Nd:Nd,1:NL),ifdz(-Nd:Nd,1:NL))
-  allocate(kAc(NK,3),kAc0(NK,3))
+  allocate(kAc(NK,3),kAc0(NK,3),kAc_new(NK,3))
   allocate(Vh(NL),Vexc(NL),Eexc(NL),rho(NL),Vpsl(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
   allocate(Vloc_new(NL),Vloc_old(NL,2))
 !yabana
@@ -1182,11 +1192,11 @@ subroutine prep_Reentrance_Read
   read(500) eGx(:,:),eGy(:,:),eGz(:,:),eGxc(:,:),eGyc(:,:),eGzc(:,:)
 
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
-  allocate(kAc(NK,3),kAc0(NK,3))
+  allocate(kAc(NK,3),kAc0(NK,3),kAc_new(NK,3))
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
 
   read(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  read(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
+  read(500) kAc(:,:),kAc0(:,:),kAc_new(:,:)                  !k+A(t)/c (kAc)
   read(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
   allocate(ekr(Nps,NI)) ! sato
@@ -1411,7 +1421,7 @@ subroutine prep_Reentrance_write
   write(500) eGx(:,:),eGy(:,:),eGz(:,:),eGxc(:,:),eGyc(:,:),eGzc(:,:)
 
   write(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  write(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
+  write(500) kAc(:,:),kAc0(:,:),kAc_new(:,:)              !k+A(t)/c (kAc)
   write(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
 ! sato

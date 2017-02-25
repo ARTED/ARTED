@@ -110,7 +110,7 @@ Module Global_Variables
   real(8) :: f0_2,IWcm2_2,tpulsefs_2,omegaev_2,omega_2,tpulse_2,Epdir_2(3),phi_CEP_2 ! sato
   real(8) :: T1_T2fs,T1_T2
   real(8),allocatable :: E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  real(8),allocatable :: kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
+  real(8),allocatable :: kAc(:,:),kAc0(:,:),kAc_new(:,:)                  !k+A(t)/c (kAc)
   real(8),allocatable :: Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
 ! control parameters
