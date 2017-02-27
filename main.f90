@@ -32,7 +32,7 @@ End Subroutine Err_finalize
 
 
 Program main
-  use Global_Variables, only: cfunction => calc_mode, &
+  use Global_Variables, only: calc_mode, &
                             & calc_mode_sc, &
                             & calc_mode_ms
   use communication,    only: comm_init, &
@@ -44,6 +44,7 @@ Program main
   use inputfile,        only: read_input, &
                             & dump_inputdata
   implicit none
+  character(30) :: cfunction
   
   namelist / group_function / cfunction
   
@@ -53,6 +54,7 @@ Program main
   endif  
   call comm_bcast_character(cfunction, proc_group(1))
   
+  calc_mode = cfunction
   call read_input
   !call dump_inputdata
 
