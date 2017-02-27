@@ -44,15 +44,21 @@ Program main
   use inputfile,        only: read_input, &
                             & dump_inputdata
   implicit none
+  character(30) :: cfunction
+  
+  namelist / group_function / cfunction
   
   call comm_init()
-  if (comm_is_root()) read(*,*) calc_mode
-  call comm_bcast_character(calc_mode, proc_group(1))
+  if (comm_is_root()) then
+    read(*,nml=group_function)
+  endif  
+  call comm_bcast_character(cfunction, proc_group(1))
   
+  calc_mode = cfunction
   call read_input
   !call dump_inputdata
 
-  select case(calc_mode)
+  select case(cfunction)
   case (calc_mode_sc)
     call main_sc
   case (calc_mode_ms)
