@@ -32,7 +32,7 @@ End Subroutine Err_finalize
 
 
 Program main
-  use Global_Variables, only: calc_mode, &
+  use Global_Variables, only: cfunction => calc_mode, &
                             & calc_mode_sc, &
                             & calc_mode_ms
   use communication,    only: comm_init, &
@@ -45,14 +45,18 @@ Program main
                             & dump_inputdata
   implicit none
   
+  namelist / group_function / cfunction
+  
   call comm_init()
-  if (comm_is_root()) read(*,*) calc_mode
-  call comm_bcast_character(calc_mode, proc_group(1))
+  if (comm_is_root()) then
+    read(*,nml=group_function)
+  endif  
+  call comm_bcast_character(cfunction, proc_group(1))
   
   call read_input
   !call dump_inputdata
 
-  select case(calc_mode)
+  select case(cfunction)
   case (calc_mode_sc)
     call main_sc
   case (calc_mode_ms)

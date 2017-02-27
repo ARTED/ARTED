@@ -1,4 +1,6 @@
-'multiscale'
+&group_function
+	cfunction='multiscale'
+	/
 &control
 	entrance_option='new'
 	Time_shutdown=1d10
@@ -29,9 +31,9 @@
 	NLz=16
 	/
 &kgrid
-	NKx=12
-	NKy=12
-	NKz=12
+	NKx=24
+	NKy=24
+	NKz=24
 	/
 &tstep
 	Nt=100
@@ -82,7 +84,7 @@
 	NY_m=1
 	HX_m=250
 	HY_m=2500
-	NKsplit=2
+	NKsplit=4
 	NXYsplit=1
 	NXvacL_m=-2000
 	NXvacR_m=256

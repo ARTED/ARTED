@@ -1,4 +1,6 @@
-'singlecell'
+&group_function
+	cfunction='multiscale'
+	/
 &control
 	entrance_option='new'
 	Time_shutdown=1d10
@@ -17,7 +19,6 @@
 	crystal_structure='diamond'
 	NB=32
 	Nelec=32
-	ext_field='LF'
 	MD_option='N'
 	AD_RHO='No'
 	NE=1
@@ -35,8 +36,8 @@
 	NKz=24
 	/
 &tstep
-	Nt=50
-	dt=0.04
+	Nt=1000
+	dt=0.08
 	/
 &pseudo
 	ps_format='KY'
@@ -49,19 +50,18 @@
 	NEwald=4
 	aEwald=0.5d0
 	KbTev=-1.0
-	Ncg=1
+	Ncg=5
 	Nmemory_MB=8
 	alpha_MB=0.75
 	FSset_option='N'
 	NFSset_start=75
 	NFSset_every=25
-	Nscf=1
+	Nscf=100
 	/
 &incident
-	Longi_Trans='Tr'
 	dAc=0.005
 	AE_shape='Asin2cos'
-	IWcm2_1=1d14
+	IWcm2_1=1d12
 	tpulsefs_1=10.672
 	omegaev_1=1.55
 	phi_CEP_1=.0
@@ -78,6 +78,16 @@
 	domega=0.001
 	/
 &multiscale
+	FDTDdim='1D'
+	TwoD_shape='periodic'
+	NX_m=0
+	NY_m=1
+	HX_m=250
+	HY_m=2500
+	NKsplit=4
+	NXYsplit=1
+	NXvacL_m=-2000
+	NXvacR_m=256
 	/
 &atomic_spiecies
 	1	14	2
