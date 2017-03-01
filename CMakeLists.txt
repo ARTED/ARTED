@@ -73,6 +73,7 @@ option_set(ENABLE_EXPLICIT_VEC            "Enable explicit vectorization for the
 option_set(ENABLE_LOOP_BLOCKING           "Enable loop blocking at the stencil"                      OFF)
 option_set(ENABLE_SWPREFETCH              "Enable software prefetch in the explicit vec of stencil"  OFF)
 option_set(ENABLE_REDUCE_FOR_MANYCORE     "Enable optimized reduction code for many-core processor"  OFF)
+option_set(ENABLE_OPENACC                 "Enable OpenACC for NVIDIA GPUs"                           OFF)
 option_set(ENABLE_LARGE_BLOCKING          "Enable large blocking for accelerator"                    OFF)
 option_set(USE_OLD_PROPAGATOR             "Use old propagator for comparing to past results"         OFF)
 
