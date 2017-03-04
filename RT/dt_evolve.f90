@@ -90,7 +90,7 @@ Subroutine dt_evolve_omp_KB
     tjr2_t=tjr2
   end if
 
-  call dt_evolve_hpsi(.false.)
+  call hamiltonian(.false.)
 
   call psi_rho_RT
   call Hartree
@@ -120,8 +120,8 @@ Subroutine dt_evolve_omp_KB
   end select
 ! yabana
 
-  NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
-  call dt_evolve_hpsi(.true.)
+  NVTX_BEG('dt_evolve_omp_KB(): hamiltonian',3)
+  call hamiltonian(.true.)
   NVTX_END()
 
   NVTX_BEG('dt_evolve_omp_KB(): psi_rho_RT',4)
@@ -208,8 +208,8 @@ Subroutine dt_evolve_etrs_omp_KB
 
 !$acc update self(zu, ekr_omp, vloc)
 
-  NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
-  call dt_evolve_hpsi(.false.)
+  NVTX_BEG('dt_evolve_omp_KB(): hamiltonian',3)
+  call hamiltonian(.false.)
   NVTX_END()
 
 
@@ -261,8 +261,8 @@ Subroutine dt_evolve_etrs_omp_KB
         zu_GS(:,ib,ik)=zu(:,ib,ik)
      end do
 
-     NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
-     call dt_evolve_hpsi(.false.)
+     NVTX_BEG('dt_evolve_omp_KB(): hamiltonian',3)
+     call hamiltonian(.false.)
      NVTX_END()
 
      NVTX_BEG('dt_evolve_omp_KB(): psi_rho_RT',4)
@@ -297,8 +297,8 @@ Subroutine dt_evolve_etrs_omp_KB
   end select
 
 
-  NVTX_BEG('dt_evolve_omp_KB(): dt_evolve_hpsi',3)
-  call dt_evolve_hpsi(.true.)
+  NVTX_BEG('dt_evolve_omp_KB(): hamiltonian',3)
+  call hamiltonian(.true.)
   NVTX_END()
 
   NVTX_BEG('dt_evolve_omp_KB(): psi_rho_RT',4)
@@ -395,7 +395,7 @@ Subroutine dt_evolve_omp_KB_MS
     tjr2_t=tjr2
   end if
 
-  call dt_evolve_hpsi(.false.)
+  call hamiltonian(.false.)
 
   call psi_rho_RT
   call Hartree
@@ -423,8 +423,8 @@ Subroutine dt_evolve_omp_KB_MS
   end select
 ! yabana
 
-  NVTX_BEG('dt_evolve_omp_KB_MS(): dt_evolve_hpsi',3)
-  call dt_evolve_hpsi(.true.)
+  NVTX_BEG('dt_evolve_omp_KB_MS(): hamiltonian',3)
+  call hamiltonian(.true.)
   NVTX_END()
 
   NVTX_BEG('dt_evolve_omp_KB_MS(): psi_rho_RT',4)
