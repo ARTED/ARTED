@@ -50,7 +50,7 @@ contains
   subroutine write_hamiltonian(iounit)
     use global_variables
     use communication
-    use timelog
+    use timer
     implicit none
     integer,intent(in) :: iounit
 
@@ -90,7 +90,7 @@ contains
   subroutine write_loadbalance(iounit)
     use global_variables
     use communication
-    use timelog
+    use timer
     implicit none
     integer,intent(in) :: iounit
 
@@ -99,18 +99,18 @@ contains
 
     real(8) :: src(LOG_SIZE), rmin(LOG_SIZE), rmax(LOG_SIZE), diff(LOG_SIZE), rel(LOG_SIZE)
 
-    src( 1) = timelog_get(LOG_DT_EVOLVE)
-    src( 2) = timelog_get(LOG_HPSI)
-    src( 3) = timelog_get(LOG_PSI_RHO)
-    src( 4) = timelog_get(LOG_HARTREE)
-    src( 5) = timelog_get(LOG_CURRENT)
-    src( 6) = timelog_get(LOG_TOTAL_ENERGY)
-    src( 7) = timelog_get(LOG_ION_FORCE)
-    src( 8) = timelog_get(LOG_DT_EVOLVE_AC)
-    src( 9) = timelog_get(LOG_K_SHIFT_WF)
-    src(10) = timelog_get(LOG_OTHER)
-    src(11) = timelog_get(LOG_ALLREDUCE)
-    src(12) = timelog_get(LOG_DYNAMICS)
+    src( 1) = timer_get(LOG_DT_EVOLVE)
+    src( 2) = timer_get(LOG_HPSI)
+    src( 3) = timer_get(LOG_PSI_RHO)
+    src( 4) = timer_get(LOG_HARTREE)
+    src( 5) = timer_get(LOG_CURRENT)
+    src( 6) = timer_get(LOG_TOTAL_ENERGY)
+    src( 7) = timer_get(LOG_ION_FORCE)
+    src( 8) = timer_get(LOG_DT_EVOLVE_AC)
+    src( 9) = timer_get(LOG_K_SHIFT_WF)
+    src(10) = timer_get(LOG_OTHER)
+    src(11) = timer_get(LOG_ALLREDUCE)
+    src(12) = timer_get(LOG_DYNAMICS)
 
     call comm_get_min(src,rmin,LOG_SIZE,proc_group(1))
     call comm_get_max(src,rmax,LOG_SIZE,proc_group(1))
@@ -156,7 +156,7 @@ contains
 
   subroutine summation_threads(lgflops)
     use global_variables, only: NUMBER_THREADS, functional
-    use timelog
+    use timer
     implicit none
     real(8), intent(out) :: lgflops(4)
     real(8) :: hflop(3), htime(4)
@@ -190,10 +190,10 @@ contains
       hflop(2) = get_pseudo_pt_FLOP(cnt) * ncalls_in_loop
       hflop(3) = get_update_FLOP(cnt)    * ncalls_in_loop
 
-      htime(1) = timelog_thread_get(LOG_HPSI_STENCIL, i)
-      htime(2) = timelog_thread_get(LOG_HPSI_PSEUDO, i)
-      htime(3) = timelog_thread_get(LOG_HPSI_UPDATE, i)
-      htime(4) = timelog_thread_get(LOG_HPSI_INIT, i)
+      htime(1) = timer_thread_get(LOG_HPSI_STENCIL, i)
+      htime(2) = timer_thread_get(LOG_HPSI_PSEUDO, i)
+      htime(3) = timer_thread_get(LOG_HPSI_UPDATE, i)
+      htime(4) = timer_thread_get(LOG_HPSI_INIT, i)
 
       lgflops(1) = lgflops(1) + get_gflops(hflop(1), htime(1))
       lgflops(2) = lgflops(2) + get_gflops(hflop(2), htime(2))

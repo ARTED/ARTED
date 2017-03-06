@@ -20,7 +20,7 @@
 Subroutine sp_energy_omp
   use Global_Variables
   use communication
-  use timelog
+  use timer
   implicit none
   integer :: ik,ib
   real(8) :: esp_l(NB,NK)
@@ -30,7 +30,7 @@ Subroutine sp_energy_omp
 ! omp
   integer :: thr_id,omp_get_thread_num
 
-  call timelog_begin(LOG_SP_ENERGY)
+  call timer_begin(LOG_SP_ENERGY)
   esp_l=0.d0
   thr_id=0
 !$omp parallel private(thr_id)
@@ -47,18 +47,18 @@ Subroutine sp_energy_omp
   enddo
     do ib=1,NB
       tpsi_omp(1:NL,thr_id)=zu_GS(1:NL,ib,ik)
-      call hpsi_omp_KB(ik,tpsi_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
+      call hpsi_omp_KB_GS(ik,tpsi_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
       esp_l(ib,ik)=sum(conjg(zu_GS(:,ib,ik))*htpsi_omp(:,thr_id))*Hxyz
     enddo
   enddo
 
 !$omp end parallel
 
-  call timelog_begin(LOG_ALLREDUCE)
+  call timer_begin(LOG_ALLREDUCE)
   call comm_summation(esp_l,esp,NB*NK,proc_group(2))
-  call timelog_end(LOG_ALLREDUCE)
+  call timer_end(LOG_ALLREDUCE)
 
-  call timelog_end(LOG_SP_ENERGY)
+  call timer_end(LOG_SP_ENERGY)
 
   return
 End Subroutine sp_energy_omp

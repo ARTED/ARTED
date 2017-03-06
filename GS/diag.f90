@@ -21,7 +21,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine diag_omp
   use Global_Variables
-  use timelog
+  use timer
   use omp_lib
   implicit none
   integer,parameter :: matz=1
@@ -38,7 +38,7 @@ Subroutine diag_omp
   lwork=6*NB
   thr_id=0
 
-  call timelog_begin(LOG_DIAG)
+  call timer_begin(LOG_DIAG)
 !$omp parallel private(thr_id)
 !$ thr_id = omp_get_thread_num()
 !$omp do private(ia,j,i,ix,iy,iz,kr) collapse(2)
@@ -63,7 +63,7 @@ Subroutine diag_omp
   do ik=NK_s,NK_e
     do ib1=1,NB
       tpsi_omp(1:NL,thr_id)=zu_GS(1:NL,ib1,ik)
-      call hpsi_omp_KB(ik,tpsi_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
+      call hpsi_omp_KB_GS(ik,tpsi_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
       do ib2=ib1+1,NB
         za(ib2,ib1)=sum(conjg(zu_GS(:,ib2,ik))*htpsi_omp(:,thr_id))*Hxyz
         za(ib1,ib2)=conjg(za(ib2,ib1))
@@ -84,7 +84,7 @@ Subroutine diag_omp
 !$omp end do
   deallocate(za,zutmp,work_lp,rwork)
 !$omp end parallel
-  call timelog_end(LOG_DIAG)
+  call timer_end(LOG_DIAG)
 
   return
 End Subroutine diag_omp

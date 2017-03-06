@@ -148,7 +148,6 @@ Module Global_Variables
 
   integer :: NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   integer :: NK_remainder,NG_remainder
-  real(8) :: etime1,etime2
 ! Timer
   real(8) :: Time_shutdown
   real(8) :: Time_start,Time_now

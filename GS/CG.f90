@@ -20,7 +20,7 @@
 Subroutine CG_omp(iter_cg_max)
   use Global_Variables
   use communication
-  use timelog
+  use timer
   implicit none
   real(8),parameter :: delta_cg=1.d-15
   integer iter,ik,ib,ibt
@@ -38,7 +38,7 @@ Subroutine CG_omp(iter_cg_max)
   integer :: thr_id,omp_get_thread_num
   thr_id=0
 
-  call timelog_begin(LOG_CG)
+  call timer_begin(LOG_CG)
   esp_var_l(:,:)=0.d0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
@@ -62,7 +62,7 @@ Subroutine CG_omp(iter_cg_max)
     end do
     s=1.0d0/sqrt(sum(abs(zu_GS(:,ib,ik))**2)*Hxyz)
     xk_omp(1:NL,thr_id)=zu_GS(1:NL,ib,ik)*s
-    call hpsi_omp_KB(ik,xk_omp(:,thr_id),txk_omp(:,thr_id),hxk_omp(:,thr_id))
+    call hpsi_omp_KB_GS(ik,xk_omp(:,thr_id),txk_omp(:,thr_id),hxk_omp(:,thr_id))
     xkHxk=sum(conjg(xk_omp(:,thr_id))*hxk_omp(:,thr_id))*Hxyz
     xkTxk=sum(conjg(xk_omp(:,thr_id))*txk_omp(:,thr_id))*Hxyz
 
@@ -87,7 +87,7 @@ Subroutine CG_omp(iter_cg_max)
       pko_omp(1:NL,thr_id)=pk_omp(1:NL,thr_id)-xk_omp(1:NL,thr_id)*zs
       s=1.0d0/sqrt(sum(abs(pko_omp(:,thr_id))**2)*Hxyz)
       pko_omp(1:NL,thr_id)=pko_omp(1:NL,thr_id)*s
-      call hpsi_omp_KB(ik,pko_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
+      call hpsi_omp_KB_GS(ik,pko_omp(:,thr_id),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
       xkHpk=sum(conjg( xk_omp(:,thr_id))*htpsi_omp(:,thr_id))*Hxyz
       pkHpk=sum(conjg(pko_omp(:,thr_id))*htpsi_omp(:,thr_id))*Hxyz
       ev=0.5d0*((xkHxk+pkHpk)-sqrt((xkHxk-pkHpk)**2+4*abs(xkHpk)**2))
@@ -104,7 +104,7 @@ Subroutine CG_omp(iter_cg_max)
 
     s=1.0d0/sqrt(sum(abs(xk_omp(:,thr_id))**2)*Hxyz)
     zu_GS(1:NL,ib,ik)=xk_omp(1:NL,thr_id)*s
-    call hpsi_omp_KB(ik,zu_GS(:,ib,ik),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
+    call hpsi_omp_KB_GS(ik,zu_GS(:,ib,ik),ttpsi_omp(:,thr_id),htpsi_omp(:,thr_id))
     xkHxk=sum(conjg(zu_GS(1:NL,ib,ik))*htpsi_omp(:,thr_id))*Hxyz
     esp_var_l(ib,ik)=sqrt(sum(abs(htpsi_omp(:,thr_id)-xkHxk*zu_GS(1:NL,ib,ik))**2)*Hxyz)*occ(ib,ik)
   enddo
@@ -112,11 +112,11 @@ Subroutine CG_omp(iter_cg_max)
 
 !$omp end parallel
 
-  call timelog_begin(LOG_ALLREDUCE)
+  call timer_begin(LOG_ALLREDUCE)
   call comm_summation(esp_var_l,esp_var,NB*NK,proc_group(2))
-  call timelog_end(LOG_ALLREDUCE)
+  call timer_end(LOG_ALLREDUCE)
 
-  call timelog_end(LOG_CG)
+  call timer_end(LOG_CG)
 
   return
 End Subroutine CG_OMP
