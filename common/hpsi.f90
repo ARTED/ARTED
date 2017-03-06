@@ -37,7 +37,7 @@ subroutine hpsi_omp_KB_GS(ik,tpsi,ttpsi,htpsi)
 
   tid = omp_get_thread_num()
   call init(tpsi,zhtpsi(:,1,tid))
-  call hpsi_omp_KB_RT(ik,zhtpsi(:,1,tid),zhtpsi(:,2,tid),zttpsi(:,tid))
+  call hpsi_omp_KB_base(ik,zhtpsi(:,1,tid),zhtpsi(:,2,tid),zttpsi(:,tid))
   call copyout(zhtpsi(:,2,tid),zttpsi(:,tid),htpsi,ttpsi)
 
 contains
@@ -77,8 +77,17 @@ contains
   end subroutine
 end subroutine
 
+subroutine hpsi_omp_KB_RT(ik,tpsi,htpsi)
+  use opt_variables, only: PNLx,PNLy,PNLz
+  implicit none
+  integer,intent(in)     :: ik
+  complex(8),intent(in)  ::  tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
+  complex(8),intent(out) :: htpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
+  call hpsi_omp_KB_base(ik,tpsi,htpsi)
+end subroutine
 
-subroutine hpsi_omp_KB_RT(ik,tpsi,htpsi,ttpsi)
+
+subroutine hpsi_omp_KB_base(ik,tpsi,htpsi,ttpsi)
   use timer
   use Global_Variables, only: NLx,NLy,NLz,kAc,lapx,lapy,lapz,nabx,naby,nabz,Vloc,Mps,uV,iuV,Hxyz,ekr_omp,Nlma,a_tbl
   use opt_variables, only: lapt,PNLx,PNLy,PNLz,PNL
@@ -87,7 +96,7 @@ subroutine hpsi_omp_KB_RT(ik,tpsi,htpsi,ttpsi)
 #endif
   implicit none
   integer,intent(in)              :: ik
-  complex(8),intent(in)           :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
+  complex(8),intent(in)           ::  tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
   complex(8),intent(out)          :: htpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
   complex(8),intent(out),optional :: ttpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
   real(8) :: k2,k2lap0_2
