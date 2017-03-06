@@ -25,7 +25,7 @@
 #define NVTX_END()
 #endif
 
-Subroutine dt_evolve_omp_KB(iter)
+Subroutine dt_evolve_omp_KB
   use Global_Variables
   use timelog
 #ifdef ARTED_USE_NVTX
@@ -33,7 +33,7 @@ Subroutine dt_evolve_omp_KB(iter)
 #endif
   use opt_variables
   implicit none
-  integer    :: ik,ib,iter,ixyz
+  integer    :: ik,ib
   integer    :: ia,j,i,ix,iy,iz
   real(8)    :: kr
   integer    :: thr_id,omp_get_thread_num,ikb
@@ -109,29 +109,12 @@ Subroutine dt_evolve_omp_KB(iter)
     tjr2=0.5d0*(tjr2+tjr2_t)
   end if
 
-  if (Longi_Trans == 'Lo') then 
-    call current
-    javt(iter,:)=jav(:)
-    Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
-    if (Sym /= 1) then
-      Ac_ind(iter+1,1)=0.d0
-      Ac_ind(iter+1,2)=0.d0
-    end if
-    Ac_tot(iter+1,:)=Ac_ext(iter+1,:)+Ac_ind(iter+1,:)
-  else if (Longi_Trans == 'Tr') then 
-    Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
-  end if
 
 !$omp parallel do private(ik,ib)
   do ikb=1,NKB
     ik=ik_table(ikb) ; ib=ib_table(ikb)
     zu(:,ib,ik)=zu_GS(:,ib,ik)
   end do
-
-  do ixyz=1,3
-    kAc(:,ixyz)=kAc0(:,ixyz)+0.5*(Ac_tot(iter,ixyz)+Ac_tot(iter+1,ixyz))
-  enddo
-!$acc update device(kAc)
 
 !$acc update device(zu, vloc)
   end select
@@ -155,10 +138,6 @@ Subroutine dt_evolve_omp_KB(iter)
   NVTX_END()
 ! yabana
 
-  do ixyz=1,3
-    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
-  enddo
-!$acc update device(kAc)
 
 #ifdef _OPENACC
 !$acc kernels pcopy(Vloc) pcopyin(Vh,Vpsl,Vexc)
@@ -178,7 +157,7 @@ Subroutine dt_evolve_omp_KB(iter)
   return
 End Subroutine dt_evolve_omp_KB
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine dt_evolve_etrs_omp_KB(iter)
+Subroutine dt_evolve_etrs_omp_KB
   use Global_Variables
   use timelog
 #ifdef ARTED_USE_NVTX
@@ -186,7 +165,7 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
 #endif
   use opt_variables
   implicit none
-  integer    :: ik,ib,iter,ixyz
+  integer    :: ik,ib
   integer    :: ia,j,i,ix,iy,iz
   real(8)    :: kr,dt_t
   integer    :: thr_id,omp_get_thread_num,ikb
@@ -240,10 +219,8 @@ Subroutine dt_evolve_etrs_omp_KB(iter)
   Vloc_old(:,1) = Vloc(:)
   Vloc(:) = Vloc_new(:)
 
-  do ixyz=1,3
-    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
-  enddo
-  !$acc update device(kAc)
+  kAc=kAc_new
+!$acc update device(kAc)
 
 !Constructing nonlocal part
   NVTX_BEG('dt_evolve_omp_KB(): nonlocal part',2)
