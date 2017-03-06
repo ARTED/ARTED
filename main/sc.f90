@@ -20,7 +20,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Program main
   use Global_Variables
-  use timelog
+  use timer
   use opt_variables
   use environment
   use performance_analyzer
@@ -34,7 +34,7 @@ Program main
 
   call comm_init
 
-  call timelog_initialize
+  call timer_initialize
   call load_environments
 
   if(comm_is_root()) then
@@ -52,9 +52,9 @@ Program main
 
   if(comm_is_root())write(*,*)'NUMBER_THREADS = ',NUMBER_THREADS
 
-  call timelog_begin(LOG_ALL)
+  call timer_begin(LOG_ALL)
 
-  call timelog_begin(LOG_STATIC)
+  call timer_begin(LOG_STATIC)
   Time_start=get_wtime() !reentrance
   call comm_bcast(Time_start,proc_group(1))
 
@@ -103,12 +103,12 @@ Program main
 
   if(comm_is_root()) then
     write(*,*) 'This is the end of preparation for ground state calculation'
-    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    call timer_show_current_hour('elapse time=',LOG_ALL)
     write(*,*) '-----------------------------------------------------------'
   end if
 
   call reset_gs_timer
-  call timelog_begin(LOG_GROUND_STATE)
+  call timer_begin(LOG_GROUND_STATE)
   do iter=1,Nscf
     if (comm_is_root())  write(*,*) 'iter = ',iter
     if( kbTev < 0d0 )then ! sato
@@ -180,32 +180,32 @@ Program main
       write(*,*) 'dns. difference =',dns_diff(iter)
       if (iter/20*20 == iter) then
          write(*,*) '====='
-         call timelog_show_current_min('elapse time=',LOG_ALL)
+         call timer_show_current_min('elapse time=',LOG_ALL)
       end if
       write(*,*) '-----------------------------------------------'
     end if
   end do
-  call timelog_end(LOG_GROUND_STATE)
+  call timer_end(LOG_GROUND_STATE)
 
   if(comm_is_root()) then
-    call timelog_show_hour('Ground State time  :', LOG_GROUND_STATE)
-    call timelog_show_min ('CG time            :', LOG_CG)
-    call timelog_show_min ('Gram Schmidt time  :', LOG_GRAM_SCHMIDT)
-    call timelog_show_min ('diag time          :', LOG_DIAG)
-    call timelog_show_min ('sp_energy time     :', LOG_SP_ENERGY)
-    call timelog_show_min ('hpsi time          :', LOG_HPSI)
-    call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
-    call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
-    call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
-    call timelog_show_min ('Hartree time       :', LOG_HARTREE)
-    call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
-    call timelog_show_min ('current time       :', LOG_CURRENT)
-    call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
-    call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timer_show_hour('Ground State time  :', LOG_GROUND_STATE)
+    call timer_show_min ('CG time            :', LOG_CG)
+    call timer_show_min ('Gram Schmidt time  :', LOG_GRAM_SCHMIDT)
+    call timer_show_min ('diag time          :', LOG_DIAG)
+    call timer_show_min ('sp_energy time     :', LOG_SP_ENERGY)
+    call timer_show_min ('hpsi time          :', LOG_HPSI)
+    call timer_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
+    call timer_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
+    call timer_show_min ('psi_rho time       :', LOG_PSI_RHO)
+    call timer_show_min ('Hartree time       :', LOG_HARTREE)
+    call timer_show_min ('Exc_Cor time       :', LOG_EXC_COR)
+    call timer_show_min ('current time       :', LOG_CURRENT)
+    call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
+    call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
   end if
   if(comm_is_root()) then
     write(*,*) 'This is the end of GS calculation'
-    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    call timer_show_current_hour('elapse time=',LOG_ALL)
     write(*,*) '-----------------------------------------------------------'
   end if
 
@@ -227,10 +227,10 @@ Program main
   Eall0=Eall
   if(comm_is_root()) write(*,*) 'Eall =',Eall
 
-  call timelog_end(LOG_STATIC)
+  call timer_end(LOG_STATIC)
   if (comm_is_root()) then
     write(*,*) '-----------------------------------------------'
-    call timelog_show_min('static time=',LOG_STATIC)
+    call timer_show_min('static time=',LOG_STATIC)
     write(*,*) '-----------------------------------------------'
   end if
 
@@ -267,7 +267,7 @@ Program main
 
   if(comm_is_root()) then
     write(*,*) 'This is the end of preparation for Real time calculation'
-    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    call timer_show_current_hour('elapse time=',LOG_ALL)
     write(*,*) '-----------------------------------------------------------'
   end if
 
@@ -320,7 +320,7 @@ Program main
 #endif
 
   call reset_rt_timer
-  call timelog_begin(LOG_DYNAMICS)
+  call timer_begin(LOG_DYNAMICS)
 !$acc enter data copyin(zu)
   do iter=entrance_iter+1,Nt
 
@@ -372,7 +372,7 @@ Program main
       end if
     end if
 
-    call timelog_begin(LOG_OTHER)
+    call timer_begin(LOG_OTHER)
 
 
     E_ext(iter,:)=-(Ac_ext(iter+1,:)-Ac_ext(iter-1,:))/(2*dt)
@@ -455,10 +455,10 @@ Program main
 
 !Timer
     if (iter/1000*1000 == iter.and.comm_is_root()) then
-      call timelog_show_current_hour('dynamics time      :', LOG_DYNAMICS)
-      call timelog_show_min         ('dt_evolve time     :', LOG_DT_EVOLVE)
-      call timelog_show_min         ('Hartree time       :', LOG_HARTREE)
-      call timelog_show_min         ('current time       :', LOG_CURRENT)
+      call timer_show_current_hour('dynamics time      :', LOG_DYNAMICS)
+      call timer_show_min         ('dt_evolve time     :', LOG_DT_EVOLVE)
+      call timer_show_min         ('Hartree time       :', LOG_HARTREE)
+      call timer_show_min         ('current time       :', LOG_CURRENT)
     end if
 !Timer for shutdown
     if (iter/10*10 == iter) then
@@ -477,10 +477,10 @@ Program main
       end if
     end if
 
-    call timelog_end(LOG_OTHER)
+    call timer_end(LOG_OTHER)
   enddo !end of RT iteraction========================
 !$acc exit data copyout(zu)
-  call timelog_end(LOG_DYNAMICS)
+  call timer_end(LOG_DYNAMICS)
 
 #ifdef ARTED_USE_PAPI
   call papi_end
@@ -488,23 +488,23 @@ Program main
 
   if(comm_is_root()) then
 #ifdef ARTED_USE_PAPI
-    call papi_result(timelog_get(LOG_DYNAMICS))
+    call papi_result(timer_get(LOG_DYNAMICS))
 #endif
-    call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
-    call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
-    call timelog_show_min ('hpsi time          :', LOG_HPSI)
-    call timelog_show_min (' - init time       :', LOG_HPSI_INIT)
-    call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
-    call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
-    call timelog_show_min (' - update time     :', LOG_HPSI_UPDATE)
-    call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
-    call timelog_show_min ('Hartree time       :', LOG_HARTREE)
-    call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
-    call timelog_show_min ('current time       :', LOG_CURRENT)
-    call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
-    call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
-    call timelog_show_min ('Other time         :', LOG_OTHER)
-    call timelog_show_min ('Allreduce time     :', LOG_ALLREDUCE)
+    call timer_show_hour('dynamics time      :', LOG_DYNAMICS)
+    call timer_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
+    call timer_show_min ('hpsi time          :', LOG_HPSI)
+    call timer_show_min (' - init time       :', LOG_HPSI_INIT)
+    call timer_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
+    call timer_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
+    call timer_show_min (' - update time     :', LOG_HPSI_UPDATE)
+    call timer_show_min ('psi_rho time       :', LOG_PSI_RHO)
+    call timer_show_min ('Hartree time       :', LOG_HARTREE)
+    call timer_show_min ('Exc_Cor time       :', LOG_EXC_COR)
+    call timer_show_min ('current time       :', LOG_CURRENT)
+    call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
+    call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timer_show_min ('Other time         :', LOG_OTHER)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
   call write_performance(trim(directory)//'sc_performance')
 
@@ -520,7 +520,7 @@ Program main
 
   if(comm_is_root()) then
     write(*,*) 'This is the end of RT calculation'
-    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    call timer_show_current_hour('elapse time=',LOG_ALL)
     write(*,*) '-----------------------------------------------------------'
   end if
 
@@ -536,8 +536,8 @@ Program main
 
   if (comm_is_root()) write(*,*) 'This is the end of all calculation'
   Time_now=get_wtime()
-  call timelog_end(LOG_ALL)
-  if (comm_is_root()) call timelog_show_hour('Total time =',LOG_ALL)
+  call timer_end(LOG_ALL)
+  if (comm_is_root()) call timer_show_hour('Total time =',LOG_ALL)
 
 1 if(comm_is_root()) write(*,*)  'This calculation is shutdown successfully!'
   call comm_finalize
@@ -547,7 +547,7 @@ contains
     implicit none
     integer :: i
     do i = LOG_CG,LOG_GRAM_SCHMIDT
-      call timelog_reset(i)
+      call timer_reset(i)
     end do
     call reset_rt_timer
   end subroutine
@@ -556,7 +556,7 @@ contains
     implicit none
     integer :: i
     do i = LOG_DT_EVOLVE,LOG_ALLREDUCE
-      call timelog_reset(i)
+      call timer_reset(i)
     end do
   end subroutine
 End Program Main
@@ -995,7 +995,7 @@ End Subroutine Read_data
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_Read
   use Global_Variables
-  use timelog,       only: timelog_reentrance_read
+  use timer,       only: timer_reentrance_read
   use opt_variables, only: opt_vars_initialize_p1, opt_vars_initialize_p2
   use communication
   use misc_routines, only: get_wtime
@@ -1266,7 +1266,7 @@ subroutine prep_Reentrance_Read
   end if
 
 
-  call timelog_reentrance_read(500)
+  call timer_reentrance_read(500)
   call opt_vars_initialize_p1
   call opt_vars_initialize_p2
 
@@ -1284,7 +1284,7 @@ end subroutine prep_Reentrance_Read
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine prep_Reentrance_write
   use Global_Variables
-  use timelog, only: timelog_reentrance_write
+  use timer, only: timer_reentrance_write
   use communication
   use misc_routines, only: get_wtime
   implicit none
@@ -1476,7 +1476,7 @@ subroutine prep_Reentrance_write
      write(500)rho_nlcc(:),tau_nlcc(:)
   end if
 
-  call timelog_reentrance_write(500)
+  call timer_reentrance_write(500)
 
 !== write data ===!  
 

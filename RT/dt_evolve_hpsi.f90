@@ -13,8 +13,8 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-#define TIMELOG_BEG(id) call timelog_thread_begin(id)
-#define TIMELOG_END(id) call timelog_thread_end(id)
+#define TIMELOG_BEG(id) call timer_thread_begin(id)
+#define TIMELOG_END(id) call timer_thread_end(id)
 
 #ifdef ARTED_USE_NVTX
 #define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
@@ -29,7 +29,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine dt_evolve_hpsi(flag_current)
   use Global_Variables
-  use timelog
+  use timer
   use omp_lib
   use opt_variables
   implicit none
@@ -44,7 +44,7 @@ subroutine dt_evolve_hpsi(flag_current)
     zfac(i)=zfac(i-1)*(-zI*dt)/i
   end do
 
-  call timelog_begin(LOG_HPSI)
+  call timer_begin(LOG_HPSI)
 
 !$omp parallel private(tid) shared(zfac)
 !$  tid=omp_get_thread_num()
@@ -68,13 +68,13 @@ subroutine dt_evolve_hpsi(flag_current)
 !$omp end do
 !$omp end parallel
 
-  call timelog_end(LOG_HPSI)
+  call timer_end(LOG_HPSI)
 
 contains
   subroutine init(tpsi,zu)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
-    use timelog
+    use timer
     implicit none
     complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1)
     complex(8) :: zu(0:NLz-1,0:NLy-1,0:NLx-1)
@@ -95,7 +95,7 @@ contains
   subroutine update(zfac,tpsi,zu)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
-    use timelog
+    use timer
     implicit none
     complex(8) :: zfac(4)
     complex(8) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1,4)
@@ -123,7 +123,7 @@ end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 subroutine dt_evolve_hpsi(flag_current)
   use Global_Variables
-  use timelog
+  use timer
 #ifdef ARTED_USE_NVTX
   use nvtx
 #endif
@@ -142,7 +142,7 @@ subroutine dt_evolve_hpsi(flag_current)
   end do
 
   ! NVTX_BEG('dt_evolve_hpsi()',2)
-  call timelog_begin(LOG_HPSI)
+  call timer_begin(LOG_HPSI)
 
 !$acc data pcopy(zu) create(zhtpsi)
   do ikb0=1,NKB, blk_nkb_hpsi
@@ -163,14 +163,14 @@ subroutine dt_evolve_hpsi(flag_current)
   end do
 !$acc end data
 
-  call timelog_end(LOG_HPSI)
+  call timer_end(LOG_HPSI)
   ! NVTX_END()
 
 contains
   subroutine init_LBLK(tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz
-    use timelog
+    use timer
     implicit none
     integer :: ikb_s,ikb_e
     complex(8),intent(out) :: tpsi(0:PNLz-1,0:PNLy-1,0:PNLx-1, ikb_s:ikb_e)
@@ -199,7 +199,7 @@ contains
   subroutine update_LBLK(zfac,tpsi,zu, ikb_s,ikb_e)
     use Global_Variables, only: NLx,NLy,NLz
     use opt_variables, only: PNLx,PNLy,PNLz, blk_nkb_hpsi
-    use timelog
+    use timer
     implicit none
     integer :: ikb_s,ikb_e
     complex(8),intent(in)    :: zfac(4)

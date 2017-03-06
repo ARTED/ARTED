@@ -14,8 +14,8 @@
 !  limitations under the License.
 !
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-#define LOG_BEG(id) call timelog_thread_begin(id)
-#define LOG_END(id) call timelog_thread_end(id)
+#define LOG_BEG(id) call timer_thread_begin(id)
+#define LOG_END(id) call timer_thread_end(id)
 
 #ifdef ARTED_USE_NVTX
 #define NVTX_BEG(name,id)  call nvtxStartRange(name,id)
@@ -79,7 +79,7 @@ end subroutine
 
 
 subroutine hpsi_omp_KB_RT(ik,tpsi,htpsi,ttpsi)
-  use timelog
+  use timer
   use Global_Variables, only: NLx,NLy,NLz,kAc,lapx,lapy,lapz,nabx,naby,nabz,Vloc,Mps,uV,iuV,Hxyz,ekr_omp,Nlma,a_tbl
   use opt_variables, only: lapt,PNLx,PNLy,PNLz,PNL
 #ifdef ARTED_USE_NVTX
