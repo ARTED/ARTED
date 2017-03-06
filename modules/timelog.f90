@@ -17,30 +17,40 @@ module timelog
   use misc_routines, only: get_wtime
   implicit none
 
-  integer,public,parameter :: LOG_DT_EVOLVE    = 0
-  integer,public,parameter :: LOG_HPSI         = 1
-  integer,public,parameter :: LOG_PSI_RHO      = 2
-  integer,public,parameter :: LOG_HARTREE      = 3
-  integer,public,parameter :: LOG_EXC_COR      = 4
-  integer,public,parameter :: LOG_CURRENT      = 5
-  integer,public,parameter :: LOG_TOTAL_ENERGY = 6
-  integer,public,parameter :: LOG_ION_FORCE    = 7
-  integer,public,parameter :: LOG_DT_EVOLVE_AC = 8
-  integer,public,parameter :: LOG_K_SHIFT_WF   = 9
-  integer,public,parameter :: LOG_OTHER        = 10
-  integer,public,parameter :: LOG_ALLREDUCE    = 11
+  ! Calculation
+  integer,public,parameter :: LOG_ALL          = 0
+  integer,public,parameter :: LOG_STATIC       = 1
+  integer,public,parameter :: LOG_GROUND_STATE = 2
+  integer,public,parameter :: LOG_DYNAMICS     = 3
+  integer,public,parameter :: LOG_IO           = 7
 
-  integer,public,parameter :: LOG_CG           = 12
-  integer,public,parameter :: LOG_DIAG         = 13
-  integer,public,parameter :: LOG_SP_ENERGY    = 14
-  integer,public,parameter :: LOG_GRAM_SCHMIDT = 15
+  ! GS routines
+  integer,public,parameter :: LOG_CG           = 10
+  integer,public,parameter :: LOG_DIAG         = 11
+  integer,public,parameter :: LOG_SP_ENERGY    = 12
+  integer,public,parameter :: LOG_GRAM_SCHMIDT = 13
 
-  integer,public,parameter :: LOG_HPSI_INIT    = 16
-  integer,public,parameter :: LOG_HPSI_STENCIL = 17
-  integer,public,parameter :: LOG_HPSI_PSEUDO  = 18
-  integer,public,parameter :: LOG_HPSI_UPDATE  = 19
+  ! GS and RT routines
+  integer,public,parameter :: LOG_DT_EVOLVE    = 20
+  integer,public,parameter :: LOG_HPSI         = 21
+  integer,public,parameter :: LOG_PSI_RHO      = 22
+  integer,public,parameter :: LOG_HARTREE      = 23
+  integer,public,parameter :: LOG_EXC_COR      = 24
+  integer,public,parameter :: LOG_CURRENT      = 25
+  integer,public,parameter :: LOG_TOTAL_ENERGY = 26
+  integer,public,parameter :: LOG_ION_FORCE    = 27
+  integer,public,parameter :: LOG_DT_EVOLVE_AC = 28
+  integer,public,parameter :: LOG_K_SHIFT_WF   = 29
+  integer,public,parameter :: LOG_OTHER        = 30
 
-  integer,public,parameter :: LOG_DYNAMICS     = 20
+  ! Hamiltonian
+  integer,public,parameter :: LOG_HPSI_INIT    = 35
+  integer,public,parameter :: LOG_HPSI_STENCIL = 36
+  integer,public,parameter :: LOG_HPSI_PSEUDO  = 37
+  integer,public,parameter :: LOG_HPSI_UPDATE  = 38
+
+  ! Communication
+  integer,public,parameter :: LOG_ALLREDUCE    = 40
 
   public :: timelog_initialize
   public :: timelog_set, timelog_reset
@@ -48,12 +58,13 @@ module timelog
   public :: timelog_begin, timelog_end
   public :: timelog_thread_begin, timelog_thread_end
   public :: timelog_show_hour, timelog_show_min
+  public :: timelog_show_current_hour, timelog_show_current_min
 
   public :: timelog_reentrance_read, timelog_reentrance_write
   public :: timelog_write, timelog_thread_write
 
 
-  integer,private,parameter   :: LOG_SIZE = 30
+  integer,private,parameter   :: LOG_SIZE = 50
   real(8),private,allocatable :: log_time(:)
   real(8),private,allocatable :: log_temp(:)
 
@@ -156,12 +167,32 @@ contains
     write(*,*) str,time,'sec =',hour,'hour'
   end subroutine
 
+  subroutine timelog_show_current_hour(str, id)
+    implicit none
+    character(*),intent(in) :: str
+    integer,intent(in)      :: id
+    real(8) :: time,hour
+    time = get_wtime() - log_temp(id)
+    hour = time / 3600
+    write(*,*) str,time,'sec =',hour,'hour'
+  end subroutine
+
   subroutine timelog_show_min(str, id)
     implicit none
     character(*),intent(in) :: str
     integer,intent(in)      :: id
     real(8) :: time,mini
     time = log_time(id)
+    mini = time / 60
+    write(*,*) str,time,'sec =',mini,'min'
+  end subroutine
+
+  subroutine timelog_show_current_min(str, id)
+    implicit none
+    character(*),intent(in) :: str
+    integer,intent(in)      :: id
+    real(8) :: time,mini
+    time = get_wtime() - log_temp(id)
     mini = time / 60
     write(*,*) str,time,'sec =',mini,'min'
   end subroutine

@@ -54,9 +54,12 @@ Program main
 
   if(comm_is_root(1))write(*,*)'NUMBER_THREADS = ',NUMBER_THREADS
 
-  etime1=get_wtime()
+  call timelog_begin(LOG_ALL)
+
+  call timelog_begin(LOG_STATIC)
   Time_start=get_wtime() !reentrance
   call comm_bcast(Time_start,proc_group(1))
+
   Rion_update='on'
 
   call Read_data
@@ -98,10 +101,14 @@ Program main
   if (MD_option /= 'Y') Rion_update = 'off'
   Eall_GS(0)=Eall
 
-  if(comm_is_root(1)) write(*,*) 'This is the end of preparation for ground state calculation'
-  if(comm_is_root(1)) write(*,*) '-----------------------------------------------------------'
+  if(comm_is_root(1)) then
+    write(*,*) 'This is the end of preparation for ground state calculation'
+    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
-  call timelog_reset
+  call reset_gs_timer
+  call timelog_begin(LOG_GROUND_STATE)
   do iter=1,Nscf
     if (comm_is_root(1))  write(*,*) 'iter = ',iter
     if( kbTev < 0d0 )then ! sato
@@ -172,18 +179,16 @@ Program main
       write(*,*) 'var_ave,var_max=',esp_var_ave(iter),esp_var_max(iter)
       write(*,*) 'dns. difference =',dns_diff(iter)
       if (iter/20*20 == iter) then
-         etime2=get_wtime()
          write(*,*) '====='
-         write(*,*) 'elapse time=',etime2-etime1,'sec=',(etime2-etime1)/60,'min'
+         call timelog_show_current_min('elapse time=',LOG_ALL)
       end if
       write(*,*) '-----------------------------------------------'
     end if
   end do
-  etime2 = get_wtime()
+  call timelog_end(LOG_GROUND_STATE)
 
   if(comm_is_root(1)) then
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-    call timelog_show_hour('Ground State time  :', LOG_DYNAMICS)
+    call timelog_show_hour('Ground State time  :', LOG_GROUND_STATE)
     call timelog_show_min ('CG time            :', LOG_CG)
     call timelog_show_min ('Gram Schmidt time  :', LOG_GRAM_SCHMIDT)
     call timelog_show_min ('diag time          :', LOG_DIAG)
@@ -198,7 +203,11 @@ Program main
     call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
     call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
   end if
-  if(comm_is_root(1)) write(*,*) 'This is the end of GS calculation'
+  if(comm_is_root(1)) then
+    write(*,*) 'This is the end of GS calculation'
+    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
   zu_GS0(:,:,:)=zu_GS(:,:,:)
 
@@ -218,13 +227,12 @@ Program main
   Eall0=Eall
   if(comm_is_root(1)) write(*,*) 'Eall =',Eall
 
-  etime2=get_wtime()
+  call timelog_end(LOG_STATIC)
   if (comm_is_root(1)) then
     write(*,*) '-----------------------------------------------'
-    write(*,*) 'static time=',etime2-etime1,'sec=', (etime2-etime1)/60,'min'
+    call timelog_show_min('static time=',LOG_STATIC)
     write(*,*) '-----------------------------------------------'
   end if
-  etime1=etime2
 
   if (comm_is_root(1)) then
     write(*,*) '-----------------------------------------------'
@@ -257,7 +265,11 @@ Program main
   call opt_vars_init_t4ppt()
 #endif
 
-  if(comm_is_root(1)) write(*,*) 'This is the end of preparation for Real time calculation'
+  if(comm_is_root(1)) then
+    write(*,*) 'This is the end of preparation for Real time calculation'
+    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
 !====RT calculation============================
 
@@ -327,8 +339,8 @@ Program main
 
 !$acc enter data create(kAc)
 
-  call timelog_reset
-  etime1=get_wtime()
+  call reset_rt_timer
+  call timelog_begin(LOG_DYNAMICS)
 !$acc enter data copyin(zu)
   RTiteratopm : do iter=entrance_iter+1,Nt ! sato
 
@@ -517,11 +529,9 @@ Program main
     end if
 
 !Timer
-    etime2=get_wtime()
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
     if (iter/1000*1000 == iter.and.comm_is_root(1)) then
       write(*,*) 'iter =',iter
-      call timelog_show_hour('dynamics time     :', LOG_DYNAMICS)
+      call timelog_show_current_hour('dynamics time      :', LOG_DYNAMICS)
     end if
 
 !Timer for shutdown
@@ -539,8 +549,7 @@ Program main
 
   enddo RTiteratopm !end of RT iteraction========================
 !$acc exit data copyout(zu)
-  etime2=get_wtime()
-  call timelog_set(LOG_DYNAMICS, etime2 - etime1)
+  call timelog_end(LOG_DYNAMICS)
 
   if(comm_is_root(1)) then
     call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
@@ -563,20 +572,27 @@ Program main
   call write_performance(trim(directory)//'ms_performance')
 
   if(comm_is_root(1)) write(*,*) 'This is the start of write section'
-  etime1=get_wtime()
+  call timelog_begin(LOG_IO)
   call write_result_all
-  etime2=get_wtime()
-  if(comm_is_root(1)) write(*,*) 'This is the end of write section'
-  if(comm_is_root(1)) write(*,*) 'write time =',etime2-etime1,'sec'
+  call timelog_end(LOG_IO)
+  if(comm_is_root(1)) then
+    write(*,*) 'This is the end of write section'
+    call timelog_show_min('write time =',LOG_IO)
+  end if
 
-  if(comm_is_root(1)) write(*,*) 'This is the end of RT calculation'
+  if(comm_is_root(1)) then
+    write(*,*) 'This is the end of RT calculation'
+    call timelog_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
 !====RT calculation===========================
   call comm_sync_all
 
   if (comm_is_root(1)) write(*,*) 'This is the end of all calculation'
   Time_now=get_wtime()
-  if (comm_is_root(1) ) write(*,*) 'Total time =',(Time_now-Time_start)
+  call timelog_end(LOG_ALL)
+  if (comm_is_root(1)) call timelog_show_hour('Total time =',LOG_ALL)
 
 1 if(comm_is_root(1)) write(*,*)  'This calculation is shutdown successfully!'
   if(comm_is_root(1)) then
@@ -598,6 +614,23 @@ Program main
   end if
   call comm_finalize
 
+contains
+  subroutine reset_gs_timer
+    implicit none
+    integer :: i
+    do i = LOG_CG,LOG_GRAM_SCHMIDT
+      call timelog_reset(i)
+    end do
+    call reset_rt_timer
+  end subroutine
+
+  subroutine reset_rt_timer
+    implicit none
+    integer :: i
+    do i = LOG_DT_EVOLVE,LOG_ALLREDUCE
+      call timelog_reset(i)
+    end do
+  end subroutine
 End Program Main
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Read_data
@@ -1217,7 +1250,6 @@ subroutine prep_Reentrance_Read
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato
   read(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   read(500) NK_remainder,NG_remainder
-  read(500) etime1,etime2
 ! Timer
 !  read(500) Time_shutdown
 !  read(500) Time_start,Time_now
@@ -1465,7 +1497,6 @@ subroutine prep_Reentrance_write
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato
   write(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   write(500) NK_remainder,NG_remainder
-  write(500) etime1,etime2
 ! Timer
 !  write(500) Time_shutdown
 !  write(500) Time_start,Time_now
