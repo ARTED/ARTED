@@ -39,7 +39,9 @@ subroutine main
   call load_environments
 
   if(comm_is_root(1)) then
-    write(*,'(2A)')'ARTED ver. = ',ARTED_ver
+    write(*,'(A)') "Welcome to SALMON-TDDFT multiscale mode"
+    write(*,'(A)') "(Preliminary Developers Version)"
+    write(*,'(2A)') "based on ARTED ver. = ",ARTED_ver
     call print_optimize_message
   end if
 
