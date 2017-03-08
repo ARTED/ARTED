@@ -664,6 +664,7 @@ Subroutine Read_data
 !yabana
     read(*,*) functional, cval
 !yabana
+    read(*,*) propagator
     read(*,*) ps_format !shinohara
     read(*,*) PSmask_option !shinohara
     read(*,*) alpha_mask, gamma_mask, eta_mask !shinohara
@@ -689,6 +690,7 @@ Subroutine Read_data
     write(*,*) 'functional=',functional
     if(functional == 'TBmBJ') write(*,*) 'cvalue=',cval
 !yabana
+    write(*,*) 'propagator=',propagator
     write(*,*) 'ps_format =',ps_format !shinohara
     write(*,*) 'PSmask_option =',PSmask_option !shinohara
     write(*,*) 'alpha_mask, gamma_mask, eta_mask =',alpha_mask, gamma_mask, eta_mask !shinohara
@@ -722,6 +724,7 @@ Subroutine Read_data
   call comm_bcast(functional,proc_group(1))
   call comm_bcast(cval,proc_group(1))
 !yabana
+  call comm_bcast(propagator,proc_group(1))
 
   call comm_bcast(ps_format,proc_group(1))!shinohara
   call comm_bcast(PSmask_option,proc_group(1))!shinohara
@@ -1239,6 +1242,8 @@ subroutine prep_Reentrance_Read
   read(500) FSset_option,MD_option
   read(500) AD_RHO !ovlp_option
 
+  read(500) propagator
+
 !  integer :: procid(1),Nprocs
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato
   read(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
@@ -1485,6 +1490,8 @@ subroutine prep_Reentrance_write
   write(500) Longi_Trans
   write(500) FSset_option,MD_option
   write(500) AD_RHO !ovlp_option
+
+  write(500) propagator
 
 !  integer :: procid(1),Nprocs
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato

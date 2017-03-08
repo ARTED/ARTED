@@ -584,6 +584,7 @@ Subroutine Read_data
 !yabana
     read(*,*) functional, cval
 !yabana
+    read(*,*) propagator
     read(*,*) ps_format !shinohara
     read(*,*) PSmask_option !shinohara
     read(*,*) alpha_mask, gamma_mask, eta_mask !shinohara
@@ -604,6 +605,7 @@ Subroutine Read_data
     write(*,*) 'functional=',functional
     if(functional == 'TBmBJ') write(*,*) 'cvalue=',cval
 !yabana
+    write(*,*) 'propagator=',propagator
     write(*,*) 'ps_format =',ps_format !shinohara
     write(*,*) 'PSmask_option =',PSmask_option !shinohara
     write(*,*) 'alpha_mask, gamma_mask, eta_mask =',alpha_mask, gamma_mask, eta_mask !shinohara
@@ -629,6 +631,7 @@ Subroutine Read_data
   call comm_bcast(directory,proc_group(1))
   call comm_bcast(functional,proc_group(1))
   call comm_bcast(cval,proc_group(1))
+  call comm_bcast(propagator,proc_group(1))
 
   call comm_bcast(ps_format,proc_group(1))
   call comm_bcast(PSmask_option,proc_group(1))
@@ -1081,6 +1084,7 @@ subroutine prep_Reentrance_Read
   read(500) functional
   read(500) cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
 !yabana
+  read(500) propagator
 
 !  read(500) procid(1),nprocs(1),ierr
 !  read(500) proc_group(2),NEWPROCS,NEWRANK ! sato
@@ -1357,6 +1361,7 @@ subroutine prep_Reentrance_write
   write(500) functional
   write(500) cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
 !yabana
+  write(500) propagator
 
 !  write(500) procid(1),nprocs(1),ierr
 !  write(500) proc_group(2),NEWPROCS,NEWRANK ! sato
