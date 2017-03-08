@@ -282,6 +282,7 @@ Program main
   
   rho_gs(:)=rho(:)
 
+  Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! sato ---------------------------------------
   if(NXYsplit /= 1)then
     do ixy_m=NXY_s,NXY_e
@@ -291,6 +292,7 @@ Program main
       Vexc_m(:,ixy_m)=Vexc(:)
       Eexc_m(:,ixy_m)=Eexc(:)
       Vloc_m(:,ixy_m)=Vloc(:)
+      Vloc_old_m(:,:,ixy_m)=Vloc_old(:,:)
     end do
   end if
 ! sato ---------------------------------------
@@ -347,7 +349,6 @@ Program main
     call dt_evolve_Ac ! sato
     Macro_loop : do ixy_m=NXY_s,NXY_e ! sato
       call timer_begin(LOG_OTHER)
-! sato ---------------------------------------
       ix_m=NX_table(ixy_m)
       iy_m=NY_table(ixy_m)
       if(NXYsplit /= 1)then
@@ -356,20 +357,29 @@ Program main
         Vexc(:)=Vexc_m(:,ixy_m)
         Eexc(:)=Eexc_m(:,ixy_m)
         Vloc(:)=Vloc_m(:,ixy_m)
+        Vloc_old(:,:)=Vloc_old_m(:,:,ixy_m)
       end if
 
+
+      
+#ifdef ARTED_USE_OLD_PROPAGATOR
       kAc(:,1)=kAc0(:,1)+(Ac_new_m(1,ix_m,iy_m)+Ac_m(1,ix_m,iy_m))/2d0
       kAc(:,2)=kAc0(:,2)+(Ac_new_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m))/2d0
       kAc(:,3)=kAc0(:,3)+(Ac_new_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m))/2d0
 !$acc update device(kAc)
-! sato ---------------------------------------
+
       call timer_end(LOG_OTHER)
       
-#ifdef ARTED_USE_OLD_PROPAGATOR
       call dt_evolve_omp_KB_MS
 #else
-      !call dt_evolve_etrs_omp_KB_MS
-      call dt_evolve_omp_KB_MS
+      kAc(:,1)=kAc0(:,1)+Ac_m(1,ix_m,iy_m)
+      kAc(:,2)=kAc0(:,2)+Ac_m(2,ix_m,iy_m)
+      kAc(:,3)=kAc0(:,3)+Ac_m(3,ix_m,iy_m)
+      kAc_new(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
+      kAc_new(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
+      kAc_new(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
+!$acc update device(kAc)
+      call dt_evolve_etrs_omp_KB
 #endif
 
       call timer_begin(LOG_OTHER)
@@ -935,8 +945,9 @@ Subroutine Read_data
   allocate(Lx(NL),Ly(NL),Lz(NL),Gx(NG),Gy(NG),Gz(NG))
   allocate(Lxyz(0:NLx-1,0:NLy-1,0:NLz-1))
   allocate(ifdx(-Nd:Nd,1:NL),ifdy(-Nd:Nd,1:NL),ifdz(-Nd:Nd,1:NL))
-  allocate(kAc(NK,3),kAc0(NK,3))
+  allocate(kAc(NK,3),kAc0(NK,3),kAc_new(NK,3))
   allocate(Vh(NL),Vexc(NL),Eexc(NL),rho(NL),Vpsl(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
+  allocate(Vloc_new(NL),Vloc_old(NL,2))
 !yabana
   allocate(tmass(NL),tjr(NL,3),tjr2(NL),tmass_t(NL),tjr_t(NL,3),tjr2_t(NL))
 !yabana
@@ -1060,7 +1071,8 @@ Subroutine Read_data
     allocate(Vh_m(NL,NXY_s:NXY_e))         
     allocate(Vexc_m(NL,NXY_s:NXY_e))         
     allocate(Eexc_m(NL,NXY_s:NXY_e))         
-    allocate(Vloc_m(NL,NXY_s:NXY_e))         
+    allocate(Vloc_m(NL,NXY_s:NXY_e))
+    allocate(Vloc_old_m(NL,2,NXY_s:NXY_e))
   end if
     allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m))
     allocate(energy_elec_Matter_l(1:NX_m,1:NY_m))
@@ -1364,11 +1376,11 @@ subroutine prep_Reentrance_Read
 
 
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
-  allocate(kAc(NK,3),kAc0(NK,3))
+  allocate(kAc(NK,3),kAc0(NK,3),kAc_new(NK,3))
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
 
   read(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  read(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
+  read(500) kAc(:,:),kAc0(:,:),kAc_new(:,:)             !k+A(t)/c (kAc)
   read(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
 
@@ -1564,7 +1576,7 @@ subroutine prep_Reentrance_write
 
 
   write(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  write(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
+  write(500) kAc(:,:),kAc0(:,:),kAc_new(:,:)                  !k+A(t)/c (kAc)
   write(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
 
 

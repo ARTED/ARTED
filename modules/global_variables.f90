@@ -201,7 +201,7 @@ Module Global_Variables
   real(8),allocatable :: Vh_m(:,:)
   real(8),allocatable :: Vexc_m(:,:)
   real(8),allocatable :: Eexc_m(:,:)
-  real(8),allocatable :: Vloc_m(:,:)
+  real(8),allocatable :: Vloc_m(:,:),Vloc_old_m(:,:,:)
   real(8),allocatable :: rho_m(:,:)
   real(8),allocatable :: energy_joule(:,:)
   real(8),allocatable :: energy_elec_Matter_l(:,:)
