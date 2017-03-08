@@ -145,6 +145,7 @@ Module Global_Variables
   character(10) :: functional
   real(8) :: cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
 !yabana
+  character(10) :: propagator = 'default' ! propagation scheme: default, or etrs
 
   integer :: NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   integer :: NK_remainder,NG_remainder

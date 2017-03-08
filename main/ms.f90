@@ -359,28 +359,9 @@ Program main
         Vloc(:)=Vloc_m(:,ixy_m)
         Vloc_old(:,:)=Vloc_old_m(:,:,ixy_m)
       end if
-
-
-      
-#ifdef ARTED_USE_OLD_PROPAGATOR
-      kAc(:,1)=kAc0(:,1)+(Ac_new_m(1,ix_m,iy_m)+Ac_m(1,ix_m,iy_m))/2d0
-      kAc(:,2)=kAc0(:,2)+(Ac_new_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m))/2d0
-      kAc(:,3)=kAc0(:,3)+(Ac_new_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m))/2d0
-!$acc update device(kAc)
-
       call timer_end(LOG_OTHER)
-      
-      call dt_evolve_omp_KB_MS
-#else
-      kAc(:,1)=kAc0(:,1)+Ac_m(1,ix_m,iy_m)
-      kAc(:,2)=kAc0(:,2)+Ac_m(2,ix_m,iy_m)
-      kAc(:,3)=kAc0(:,3)+Ac_m(3,ix_m,iy_m)
-      kAc_new(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
-      kAc_new(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
-      kAc_new(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
-!$acc update device(kAc)
-      call dt_evolve_etrs_omp_KB
-#endif
+
+      call dt_evolve_KB_MS(ix_m,iy_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------

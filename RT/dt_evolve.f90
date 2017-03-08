@@ -25,6 +25,84 @@
 #define NVTX_END()
 #endif
 
+subroutine dt_evolve_KB(iter)
+  use global_variables, only: propagator,kAc,kAc0,Ac_tot
+  implicit none
+  integer, intent(in) :: iter
+
+  select case(propagator)
+    case('default')
+      call default_propagator
+    case('etrs')
+      call etrs_propagator
+    case default
+      call err_finalize('invalid propagator')
+  end select
+
+contains
+  subroutine default_propagator
+    implicit none
+    integer :: ixyz
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+0.5d0*(Ac_tot(iter,ixyz) + Ac_tot(iter+1,ixyz) )
+    enddo
+!$acc update device(kAc)
+    call dt_evolve_omp_KB
+  end subroutine
+
+  subroutine etrs_propagator
+    use global_variables, only: kAc_new
+    implicit none
+    integer :: ixyz
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
+      kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
+    enddo
+!$acc update device(kAc,kAc_new)
+    call dt_evolve_etrs_omp_KB
+  end subroutine
+end subroutine
+
+subroutine dt_evolve_KB_MS(ix_m,iy_m)
+  use global_variables, only: propagator,kAc,kAc0,Ac_new_m,Ac_m
+  implicit none
+  integer, intent(in) :: ix_m, iy_m
+
+  select case(propagator)
+    case('default')
+      call default_propagator
+    case('etrs')
+      call etrs_propagator
+    case default
+      call err_finalize('invalid propagator')
+  end select
+
+contains
+  subroutine default_propagator
+    implicit none
+    integer :: ixyz
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+(Ac_new_m(ixyz,ix_m,iy_m)+Ac_m(ixyz,ix_m,iy_m))/2d0
+    enddo
+!$acc update device(kAc)
+    call dt_evolve_omp_KB_MS
+  end subroutine
+
+  subroutine etrs_propagator
+    use global_variables, only: kAc_new
+    implicit none
+    integer :: ixyz
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_m(ixyz,ix_m,iy_m)
+      kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_new_m(ixyz,ix_m,iy_m)
+    enddo
+!$acc update device(kAc,kAc_new)
+    call dt_evolve_etrs_omp_KB
+  end subroutine
+end subroutine
+
+! ---------------------------------------------
+
 Subroutine dt_evolve_omp_KB
   use Global_Variables
   use timer
