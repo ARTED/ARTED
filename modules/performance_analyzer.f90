@@ -71,7 +71,7 @@ contains
     call comm_bcast(pgflops, proc_group(1), tout%rank)
 
 #ifdef ARTED_MS
-    call comm_summation(lgflops, sgflops, 4, proc_group(1))
+    call comm_summation(lgflops, sgflops, 4, proc_group(2))
 #endif
     call comm_summation(lgflops, tgflops, 4, proc_group(1))
 
