@@ -155,7 +155,7 @@ contains
   end subroutine
 
   subroutine summation_threads(lgflops)
-    use global_variables, only: NUMBER_THREADS, functional
+    use global_variables, only: NUMBER_THREADS, functional, propagator
     use timer
     implicit none
     real(8), intent(out) :: lgflops(4)
@@ -170,11 +170,11 @@ contains
       case default
         ncalls_in_loop = 2
     end select
-#ifdef ARTED_SC
-#ifdef ARTED_USE_OLD_PROPAGATOR
-    ncalls_in_loop = ncalls_in_loop - 1
-#endif
-#endif
+
+    select case(propagator)
+      case('default')
+        ncalls_in_loop = ncalls_in_loop - 1
+    end select
 
     call get_hamiltonian_chunk_size(chunk_size)
 

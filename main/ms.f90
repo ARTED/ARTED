@@ -359,28 +359,9 @@ Program main
         Vloc(:)=Vloc_m(:,ixy_m)
         Vloc_old(:,:)=Vloc_old_m(:,:,ixy_m)
       end if
-
-
-      
-#ifdef ARTED_USE_OLD_PROPAGATOR
-      kAc(:,1)=kAc0(:,1)+(Ac_new_m(1,ix_m,iy_m)+Ac_m(1,ix_m,iy_m))/2d0
-      kAc(:,2)=kAc0(:,2)+(Ac_new_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m))/2d0
-      kAc(:,3)=kAc0(:,3)+(Ac_new_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m))/2d0
-!$acc update device(kAc)
-
       call timer_end(LOG_OTHER)
-      
-      call dt_evolve_omp_KB_MS
-#else
-      kAc(:,1)=kAc0(:,1)+Ac_m(1,ix_m,iy_m)
-      kAc(:,2)=kAc0(:,2)+Ac_m(2,ix_m,iy_m)
-      kAc(:,3)=kAc0(:,3)+Ac_m(3,ix_m,iy_m)
-      kAc_new(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
-      kAc_new(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
-      kAc_new(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
-!$acc update device(kAc)
-      call dt_evolve_etrs_omp_KB
-#endif
+
+      call dt_evolve_KB_MS(ix_m,iy_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
@@ -683,6 +664,7 @@ Subroutine Read_data
 !yabana
     read(*,*) functional, cval
 !yabana
+    read(*,*) propagator
     read(*,*) ps_format !shinohara
     read(*,*) PSmask_option !shinohara
     read(*,*) alpha_mask, gamma_mask, eta_mask !shinohara
@@ -708,6 +690,7 @@ Subroutine Read_data
     write(*,*) 'functional=',functional
     if(functional == 'TBmBJ') write(*,*) 'cvalue=',cval
 !yabana
+    write(*,*) 'propagator=',propagator
     write(*,*) 'ps_format =',ps_format !shinohara
     write(*,*) 'PSmask_option =',PSmask_option !shinohara
     write(*,*) 'alpha_mask, gamma_mask, eta_mask =',alpha_mask, gamma_mask, eta_mask !shinohara
@@ -741,6 +724,7 @@ Subroutine Read_data
   call comm_bcast(functional,proc_group(1))
   call comm_bcast(cval,proc_group(1))
 !yabana
+  call comm_bcast(propagator,proc_group(1))
 
   call comm_bcast(ps_format,proc_group(1))!shinohara
   call comm_bcast(PSmask_option,proc_group(1))!shinohara
@@ -1258,6 +1242,8 @@ subroutine prep_Reentrance_Read
   read(500) FSset_option,MD_option
   read(500) AD_RHO !ovlp_option
 
+  read(500) propagator
+
 !  integer :: procid(1),Nprocs
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato
   read(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
@@ -1504,6 +1490,8 @@ subroutine prep_Reentrance_write
   write(500) Longi_Trans
   write(500) FSset_option,MD_option
   write(500) AD_RHO !ovlp_option
+
+  write(500) propagator
 
 !  integer :: procid(1),Nprocs
 !  integer :: NEW_COMM_WORLD,nprocs(2),procid(2) ! sato
