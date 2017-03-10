@@ -352,8 +352,19 @@ subroutine dt_evolve_Ac_1d
   integer :: ix_m
   real(8) :: RR(3) ! rot rot Ac
 
-  Ac_old_m=Ac_m
-  Ac_m=Ac_new_m
+!$omp parallel do default(none) &
+!$    private(ix_m) &
+!$    shared(NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
+  do ix_m=NXvacL_m-1,NXvacR_m+1
+    Ac_old_m(:,ix_m,1) = Ac_m    (:,ix_m,1)
+    Ac_m    (:,ix_m,1) = Ac_new_m(:,ix_m,1)
+  end do
+!$omp end parallel do
+
+!$omp parallel do default(none) &
+!$    private(ix_m,RR) &
+!$    shared(NXvacL_m,NXvacR_m,Ac_m,HX_m,j_m,Ac_old_m,Ac_new_m) &
+!$    firstprivate(dt)
   do ix_m=NXvacL_m,NXvacR_m
     RR(1) = 0.0d0
     RR(2) = -(Ac_m(2,ix_m+1,1) - 2*Ac_m(2,ix_m,1) + Ac_m(2,ix_m-1,1)) * (1.0 / HX_m**2) 
@@ -361,6 +372,7 @@ subroutine dt_evolve_Ac_1d
     Ac_new_m(:,ix_m,1) = (2*Ac_m(:,ix_m,1) - Ac_old_m(:,ix_m,1) &
       & - j_m(:,ix_m,1)*4.0d0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
   end do
+!$omp end parallel do
   return
 end subroutine dt_evolve_Ac_1d
 !===========================================================
@@ -372,8 +384,22 @@ subroutine dt_evolve_Ac_2d
   integer :: ix_m,iy_m
   real(8) :: RR(3) ! rot rot Ac
   ! (written by M.Uemoto on 2016-11-22)
-  Ac_old_m=Ac_m
-  Ac_m=Ac_new_m
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
+  do iy_m=NYvacB_m-1,NYvacT_m+1
+    do ix_m=NXvacL_m-1,NXvacR_m+1
+      Ac_old_m(:,ix_m,iy_m) = Ac_m    (:,ix_m,iy_m)
+      Ac_m    (:,ix_m,iy_m) = Ac_new_m(:,ix_m,iy_m)
+    end do
+  end do
+!$omp end parallel do
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m,RR) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HX_m,HY_m,Ac_m,j_m,Ac_old_m,Ac_new_m) &
+!$    firstprivate(dt)
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
       RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1) &
@@ -399,14 +425,28 @@ subroutine dt_evolve_Ac_2d
         & -j_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
+!$omp end parallel do
+
   ! Boundary Condition
   select case(TwoD_shape)
   case('periodic')
-    Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacT_m)
-    Ac_new_m(:,:,NYvacT_m+1)=Ac_new_m(:,:,NYvacB_m)
+!$omp parallel do default(none) &
+!$    private(ix_m) &
+!$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
+    do ix_m=NXvacL_m-1,NXvacR_m+1
+      Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacT_m)
+      Ac_new_m(:,ix_m,NYvacT_m+1)=Ac_new_m(:,ix_m,NYvacB_m)
+    enddo
+!$omp end parallel do
   case('isolated')
-    Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
-    Ac_new_m(:,:,NYvacT_m+1)=0.0d0
+!$omp parallel do default(none) &
+!$    private(ix_m) &
+!$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
+    do ix_m=NXvacL_m-1,NXvacR_m+1
+      Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacB_m)
+      Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
+    enddo
+!$omp end parallel do
   end select
   return
 end subroutine dt_evolve_Ac_2d
@@ -419,11 +459,25 @@ subroutine dt_evolve_Ac_2dc()
   integer :: ix_m, iy_m
   real(8) :: Y, RR(3) ! rot rot Ac
   ! (written by M.Uemoto on 2016-11-22)
-  Ac_old_m=Ac_m
-  Ac_m=Ac_new_m
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
+  do iy_m=NYvacB_m-1,NYvacT_m+1
+    do ix_m=NXvacL_m-1,NXvacR_m+1
+      Ac_old_m(:,ix_m,iy_m) = Ac_m    (:,ix_m,iy_m)
+      Ac_m    (:,ix_m,iy_m) = Ac_new_m(:,ix_m,iy_m)
+    end do
+  end do
+!$omp end parallel do
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m,RR,Y) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HX_m,HY_m,Ac_m,j_m,Ac_old_m,Ac_new_m) &
+!$    firstprivate(dt)
   do iy_m=NYvacB_m,NYvacT_m
-    Y = (iy_m - 0.50d0) * HY_m
     do ix_m=NXvacL_m,NXvacR_m
+      Y = (iy_m - 0.50d0) * HY_m
       RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
             & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
             & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
@@ -449,9 +503,17 @@ subroutine dt_evolve_Ac_2dc()
         & -J_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
+!$omp end parallel do
+
   ! Boundary condition
-  Ac_new_m(:,:,NYvacB_m-1)=Ac_new_m(:,:,NYvacB_m)
-  Ac_new_m(:,:,NYvacT_m+1)=0.0d0
+!$omp parallel do default(none) &
+!$    private(ix_m) &
+!$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
+  do ix_m=NXvacL_m-1,NXvacR_m+1
+    Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacB_m)
+    Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
+  enddo
+!$omp end parallel do
   return
 end subroutine dt_evolve_Ac_2dc
 !===========================================================
@@ -484,11 +546,17 @@ subroutine calc_elec_field()
   integer ix_m,iy_m
   ! calculate the electric field from the vector potential Ac
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Ac_new_m,Ac_old_m) &
+!$    firstprivate(dt)
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
       Elec(:,ix_m,iy_m)=-(Ac_new_m(:,ix_m,iy_m)-Ac_old_m(:,ix_m,iy_m))/(2d0*dt)
     end do
   end do
+!$omp end parallel do
 end subroutine calc_elec_field
 !===========================================================
 subroutine calc_bmag_field_1d()
@@ -498,12 +566,17 @@ subroutine calc_bmag_field_1d()
   real(8) :: Rc(3)  ! rot Ac
   ! calculate the magnetic field from the vector potential (1D case)
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do default(none) &
+!$    private(ix_m,Rc) &
+!$    shared(NXvacL_m,NXvacR_m,HX_m,Bmag,Ac_m)
   do ix_m=NXvacL_m, NXvacR_m
     Rc(1) = 0.0d0
     Rc(2) = - (Ac_m(3,ix_m+1,1) - Ac_m(3,ix_m-1,1)) / (2 * HX_m)
     Rc(3) = + (Ac_m(2,ix_m+1,1) - Ac_m(2,ix_m-1,1)) / (2 * HX_m)
     Bmag(:,ix_m,1) = Rc(:) * c_light
   end do
+!$omp end parallel do
   return
 end subroutine calc_bmag_field_1d
 !===========================================================
@@ -516,6 +589,10 @@ subroutine calc_bmag_field_2d()
   real(8) :: rc(3)  ! rot Ac
   ! calculate the magnetic field from the vector potential (2D case)
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m,Rc) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HY_m,HX_m,Bmag,Ac_m)
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
       Rc(1) = + (Ac_m(3, ix_m, iy_m+1) - Ac_m(3, ix_m, iy_m-1)) / (2*HY_m)
@@ -525,6 +602,7 @@ subroutine calc_bmag_field_2d()
       Bmag(:,ix_m,iy_m) = Rc(:) * c_light
     end do
   end do
+!$omp end parallel do
   return
 end subroutine calc_bmag_field_2d
 !===========================================================
@@ -537,9 +615,13 @@ subroutine calc_bmag_field_2dc()
   real(8) :: Y, Rc(3)  ! rot Ac
   ! calculate the magnetic field from the vector potential (2D cylindal case)
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m,Rc,Y) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HY_m,HX_m,Bmag,Ac_m)
   do iy_m=NYvacB_m, NYvacT_m
-    Y = (iy_m-0.5d0) * HY_m
     do ix_m=NXvacL_m, NXvacR_m
+      Y = (iy_m-0.5d0) * HY_m
       Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
             & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0) &
             & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
@@ -552,6 +634,8 @@ subroutine calc_bmag_field_2dc()
       Bmag(:,ix_m,iy_m) = Rc(:) * c_light
     end do
   end do
+!$omp end parallel do
+
   return
 end subroutine calc_bmag_field_2dc
 !===========================================================
@@ -576,12 +660,19 @@ subroutine calc_energy_joule()
   integer :: ix_m,iy_m
   ! calculate the Ohmic losses in the media
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,energy_joule,j_m,Elec,aLxyz) &
+!$    firstprivate(dt)
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
       energy_joule(ix_m, iy_m) = energy_joule(ix_m, iy_m) &
           & + sum(-j_m(:,ix_m,iy_m) * Elec(:,ix_m,iy_m)) * dt * aLxyz
     end do
   end do
+!$omp end parallel do
+
   return
 end subroutine calc_energy_joule
 !===========================================================
@@ -593,6 +684,10 @@ subroutine calc_energy_elemag()
   real(8) :: e2, b2
   ! calculate the total electromagnetic energy
   ! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m,ix_m,e2,b2) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Bmag,energy_elemag,aLxyz)
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
       e2 = sum(Elec(:, ix_m, iy_m) ** 2)
@@ -600,5 +695,7 @@ subroutine calc_energy_elemag()
       energy_elemag(ix_m, iy_m) = (1.0 / (8.0 * pi)) * aLxyz * (e2 + b2)
     end do
   end do
+!$omp end parallel do
+
   return
 end subroutine calc_energy_elemag
