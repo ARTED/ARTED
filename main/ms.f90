@@ -490,7 +490,6 @@ Program main
       data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
 
       if(comm_is_root(1))then
-        call write_result(index)
         write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
           &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
       end if
