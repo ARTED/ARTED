@@ -30,7 +30,7 @@ from collections import deque
 
 input_list_sc = [
     "entrance_option", "Time_shutdown", "entrance_iter", "SYSname",
-    "directory", "functional", "cval", "ps_format", "PSmask_option",
+    "directory", "functional", "cval", "propagator","ps_format", "PSmask_option",
     "alpha_mask", "gamma_mask", "eta_mask", "aL", "ax", "ay", "az", "Sym",
     "crystal_structure", "Nd", "NLx", "NLy", "NLz", "NKx", "NKy", "NKz",
     "file_kw", "NEwald", "aEwald", "KbTev", "NB", "Nelec", "FSset_option",
@@ -43,7 +43,7 @@ input_list_sc = [
 
 input_list_ms = [
     "entrance_option", "Time_shutdown", "entrance_iter", "SYSname",
-    "directory", "functional", "cval", "ps_format", "PSmask_option",
+    "directory", "functional", "cval", "propagator", "ps_format", "PSmask_option",
     "alpha_mask", "gamma_mask", "eta_mask", "aL", "ax", "ay", "az", "Sym",
     "crystal_structure", "Nd", "NLx", "NLy", "NLz", "NKx", "NKy", "NKz",
     "file_kw", "FDTDdim", "TwoD_shape", "NX_m", "NY_m", "HX_m", "HY_m",
@@ -67,6 +67,9 @@ output_list = [
         "functional", "cval", "aL", "ax", "ay", "az", "Sym",
         "crystal_structure", "NB", "Nelec", "ext_field", "MD_option",
         "AD_RHO", "NE", "NI",
+    ]],
+    ["propagation", [
+        "propagator",
     ]],
     ["rgrid", [
         "Nd", "NLx", "NLy", "NLz",
