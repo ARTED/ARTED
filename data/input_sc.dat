@@ -4,6 +4,7 @@
 'SiO2'                                ! SYSname
 './data/'                                ! directory
 'PZ', 1.00d0                        ! functional 'PZ','PBE','TBmBJ','TPSS','VS98'
+'etrs'                              ! propagator 'default','etrs'
 'KY'                                ! ps_format 'KY','ABINIT','FHI'
 'n'          			    ! PSmask_option 'y' or 'n'
 0.8d0  1.8d0  15.d0                ! alpha_mask, gamma_mask, eta_mask

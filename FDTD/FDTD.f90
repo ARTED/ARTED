@@ -457,10 +457,10 @@ end subroutine dt_evolve_Ac_2dc
 !===========================================================
 subroutine dt_evolve_Ac
   use Global_variables
-  use timelog
+  use timer
   implicit none
   ! (written by M.Uemoto on 2016-11-22)
-  call timelog_begin(LOG_DT_EVOLVE_AC)
+  call timer_begin(LOG_DT_EVOLVE_AC)
   
   select case(FDTDdim)
   case('1D')
@@ -471,7 +471,7 @@ subroutine dt_evolve_Ac
     call dt_evolve_Ac_2dc()
   end select
   
-  call timelog_end(LOG_DT_EVOLVE_AC)
+  call timer_end(LOG_DT_EVOLVE_AC)
       
   return
 end subroutine dt_evolve_Ac
