@@ -29,16 +29,21 @@ subroutine hpsi_omp_KB_GS(ik,tpsi,ttpsi,htpsi)
   use Global_Variables, only: NL,NLz,NLy,NLx
   use opt_variables, only: zhtpsi,zttpsi,PNLx,PNLy,PNLz
   use omp_lib
+  use timer
   implicit none
   integer,intent(in)     :: ik
   complex(8),intent(in)  :: tpsi(NL)
   complex(8),intent(out) :: ttpsi(NL),htpsi(NL)
   integer :: tid
 
+  LOG_BEG(LOG_HPSI)
+
   tid = omp_get_thread_num()
   call init(tpsi,zhtpsi(:,1,tid))
   call hpsi_omp_KB_base(ik,zhtpsi(:,1,tid),zhtpsi(:,2,tid),zttpsi(:,tid))
   call copyout(zhtpsi(:,2,tid),zttpsi(:,tid),htpsi,ttpsi)
+
+  LOG_END(LOG_HPSI)
 
 contains
   subroutine init(zu,tpsi)
