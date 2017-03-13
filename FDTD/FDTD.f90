@@ -17,28 +17,32 @@
 !===============================================================
 subroutine write_result(index)
   use Global_Variables
+  use communication, only: procid, nprocs
   implicit none
   integer, intent(in) :: index
-  integer :: iter,ix_m,iy_m
+  integer :: iter,ix_m,iy_m, n
   ! export results of each calculation step
   ! (written by M.Uemoto on 2016-11-22)
-  iter = Nstep_write * index
-  write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
-  open(902, file=file_ac)
-  select case(FDTDdim)
-  case("1D")
-    write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
-    do ix_m=NXvacL_m,NXvacR_m
-      write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
-    end do
-  case("2D", "2DC")
-    write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
-    do iy_m=NYvacB_m,NYvacT_m
+  n = nprocs(1) * index + procid(1)
+  if (n <= Ndata_out) then
+    iter = Nstep_write * n
+    write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
+    open(902, file=file_ac)
+    select case(FDTDdim)
+    case("1D")
+      write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
       do ix_m=NXvacL_m,NXvacR_m
-        write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
+        write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
       end do
-    end do
-  end select
+    case("2D", "2DC")
+      write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
+      do iy_m=NYvacB_m,NYvacT_m
+        do ix_m=NXvacL_m,NXvacR_m
+          write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
+        end do
+      end do
+    end select
+  end if
   close(902)
   return
 end subroutine write_result
@@ -47,16 +51,11 @@ subroutine write_result_all()
   use Global_Variables
   use communication
   implicit none
-  integer :: Ndata, Ndata_per_proc, i, index
+  integer :: index
   ! export all results by using MPI
   ! (written by M.Uemoto on 2016-11-22)
-  Ndata = Nt / Nstep_write
-  Ndata_per_proc = ceiling(float(Ndata) / nprocs(1))
-  do i=0, Ndata_per_proc-1
-    index = procid(1) * Ndata_per_proc + i
-    if (index <= Ndata) then
-      call write_result(index)
-    endif
+  do index = 0, Ndata_out_per_proc
+    call write_result(index)
   end do
   return
 end subroutine write_result_all
