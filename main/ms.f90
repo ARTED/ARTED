@@ -1071,8 +1071,8 @@ Subroutine Read_data
     allocate(excited_electron(1:NX_m,1:NY_m))
     energy_elec_Matter_l(:,:)=0d0
     excited_electron_l=0d0
-    Ndata_out = Nt / Nstep_write
-    Ndata_out_per_proc = ceiling(float(NData_out) / nprocs(1))
+    Ndata_out = floor(float(Nt) / Nstep_write)
+    Ndata_out_per_proc = ceiling(float(NData_out + 1) / nprocs(1)) - 1
     allocate(data_out(16,NXvacL_m:NXvacR_m,NY_m+1,0:Ndata_out_per_proc))
 ! sato ---------------------------------------------------------------------------------------
 

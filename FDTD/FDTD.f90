@@ -20,29 +20,26 @@ subroutine write_result(index)
   use communication, only: procid, nprocs
   implicit none
   integer, intent(in) :: index
-  integer :: iter,ix_m,iy_m, n
+  integer :: iter,ix_m,iy_m
   ! export results of each calculation step
   ! (written by M.Uemoto on 2016-11-22)
-  n = nprocs(1) * index + procid(1)
-  if (n <= Ndata_out) then
-    iter = Nstep_write * n
-    write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
-    open(902, file=file_ac)
-    select case(FDTDdim)
-    case("1D")
-      write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
+  iter = Nstep_write * (nprocs(1) * index + procid(1))
+  write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
+  open(902, file=file_ac)
+  select case(FDTDdim)
+  case("1D")
+    write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
+    do ix_m=NXvacL_m,NXvacR_m
+      write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
+    end do
+  case("2D", "2DC")
+    write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
+    do iy_m=NYvacB_m,NYvacT_m
       do ix_m=NXvacL_m,NXvacR_m
-        write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
+        write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
       end do
-    case("2D", "2DC")
-      write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
-      do iy_m=NYvacB_m,NYvacT_m
-        do ix_m=NXvacL_m,NXvacR_m
-          write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
-        end do
-      end do
-    end select
-  end if
+    end do
+  end select
   close(902)
   return
 end subroutine write_result
@@ -51,11 +48,13 @@ subroutine write_result_all()
   use Global_Variables
   use communication
   implicit none
-  integer :: index
-  ! export all results by using MPI
-  ! (written by M.Uemoto on 2016-11-22)
+  integer :: index, n
+  
   do index = 0, Ndata_out_per_proc
-    call write_result(index)
+    n = nprocs(1) * index + procid(1)
+    if (n <= Ndata_out) then
+      call write_result(index)
+    end if
   end do
   return
 end subroutine write_result_all
