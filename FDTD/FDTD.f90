@@ -17,12 +17,13 @@
 !===============================================================
 subroutine write_result(index)
   use Global_Variables
+  use communication, only: procid, nprocs
   implicit none
   integer, intent(in) :: index
   integer :: iter,ix_m,iy_m
   ! export results of each calculation step
   ! (written by M.Uemoto on 2016-11-22)
-  iter = Nstep_write * index
+  iter = Nstep_write * (nprocs(1) * index + procid(1))
   write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
   open(902, file=file_ac)
   select case(FDTDdim)
@@ -47,16 +48,13 @@ subroutine write_result_all()
   use Global_Variables
   use communication
   implicit none
-  integer :: Ndata, Ndata_per_proc, i, index
-  ! export all results by using MPI
-  ! (written by M.Uemoto on 2016-11-22)
-  Ndata = Nt / Nstep_write
-  Ndata_per_proc = ceiling(float(Ndata) / nprocs(1))
-  do i=0, Ndata_per_proc-1
-    index = procid(1) * Ndata_per_proc + i
-    if (index <= Ndata) then
+  integer :: index, n
+  
+  do index = 0, Ndata_out_per_proc
+    n = nprocs(1) * index + procid(1)
+    if (n <= Ndata_out) then
       call write_result(index)
-    endif
+    end if
   end do
   return
 end subroutine write_result_all

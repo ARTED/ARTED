@@ -214,8 +214,9 @@ Module Global_Variables
   real(8),allocatable :: excited_electron(:,:)
 
   real(8),allocatable :: data_out(:,:,:,:)
-
   integer :: Nstep_write=100
+  integer :: Ndata_out, Ndata_out_per_proc
+  
 
   integer :: reentrance_switch
 
