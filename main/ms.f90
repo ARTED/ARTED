@@ -536,9 +536,12 @@ Program main
     call timer_end(LOG_OTHER)
 
     ! backup for system failure
-    if (mod(iter+1, backup_frequency) == 0) then
+    if (need_backup .and. iter > 0 .and. mod(iter, backup_frequency) == 0) then
       call timer_end(LOG_DYNAMICS)
+      call timer_end(LOG_ALL)
+      iter_now=iter
       call prep_Reentrance_write
+      call timer_begin(LOG_ALL)
       call timer_begin(LOG_DYNAMICS)
     end if
   enddo RTiteratopm !end of RT iteraction========================
@@ -720,6 +723,8 @@ Subroutine Read_data
 
 
   if(comm_is_root())then
+    read(*,*) backup_frequency
+    need_backup = (backup_frequency > 0)
     read(*,*) entrance_iter
     read(*,*) SYSname
     read(*,*) directory
@@ -745,6 +750,8 @@ Subroutine Read_data
     read(*,*) NEwald, aEwald
     read(*,*) KbTev ! sato
 
+    write(*,*) 'need backup?',need_backup
+    if (need_backup) write(*,*) '  frequency (# of iter) :',backup_frequency
     write(*,*) 'entrance_iter=',entrance_iter
     write(*,*) SYSname
     write(*,*) directory
@@ -779,6 +786,9 @@ Subroutine Read_data
     write(*,*) 'NEwald, aEwald =',NEwald, aEwald 
     write(*,*) 'KbTev=',KbTev ! sato
   end if
+
+  call comm_bcast(backup_frequency,proc_group(1))
+  call comm_bcast(need_backup,proc_group(1))
 
   call comm_bcast(SYSname,proc_group(1))
   call comm_bcast(directory,proc_group(1))

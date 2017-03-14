@@ -31,8 +31,6 @@ Module Global_Variables
 !  real(8),parameter :: CU=0.002d0,DU=-0.0116d0
 !yabana
 
-  integer,parameter :: backup_frequency = 10000 ! # of iteration
-
   integer :: iter_now,entrance_iter
   character(10) :: entrance_option    !initial or reentrance
   real(8) :: Time_shutdown
@@ -220,6 +218,9 @@ Module Global_Variables
   
 
   integer :: reentrance_switch = 0
+
+  integer :: backup_frequency = 10000 ! # of iteration
+  logical :: need_backup      = .FALSE.
 
 
 #if defined(__KNC__) || defined(__AVX512F__)
