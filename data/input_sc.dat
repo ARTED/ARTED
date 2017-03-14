@@ -1,5 +1,6 @@
 'new'                               ! entrance_option 'reentrance' or 'new'
 1d10                                ! Time_shutdown (sec)
+0                                   ! backup frequency (# of iter), if less than equal to zero, we not create backup
 0                                   ! entrance_iter
 'SiO2'                                ! SYSname
 './data/'                                ! directory
