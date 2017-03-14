@@ -402,6 +402,9 @@ subroutine prep_backup_values(is_backup)
   BACKUP(data_out)
   BACKUP(Nstep_write)
 
+  BACKUP(backup_frequency)
+  BACKUP(need_backup)
+
   if (is_backup) then
     call timer_reentrance_write(iounit)
   else
