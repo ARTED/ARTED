@@ -136,6 +136,7 @@ Module Global_Variables
   character(50) :: file_ac_vac_back     ! 942
   character(50) :: file_ac_m            ! 943
   character(50) :: file_ac              ! 902
+  character(50) :: file_macrogrid
 
   character(2) :: ext_field
   character(2) :: Longi_Trans
@@ -182,20 +183,22 @@ Module Global_Variables
 
 ! multi scale
   character(20) :: FDTDdim,TwoD_shape
-  integer :: NXY_s,NXY_e ! sato
-  integer :: NKsplit,NXYsplit ! sato
+  integer :: NXYZ_s,NXYZ_e,NXYZ_m
+  integer :: NKsplit,NXYZsplit ! sato
   integer :: macRANK,kRANK ! sato
+  real(8) :: chi_m,sigma_m
 
-  real(8) :: HX_m,HY_m
+  real(8) :: HX_m,HY_m,HZ_m
   integer :: NX_m,NXvacL_m,NXvacR_m
   integer :: NY_m,NYvacT_m,NYvacB_m
-  real(8),allocatable :: Ac_m(:,:,:),Ac_new_m(:,:,:),Ac_old_m(:,:,:)
-  real(8),allocatable :: Elec(:,:,:),Bmag(:,:,:)
-  real(8),allocatable :: j_m(:,:,:)
-  real(8),allocatable :: jmatter_m(:,:,:),jmatter_m_l(:,:,:)
-  real(8),allocatable :: g(:,:,:)
+  integer :: NZ_m,NZvacT_m,NZvacB_m
+  real(8),allocatable :: Ac_m(:,:,:,:),Ac_new_m(:,:,:,:),Ac_old_m(:,:,:,:)
+  real(8),allocatable :: Elec(:,:,:,:),Bmag(:,:,:,:)
+  real(8),allocatable :: j_m(:,:,:,:)
+  real(8),allocatable :: jmatter_m(:,:),jmatter_m_l(:,:)
+  real(8),allocatable :: g(:,:,:,:)
   real(8) :: bcon
-  integer,allocatable :: NX_table(:),NY_table(:)
+  integer,allocatable :: NX_table(:),NY_table(:),NZ_table(:)
   character(50) BC_my
 
   complex(8),allocatable :: zu_m(:,:,:,:)
@@ -204,16 +207,17 @@ Module Global_Variables
   real(8),allocatable :: Eexc_m(:,:)
   real(8),allocatable :: Vloc_m(:,:),Vloc_old_m(:,:,:)
   real(8),allocatable :: rho_m(:,:)
-  real(8),allocatable :: energy_joule(:,:)
-  real(8),allocatable :: energy_elec_Matter_l(:,:)
-  real(8),allocatable :: energy_elec_Matter(:,:)
-  real(8),allocatable :: energy_elec(:,:)
-  real(8),allocatable :: energy_elemag(:,:)
-  real(8),allocatable :: energy_total(:,:)
-  real(8),allocatable :: excited_electron_l(:,:)
-  real(8),allocatable :: excited_electron(:,:)
+  real(8),allocatable :: energy_joule(:,:,:)
+  real(8),allocatable :: energy_elec_Matter_l(:)
+  real(8),allocatable :: energy_elec_Matter(:)
+  real(8),allocatable :: energy_elec(:,:,:)
+  real(8),allocatable :: energy_elemag(:,:,:)
+  real(8),allocatable :: energy_total(:,:,:)
+  real(8),allocatable :: excited_electron_l(:)
+  real(8),allocatable :: excited_electron(:)
 
-  real(8),allocatable :: data_out(:,:,:,:)
+  real(8),allocatable :: data_out(:,:,:,:,:)
+
   integer :: Nstep_write=100
   integer :: Ndata_out, Ndata_out_per_proc
   

@@ -20,7 +20,7 @@ subroutine write_result(index)
   use communication, only: procid, nprocs
   implicit none
   integer, intent(in) :: index
-  integer :: iter,ix_m,iy_m
+  integer :: iter,ix_m,iy_m,iz_m
   ! export results of each calculation step
   ! (written by M.Uemoto on 2016-11-22)
   iter = Nstep_write * (nprocs(1) * index + procid(1))
@@ -30,16 +30,25 @@ subroutine write_result(index)
   case("1D")
     write(902,*) "# X Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E(EM) E(J) E(Mat) E(Tot)"
     do ix_m=NXvacL_m,NXvacR_m
-      write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,index)
+      write(902,'(17e26.16E3)') ix_m*HX_m, data_out(1:16,ix_m,1,1,index)
     end do
   case("2D", "2DC")
     write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
     do iy_m=NYvacB_m,NYvacT_m
       do ix_m=NXvacL_m,NXvacR_m
-        write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,index)
+        write(902,'(18e26.16E3)') ix_m*HX_m,iy_m*HY_m,data_out(1:16,ix_m,iy_m,1,index)
       end do
     end do
-  end select
+   case("3Dnano")
+    write(902,*) "# X Y Acx Acy Acz Ex Ey Ez Bx By Bz Jx Jy Jz E_EM E_J E_Mat E_Tot"
+    do iz_m=NZvacB_m,NZvacT_m
+      do iy_m=NYvacB_m,NYvacT_m
+        do ix_m=NXvacL_m,NXvacR_m
+          write(902,'(19e26.16E3)') ix_m*HX_m,iy_m*HY_m,iz_m*HZ_m,data_out(1:16,ix_m,iy_m,iz_m,index)
+        end do
+      end do
+    enddo
+ end select
   close(902)
   return
 end subroutine write_result
@@ -72,14 +81,14 @@ subroutine write_energy(iter)
 
   if(NY_m==1) then
     do ix_m=NXvacL_m,NXvacR_m
-      write(903,'(4e26.16E3)') ix_m*HX_m,energy_elemag(ix_m,1),energy_elec(ix_m,1) &
-        &,energy_total(ix_m,1)
+      write(903,'(4e26.16E3)') ix_m*HX_m,energy_elemag(ix_m,1,1),energy_elec(ix_m,1,1) &
+        &,energy_total(ix_m,1,1)
     end do
   else
     do iy_m=1,NY_m
       do ix_m=NXvacL_m,NXvacR_m
-        write(903,'(5e26.16E3)') ix_m*HX_m,iy_m*HY_m,energy_elemag(ix_m,iy_m),energy_elec(ix_m,iy_m) &
-          &,energy_total(ix_m,iy_m)
+        write(903,'(5e26.16E3)') ix_m*HX_m,iy_m*HY_m,energy_elemag(ix_m,iy_m,1),energy_elec(ix_m,iy_m,1) &
+          &,energy_total(ix_m,iy_m,1)
       end do
     end do
   end if
@@ -91,7 +100,7 @@ end subroutine write_energy
 subroutine write_excited_electron(iter)
   use Global_Variables
   implicit none
-  integer iter,ix_m,iy_m
+  integer iter,ix_m,iy_m,i
   character(30) wf,citer
   
   write(citer,'(I6.6)')iter
@@ -100,13 +109,17 @@ subroutine write_excited_electron(iter)
   open(903,file=wf)
 
   if(NY_m==1) then
+    i=0
     do ix_m=1,NX_m
-      write(903,'(2e26.16E3)') ix_m*HX_m,excited_electron(ix_m,1)
+      i=i+1
+      write(903,'(2e26.16E3)') ix_m*HX_m,excited_electron(i)
     end do
   else
+    i=0
     do iy_m=1,NY_m
       do ix_m=1,NX_m
-        write(903,'(3e26.16E3)') ix_m*HX_m,iy_m*Hy_m,excited_electron(ix_m,iy_m)
+        i=i+1
+        write(903,'(3e26.16E3)') ix_m*HX_m,iy_m*Hy_m,excited_electron(i)
       end do
     end do
   end if
@@ -137,8 +150,8 @@ subroutine init_Ac_ms
   use Global_variables
   use communication
   implicit none
-  real(8) x,y
-  integer ix_m,iy_m
+  real(8) x,y,z
+  integer ix_m,iy_m,iz_m
   real(8) Xstart
   real(8) wpulse_1
   real(8) wpulse_2
@@ -183,104 +196,118 @@ subroutine init_Ac_ms
   call comm_sync_all
 
   select case(FDTDdim)
-  case('1D')
+  case('1D', '3Dnano')
      if(AE_shape == 'Esin2sin') then
-     do iy_m=1,NY_m
-        y=iy_m*HY_m
+       do iz_m=NZvacB_m,NZvacT_m
+         z=iz_m*HZ_m
+       do iy_m=NYvacB_m,NYvacT_m
+         y=iy_m*HY_m
         do ix_m=NXvacL_m,0
            x=(ix_m-1)*HX_m
            if(x > -Xstart-tpulse_1*c_light .and. x < -Xstart) then
-              Ac_m(3,ix_m,iy_m)=Epdir_1(3)*(-f0_1/(2*omega_1)*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light) &
+              Ac_m(3,ix_m,iy_m,iz_m)=Epdir_1(3)*(-f0_1/(2*omega_1)*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light) &
                    &+f0_1/(4*(omega_1+wpulse_1))*cos((omega_1+wpulse_1)*(x+Xstart+tpulse_1*c_light)/c_light) &
                    &+f0_1/(4*(omega_1-wpulse_1))*cos((omega_1-wpulse_1)*(x+Xstart+tpulse_1*c_light)/c_light))
 
               
-              g(3,ix_m,iy_m)=-Epdir_1(3)*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+              g(3,ix_m,iy_m,iz_m)=-Epdir_1(3)*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
                    &*sin(omega_1*(x+Xstart+tpulse_1*c_light)/c_light)
 
-              Ac_m(2,ix_m,iy_m)=Epdir_1(2)*(-f0_1/(2*omega_1)*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light) &
+              Ac_m(2,ix_m,iy_m,iz_m)=Epdir_1(2)*(-f0_1/(2*omega_1)*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light) &
                    &+f0_1/(4*(omega_1+wpulse_1))*cos((omega_1+wpulse_1)*(x+Xstart+tpulse_1*c_light)/c_light) &
                    &+f0_1/(4*(omega_1-wpulse_1))*cos((omega_1-wpulse_1)*(x+Xstart+tpulse_1*c_light)/c_light)) 
               
-              g(2,ix_m,iy_m)=-Epdir_1(2)*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+              g(2,ix_m,iy_m,iz_m)=-Epdir_1(2)*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
                    &*sin(omega_1*(x+Xstart+tpulse_1*c_light)/c_light)
            endif
  
           if(x > -Xstart-(tpulse_1+T1_T2)*c_light .and. x < -Xstart-(tpulse_1+T1_T2-tpulse_2)*c_light) then
-      Ac_m(3,ix_m,iy_m)=Ac_m(3,ix_m,iy_m)+Epdir_2(3)*(-f0_2/(2*omega_2)*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
-                   &+f0_2/(4*(omega_2+wpulse_2))*cos((omega_2+wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
-                   &+f0_2/(4*(omega_2-wpulse_2))*cos((omega_2-wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light))
+            Ac_m(3,ix_m,iy_m,iz_m)=Ac_m(3,ix_m,iy_m,iz_m)+Epdir_2(3)*(-f0_2/(2*omega_2) &
+              & *cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
+              &+f0_2/(4*(omega_2+wpulse_2))*cos((omega_2+wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
+              &+f0_2/(4*(omega_2-wpulse_2))*cos((omega_2-wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light))
 
               
-              g(3,ix_m,iy_m)=g(3,ix_m,iy_m)-Epdir_2(3)*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
+              g(3,ix_m,iy_m,iz_m)=g(3,ix_m,iy_m,iz_m)-Epdir_2(3)*f0_2  &
+                   &*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
                    &*sin(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light)
 
-       Ac_m(2,ix_m,iy_m)=Ac_m(2,ix_m,iy_m)+Epdir_2(2)*(-f0_2/(2*omega_2)*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
+              Ac_m(2,ix_m,iy_m,iz_m)=Ac_m(2,ix_m,iy_m,iz_m)+Epdir_2(2)*(-f0_2/(2*omega_2)  &
+                   & *cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
                    &+f0_2/(4*(omega_2+wpulse_2))*cos((omega_2+wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light) &
                    &+f0_2/(4*(omega_2-wpulse_2))*cos((omega_2-wpulse_2)*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light)) 
 
              
-              g(2,ix_m,iy_m)=g(2,ix_m,iy_m)-Epdir_2(2)*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
+              g(2,ix_m,iy_m,iz_m)=g(2,ix_m,iy_m,iz_m)-Epdir_2(2)*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)  &
+                   & /(tpulse_2*c_light))**2 &
                    &*sin(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light)
            endif
         enddo
      enddo
+     enddo
 
-     do iy_m=1,NY_m
+     do iz_m=NZvacB_m,NZvacT_m
+     do iy_m=NYvacB_m,NYvacT_m
        do ix_m=NXvacL_m+1,NXvacR_m-1
-         Ac_new_m(2,ix_m,iy_m)=Ac_m(2,ix_m,iy_m)+dt*g(2,ix_m,iy_m)+0.5d0*(c_light*dt/HX_m)**2 &
-           *(Ac_m(2,ix_m+1,iy_m)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m-1,iy_m))+0.5d0*(c_light*dt/HY_m)**2 &
-           *(Ac_m(2,ix_m,iy_m+1)-2*Ac_m(2,ix_m,iy_m)+Ac_m(2,ix_m,iy_m-1))-4*pi*dt*dt*j_m(2,ix_m,iy_m) 
+         Ac_new_m(2,ix_m,iy_m,iz_m)=Ac_m(2,ix_m,iy_m,iz_m)+dt*g(2,ix_m,iy_m,iz_m)+0.5d0*(c_light*dt/HX_m)**2 &
+           *(Ac_m(2,ix_m+1,iy_m,iz_m)-2*Ac_m(2,ix_m,iy_m,iz_m)+Ac_m(2,ix_m-1,iy_m,iz_m))+0.5d0*(c_light*dt/HY_m)**2 &
+           *(Ac_m(2,ix_m,iy_m+1,iz_m)-2*Ac_m(2,ix_m,iy_m,iz_m)+Ac_m(2,ix_m,iy_m-1,iz_m))-4*pi*dt*dt*j_m(2,ix_m,iy_m,iz_m) 
          
-         Ac_new_m(3,ix_m,iy_m)=Ac_m(3,ix_m,iy_m)+dt*g(3,ix_m,iy_m)+0.5d0*(c_light*dt/HX_m)**2 &
-           *(Ac_m(3,ix_m+1,iy_m)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m-1,iy_m))+0.5d0*(c_light*dt/HY_m)**2 &
-           *(Ac_m(3,ix_m,iy_m+1)-2*Ac_m(3,ix_m,iy_m)+Ac_m(3,ix_m,iy_m-1))-4*pi*dt*dt*j_m(3,ix_m,iy_m) 
+         Ac_new_m(3,ix_m,iy_m,iz_m)=Ac_m(3,ix_m,iy_m,iz_m)+dt*g(3,ix_m,iy_m,iz_m)+0.5d0*(c_light*dt/HX_m)**2 &
+           *(Ac_m(3,ix_m+1,iy_m,iz_m)-2*Ac_m(3,ix_m,iy_m,iz_m)+Ac_m(3,ix_m-1,iy_m,iz_m))+0.5d0*(c_light*dt/HY_m)**2 &
+           *(Ac_m(3,ix_m,iy_m+1,iz_m)-2*Ac_m(3,ix_m,iy_m,iz_m)+Ac_m(3,ix_m,iy_m-1,iz_m))-4*pi*dt*dt*j_m(3,ix_m,iy_m,iz_m) 
        end do
+     enddo
      enddo
      
    else if(AE_shape == 'Asin2cos') then
-     do iy_m=1,NY_m
+     do iz_m=NZvacB_m,NZvacT_m
+       z=iz_m*HZ_m
+     do iy_m=NYvacB_m,NYvacT_m
        y=iy_m*HY_m
        do ix_m=NXvacL_m,0
          x=(ix_m-1)*HX_m
          if(x > -Xstart-tpulse_1*c_light .and. x < -Xstart) then
-           Ac_m(3,ix_m,iy_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+           Ac_m(3,ix_m,iy_m,iz_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
              &*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light+phi_CEP_1*2d0*pi)
            
-           Ac_m(2,ix_m,iy_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+           Ac_m(2,ix_m,iy_m,iz_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
              &*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light+phi_CEP_1*2d0*pi)
            
          endif
          
          if(x > -Xstart-(tpulse_1+T1_T2)*c_light .and. x < -Xstart-(tpulse_1+T1_T2-tpulse_2)*c_light ) then
            
-    Ac_m(3,ix_m,iy_m)=Ac_m(3,ix_m,iy_m)-Epdir_2(3)/omega_2*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
+    Ac_m(3,ix_m,iy_m,iz_m)=Ac_m(3,ix_m,iy_m,iz_m)-Epdir_2(3)/omega_2*f0_2  &
+       &*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
        &*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light+phi_CEP_2*2d0*pi)
           
-    Ac_m(2,ix_m,iy_m)=Ac_m(2,ix_m,iy_m)-Epdir_2(2)/omega_2*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
+    Ac_m(2,ix_m,iy_m,iz_m)=Ac_m(2,ix_m,iy_m,iz_m)-Epdir_2(2)/omega_2*f0_2  &
+                  &*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
                   &*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light+phi_CEP_2*2d0*pi)
          endif
          
          x=x-dt*c_light
          if(x > -Xstart-tpulse_1*c_light+dt*c_light .and. x < -Xstart+dt*c_light) then
-           Ac_new_m(3,ix_m,iy_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+           Ac_new_m(3,ix_m,iy_m,iz_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
              &*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light+phi_CEP_1*2d0*pi)
            
-           Ac_new_m(2,ix_m,iy_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+           Ac_new_m(2,ix_m,iy_m,iz_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
              &*cos(omega_1*(x+Xstart+tpulse_1*c_light)/c_light+phi_CEP_1*2d0*pi)
               
          endif
          
          if(x > -Xstart-(tpulse_1+T1_T2)*c_light+dt*c_light .and. x < -Xstart-(tpulse_1+T1_T2-tpulse_2)*c_light+dt*c_light ) then
-    Ac_new_m(3,ix_m,iy_m)=Ac_new_m(3,ix_m,iy_m)&
+    Ac_new_m(3,ix_m,iy_m,iz_m)=Ac_new_m(3,ix_m,iy_m,iz_m)&
              &-Epdir_2(3)/omega_2*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
              &*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light+phi_CEP_2*2d0*pi)
            
-    Ac_new_m(2,ix_m,iy_m)=Ac_new_m(2,ix_m,iy_m)&
+    Ac_new_m(2,ix_m,iy_m,iz_m)=Ac_new_m(2,ix_m,iy_m,iz_m)&
              &-Epdir_2(2)/omega_2*f0_2*sin(pi*(x+Xstart+(tpulse_1+T1_T2)*c_light)/(tpulse_2*c_light))**2 &
              &*cos(omega_2*(x+Xstart+(tpulse_1+T1_T2)*c_light)/c_light+phi_CEP_2*2d0*pi)
          endif
        enddo
+     enddo
      enddo
    end if
 
@@ -292,26 +319,29 @@ subroutine init_Ac_ms
    ky=kabs*sin(angle)
    length_y=2d0*pi/ky
    HY_m=length_y/dble(NY_m)
+   do iz_m=NZvacB_m,NZvacT_m
+     z=iz_m*HZ_m
    do iy_m=1,NY_m
      y=iy_m*HY_m
      do ix_m=NXvacL_m,0
        x=(ix_m-1)*HX_m
        if(x > -Xstart-tpulse_1*c_light .and. x < -Xstart) then
-         Ac_m(3,ix_m,iy_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+         Ac_m(3,ix_m,iy_m,iz_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
            &*cos(kx*(x+Xstart+tpulse_1*c_light)+ky*y)
          
-         Ac_m(2,ix_m,iy_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+         Ac_m(2,ix_m,iy_m,iz_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
            &*cos(kx*(x+Xstart+tpulse_1*c_light)+ky*y)
        endif
        if(x > -Xstart-tpulse_1*c_light .and. x < -Xstart) then
-         Ac_new_m(3,ix_m,iy_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+         Ac_new_m(3,ix_m,iy_m,iz_m)=-Epdir_1(3)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
             &*cos(kx*(x+Xstart+tpulse_1*c_light)+ky*y-omega_1*dt)            
          
-         Ac_new_m(2,ix_m,iy_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
+         Ac_new_m(2,ix_m,iy_m,iz_m)=-Epdir_1(2)/omega_1*f0_1*sin(pi*(x+Xstart+tpulse_1*c_light)/(tpulse_1*c_light))**2 &
            &*cos(kx*(x+Xstart+tpulse_1*c_light)+ky*y-omega_1*dt)            
        endif
      end do
    end do
+   enddo
  end select
 
 
@@ -323,22 +353,38 @@ subroutine init_Ac_ms
 
   select case(TwoD_shape)
   case('periodic')
-    Ac_new_m(:,:,0)=Ac_new_m(:,:,NY_m)
-    Ac_new_m(:,:,NY_m+1)=Ac_new_m(:,:,1)
-    Ac_m(:,:,0)=Ac_m(:,:,NY_m)
-    Ac_m(:,:,NY_m+1)=Ac_m(:,:,1)
-    g(:,:,0)=g(:,:,NY_m)
-    g(:,:,NY_m+1)=g(:,:,1)
+    Ac_new_m(:,:,0,:)=Ac_new_m(:,:,NY_m,:)
+    Ac_new_m(:,:,NY_m+1,:)=Ac_new_m(:,:,1,:)
+    Ac_m(:,:,0,:)=Ac_m(:,:,NY_m,:)
+    Ac_m(:,:,NY_m+1,:)=Ac_m(:,:,1,:)
+    g(:,:,0,:)=g(:,:,NY_m,:)
+    g(:,:,NY_m+1,:)=g(:,:,1,:)
   case('isolated')
-    Ac_new_m(:,:,0)=Ac_new_m(:,:,1)
-    Ac_new_m(:,:,NY_m+1)=0d0
-    Ac_m(:,:,0)=Ac_m(:,:,1)
-    Ac_m(:,:,NY_m+1)=0d0
-    g(:,:,0)=g(:,:,1)
-    g(:,:,NY_m+1)=0d0
+    Ac_new_m(:,:,0,:)=Ac_new_m(:,:,1,:)
+    Ac_new_m(:,:,NY_m+1,:)=0d0
+    Ac_m(:,:,0,:)=Ac_m(:,:,1,:)
+    Ac_m(:,:,NY_m+1,:)=0d0
+    g(:,:,0,:)=g(:,:,1,:)
+    g(:,:,NY_m+1,:)=0d0
   case default
     stop 'boundary condition is not good'
   end select
+  
+  if(FDTDdim == '3Dnano') then
+    Ac_new_m(:,:,NYvacB_m-1,:)=Ac_new_m(:,:,NYvacT_m,:)
+    Ac_new_m(:,:,NYvacT_m+1,:)=Ac_new_m(:,:,NYvacB_m,:)
+    Ac_new_m(:,:,:,NZvacB_m-1)=Ac_new_m(:,:,:,NZvacT_m)
+    Ac_new_m(:,:,:,NZvacT_m+1)=Ac_new_m(:,:,:,NZvacB_m)
+    Ac_m(:,:,NYvacB_m-1,:)=Ac_m(:,:,NYvacT_m,:)
+    Ac_m(:,:,NYvacT_m+1,:)=Ac_m(:,:,NYvacB_m,:)
+    Ac_m(:,:,:,NZvacB_m-1)=Ac_m(:,:,:,NZvacT_m)
+    Ac_m(:,:,:,NZvacT_m+1)=Ac_m(:,:,:,NZvacB_m)
+    g(:,:,NYvacB_m-1,:)=g(:,:,NYvacT_m,:)
+    g(:,:,NYvacT_m+1,:)=g(:,:,NYvacB_m,:)
+    g(:,:,:,NZvacB_m-1)=g(:,:,:,NZvacT_m)
+    g(:,:,:,NZvacT_m+1)=g(:,:,:,NZvacB_m)
+  endif
+  
   return
 end subroutine init_Ac_ms
 !===========================================================
@@ -365,10 +411,10 @@ subroutine dt_evolve_Ac_1d
 !$    firstprivate(dt)
   do ix_m=NXvacL_m,NXvacR_m
     RR(1) = 0.0d0
-    RR(2) = -(Ac_m(2,ix_m+1,1) - 2*Ac_m(2,ix_m,1) + Ac_m(2,ix_m-1,1)) * (1.0 / HX_m**2) 
-    RR(3) = -(Ac_m(3,ix_m+1,1) - 2*Ac_m(3,ix_m,1) + Ac_m(3,ix_m-1,1)) * (1.0 / HX_m**2) 
-    Ac_new_m(:,ix_m,1) = (2*Ac_m(:,ix_m,1) - Ac_old_m(:,ix_m,1) &
-      & - j_m(:,ix_m,1)*4.0d0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+    RR(2) = -(Ac_m(2,ix_m+1,1,1) - 2*Ac_m(2,ix_m,1,1) + Ac_m(2,ix_m-1,1,1)) * (1.0 / HX_m**2) 
+    RR(3) = -(Ac_m(3,ix_m+1,1,1) - 2*Ac_m(3,ix_m,1,1) + Ac_m(3,ix_m-1,1,1)) * (1.0 / HX_m**2) 
+    Ac_new_m(:,ix_m,1,1) = (2*Ac_m(:,ix_m,1,1) - Ac_old_m(:,ix_m,1,1) &
+      & - j_m(:,ix_m,1,1)*4.0d0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
   end do
 !$omp end parallel do
   return
@@ -400,27 +446,27 @@ subroutine dt_evolve_Ac_2d
 !$    firstprivate(dt)
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
-      RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1) &
-            & +(+2.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m) &
-            & +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m+1) &
-            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1) &
-            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1) &
-            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1) &
-            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1)
-      RR(2) = +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1) &
-            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1) &
-            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1) &
-            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1) &
-            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m-1, iy_m) &
-            & +(+2.00d0/HX_m**2) * Ac_m(2, ix_m, iy_m) &
-            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m+1, iy_m)
-      RR(3) = +(-1.00d0/HX_m**2) * Ac_m(3, ix_m-1, iy_m) &
-            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m-1) &
-            & +(+2.00d0/HY_m**2 +2.00d0/HX_m**2) * Ac_m(3, ix_m, iy_m) &
-            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m+1) &
-            & +(-1.00d0/HX_m**2) * Ac_m(3, ix_m+1, iy_m)
-      Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
-        & -j_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+      RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1, 1) &
+            & +(+2.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m, 1) &
+            & +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m+1, 1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1, 1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1, 1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1, 1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1, 1)
+      RR(2) = +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1, 1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1, 1) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1, 1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1, 1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m-1, iy_m, 1) &
+            & +(+2.00d0/HX_m**2) * Ac_m(2, ix_m, iy_m, 1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m+1, iy_m, 1)
+      RR(3) = +(-1.00d0/HX_m**2) * Ac_m(3, ix_m-1, iy_m, 1) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m-1, 1) &
+            & +(+2.00d0/HY_m**2 +2.00d0/HX_m**2) * Ac_m(3, ix_m, iy_m, 1) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m+1, 1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(3, ix_m+1, iy_m, 1)
+      Ac_new_m(:,ix_m,iy_m,1) = (2 * Ac_m(:,ix_m,iy_m,1) - Ac_old_m(:,ix_m,iy_m,1) &
+        & -j_m(:,ix_m,iy_m,1) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
 !$omp end parallel do
@@ -432,8 +478,8 @@ subroutine dt_evolve_Ac_2d
 !$    private(ix_m) &
 !$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
     do ix_m=NXvacL_m-1,NXvacR_m+1
-      Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacT_m)
-      Ac_new_m(:,ix_m,NYvacT_m+1)=Ac_new_m(:,ix_m,NYvacB_m)
+      Ac_new_m(:,ix_m,NYvacB_m-1,1)=Ac_new_m(:,ix_m,NYvacT_m,1)
+      Ac_new_m(:,ix_m,NYvacT_m+1,1)=Ac_new_m(:,ix_m,NYvacB_m,1)
     enddo
 !$omp end parallel do
   case('isolated')
@@ -441,8 +487,8 @@ subroutine dt_evolve_Ac_2d
 !$    private(ix_m) &
 !$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
     do ix_m=NXvacL_m-1,NXvacR_m+1
-      Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacB_m)
-      Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
+      Ac_new_m(:,ix_m,NYvacB_m-1,1)=Ac_new_m(:,ix_m,NYvacB_m,1)
+      Ac_new_m(:,ix_m,NYvacT_m+1,1)=0.0d0
     enddo
 !$omp end parallel do
   end select
@@ -476,29 +522,29 @@ subroutine dt_evolve_Ac_2dc()
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
       Y = (iy_m - 0.50d0) * HY_m
-      RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
-            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
-            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
-            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1) &
-            & -0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m-1,iy_m+0) &
-            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m+1) &
-            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m-1) &
-            & +0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m+1,iy_m+0) &
-            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m+1)
-      RR(2) = +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m-1) &
-            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m+1) &
-            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m-1) &
-            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m+1) &
-            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m-1,iy_m+0) &
-            & +2.00d0*(1.00d0/HX_m**2)*Ac_m(2,ix_m+0,iy_m+0) &
-            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m+1,iy_m+0)
-      RR(3) = -(1.00d0/HX_m**2)*Ac_m(3,ix_m-1,iy_m+0) &
-            & +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m-1) &
-            & +(+(1.00d0/Y**2)+2.00d0*(1.00d0/HX_m**2)+2.00d0*(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+0) &
-            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+1) &
-            & -(1.00d0/HX_m**2)*Ac_m(3,ix_m+1,iy_m+0)
-      Ac_new_m(:,ix_m,iy_m) = (2 * Ac_m(:,ix_m,iy_m) - Ac_old_m(:,ix_m,iy_m) &
-        & -J_m(:,ix_m,iy_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+      RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1,1) &
+            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0.1) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1,1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1,1) &
+            & -0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m-1,iy_m+0,1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m+1,1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m-1,1) &
+            & +0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m+1,iy_m+0,1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m+1,iy_m+1,1)
+      RR(2) = +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m-1,1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m-1,iy_m+1,1) &
+            & -0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m-1,1) &
+            & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(1,ix_m+1,iy_m+1,1) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m-1,iy_m+0,1) &
+            & +2.00d0*(1.00d0/HX_m**2)*Ac_m(2,ix_m+0,iy_m+0,1) &
+            & -(1.00d0/HX_m**2)*Ac_m(2,ix_m+1,iy_m+0,1)
+      RR(3) = -(1.00d0/HX_m**2)*Ac_m(3,ix_m-1,iy_m+0,1) &
+            & +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m-1,1) &
+            & +(+(1.00d0/Y**2)+2.00d0*(1.00d0/HX_m**2)+2.00d0*(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+0,1) &
+            & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(3,ix_m+0,iy_m+1,1) &
+            & -(1.00d0/HX_m**2)*Ac_m(3,ix_m+1,iy_m+0,1)
+      Ac_new_m(:,ix_m,iy_m,1) = (2 * Ac_m(:,ix_m,iy_m,1) - Ac_old_m(:,ix_m,iy_m,1) &
+        & -J_m(:,ix_m,iy_m,1) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
 !$omp end parallel do
@@ -508,12 +554,79 @@ subroutine dt_evolve_Ac_2dc()
 !$    private(ix_m) &
 !$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
   do ix_m=NXvacL_m-1,NXvacR_m+1
-    Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacB_m)
-    Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
+    Ac_new_m(:,ix_m,NYvacB_m-1,1)=Ac_new_m(:,ix_m,NYvacB_m,1)
+    Ac_new_m(:,ix_m,NYvacT_m+1,1)=0.0d0
   enddo
 !$omp end parallel do
   return
 end subroutine dt_evolve_Ac_2dc
+!===========================================================
+subroutine dt_evolve_Ac_3Dnano
+  use Global_variables, only: Ac_old_m, Ac_m, Ac_new_m, &
+                            & NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,  &
+                            & NZvacB_m,NZvacT_m,HZ_m, &
+                            & HX_m, HY_m, dt, j_m, c_light, pi, c_light
+  implicit none
+  integer :: ix_m,iy_m,iz_m
+  real(8) :: RR(3) ! rot rot Ac
+  ! (written by M.Uemoto on 2016-11-22)
+  Ac_old_m=Ac_m
+  Ac_m=Ac_new_m
+  do iy_m=NYvacB_m,NYvacT_m
+    do ix_m=NXvacL_m,NXvacR_m
+      RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1, iz_m) &
+            & +(+2.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m+1, iz_m) &
+            & +(-1.00d0/HZ_m**2) * Ac_m(1, ix_m, iy_m, iz_m-1) &
+            & +(+2.00d0/HZ_m**2) * Ac_m(1, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HZ_m**2) * Ac_m(1, ix_m, iy_m, iz_m+1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m-1, iz_m) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m-1, iy_m+1, iz_m) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m-1, iz_m) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(2, ix_m+1, iy_m+1, iz_m) &
+            & +(+0.25d0/HX_m/HZ_m) * Ac_m(3, ix_m-1, iy_m, iz_m-1) &
+            & +(-0.25d0/HX_m/HZ_m) * Ac_m(3, ix_m-1, iy_m, iz_m+1) &
+            & +(-0.25d0/HX_m/HZ_m) * Ac_m(3, ix_m+1, iy_m, iz_m-1) &
+            & +(+0.25d0/HX_m/HZ_m) * Ac_m(3, ix_m+1, iy_m, iz_m+1)
+      RR(2) = +(-1.00d0/HZ_m**2) * Ac_m(2, ix_m, iy_m, iz_m-1) &
+            & +(+2.00d0/HZ_m**2) * Ac_m(2, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HZ_m**2) * Ac_m(2, ix_m, iy_m, iz_m+1) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m-1, iy_m, iz_m) &
+            & +(+2.00d0/HX_m**2) * Ac_m(2, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HX_m**2) * Ac_m(2, ix_m+1, iy_m, iz_m) &
+            & +(+0.25d0/HY_m/HZ_m) * Ac_m(3, ix_m, iy_m-1, iz_m-1) &
+            & +(-0.25d0/HY_m/HZ_m) * Ac_m(3, ix_m, iy_m-1, iz_m+1) &
+            & +(-0.25d0/HY_m/HZ_m) * Ac_m(3, ix_m, iy_m+1, iz_m-1) &
+            & +(+0.25d0/HY_m/HZ_m) * Ac_m(3, ix_m, iy_m+1, iz_m+1) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m-1, iz_m) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m-1, iy_m+1, iz_m) &
+            & +(-0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m-1, iz_m) &
+            & +(+0.25d0/HX_m/HY_m) * Ac_m(1, ix_m+1, iy_m+1, iz_m)
+      RR(3) = +(-1.00d0/HX_m**2) * Ac_m(3, ix_m+1, iy_m, iz_m) &
+            & +(+2.00d0/HX_m**2) * Ac_m(3, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HX_m**2) * Ac_m(3, ix_m-1, iy_m, iz_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m+1, iz_m) &
+            & +(+2.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m, iz_m) &
+            & +(-1.00d0/HY_m**2) * Ac_m(3, ix_m, iy_m-1, iz_m) &
+            & +(+0.25d0/HX_m/HZ_m) * Ac_m(1, ix_m-1, iy_m, iz_m-1) &
+            & +(-0.25d0/HX_m/HZ_m) * Ac_m(1, ix_m-1, iy_m, iz_m+1) &
+            & +(-0.25d0/HX_m/HZ_m) * Ac_m(1, ix_m+1, iy_m, iz_m-1) &
+            & +(+0.25d0/HX_m/HZ_m) * Ac_m(1, ix_m+1, iy_m, iz_m+1) &
+            & +(+0.25d0/HY_m/HZ_m) * Ac_m(2, ix_m, iy_m-1, iz_m-1) &
+            & +(-0.25d0/HY_m/HZ_m) * Ac_m(2, ix_m, iy_m-1, iz_m+1) &
+            & +(-0.25d0/HY_m/HZ_m) * Ac_m(2, ix_m, iy_m+1, iz_m-1) &
+            & +(+0.25d0/HY_m/HZ_m) * Ac_m(2, ix_m, iy_m+1, iz_m+1)
+      Ac_new_m(:,ix_m,iy_m,iz_m) = (2 * Ac_m(:,ix_m,iy_m,iz_m) - Ac_old_m(:,ix_m,iy_m,iz_m) &
+        & -j_m(:,ix_m,iy_m,iz_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
+    end do
+  end do
+  ! Boundary Condition
+    Ac_new_m(:,:,NYvacB_m-1,:)=Ac_new_m(:,:,NYvacT_m,:)
+    Ac_new_m(:,:,NYvacT_m+1,:)=Ac_new_m(:,:,NYvacB_m,:)
+    Ac_new_m(:,:,:,NZvacB_m-1)=Ac_new_m(:,:,:,NZvacT_m)
+    Ac_new_m(:,:,:,NZvacT_m+1)=Ac_new_m(:,:,:,NZvacB_m)
+    return
+end subroutine dt_evolve_Ac_3dnano
 !===========================================================
 subroutine dt_evolve_Ac
   use Global_variables
@@ -529,8 +642,10 @@ subroutine dt_evolve_Ac
     call dt_evolve_Ac_2d()
   case('2DC')
     call dt_evolve_Ac_2dc()
+  case('3Dnano')
+    call dt_evolve_Ac_3dnano()
   end select
-  
+   
   call timer_end(LOG_DT_EVOLVE_AC)
       
   return
@@ -538,10 +653,11 @@ end subroutine dt_evolve_Ac
 !===========================================================
 subroutine calc_elec_field()
   use Global_variables, only: Ac_old_m, Ac_new_m, Elec, &
-                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, & 
+                            & NZvacB_m, NZvacT_m, &
                             & dt
   implicit none
-  integer ix_m,iy_m
+  integer ix_m,iy_m,iz_m
   ! calculate the electric field from the vector potential Ac
   ! (written by M.Uemoto on 2016-11-22)
 
@@ -549,10 +665,12 @@ subroutine calc_elec_field()
 !$    private(iy_m,ix_m) &
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Ac_new_m,Ac_old_m) &
 !$    firstprivate(dt)
+  do iz_m=NZvacB_m, NZvacT_m
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
-      Elec(:,ix_m,iy_m)=-(Ac_new_m(:,ix_m,iy_m)-Ac_old_m(:,ix_m,iy_m))/(2d0*dt)
+      Elec(:,ix_m,iy_m,iz_m)=-(Ac_new_m(:,ix_m,iy_m,iz_m)-Ac_old_m(:,ix_m,iy_m,iz_m))/(2d0*dt)
     end do
+  end do
   end do
 !$omp end parallel do
 end subroutine calc_elec_field
@@ -570,9 +688,9 @@ subroutine calc_bmag_field_1d()
 !$    shared(NXvacL_m,NXvacR_m,HX_m,Bmag,Ac_m)
   do ix_m=NXvacL_m, NXvacR_m
     Rc(1) = 0.0d0
-    Rc(2) = - (Ac_m(3,ix_m+1,1) - Ac_m(3,ix_m-1,1)) / (2 * HX_m)
-    Rc(3) = + (Ac_m(2,ix_m+1,1) - Ac_m(2,ix_m-1,1)) / (2 * HX_m)
-    Bmag(:,ix_m,1) = Rc(:) * c_light
+    Rc(2) = - (Ac_m(3,ix_m+1,1,1) - Ac_m(3,ix_m-1,1,1)) / (2 * HX_m)
+    Rc(3) = + (Ac_m(2,ix_m+1,1,1) - Ac_m(2,ix_m-1,1,1)) / (2 * HX_m)
+    Bmag(:,ix_m,1,1) = Rc(:) * c_light
   end do
 !$omp end parallel do
   return
@@ -593,11 +711,11 @@ subroutine calc_bmag_field_2d()
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HY_m,HX_m,Bmag,Ac_m)
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
-      Rc(1) = + (Ac_m(3, ix_m, iy_m+1) - Ac_m(3, ix_m, iy_m-1)) / (2*HY_m)
-      Rc(2) = - (Ac_m(3, ix_m+1, iy_m) - Ac_m(3, ix_m-1, iy_m)) / (2*HX_m)
-      Rc(3) = + (Ac_m(2, ix_m+1, iy_m) - Ac_m(2, ix_m-1, iy_m)) / (2*HX_m) &
-            & - (Ac_m(1, ix_m, iy_m+1) - Ac_m(1, ix_m, iy_m-1)) / (2*HY_m)
-      Bmag(:,ix_m,iy_m) = Rc(:) * c_light
+      Rc(1) = + (Ac_m(3, ix_m, iy_m+1, 1) - Ac_m(3, ix_m, iy_m-1, 1)) / (2*HY_m)
+      Rc(2) = - (Ac_m(3, ix_m+1, iy_m, 1) - Ac_m(3, ix_m-1, iy_m, 1)) / (2*HX_m)
+      Rc(3) = + (Ac_m(2, ix_m+1, iy_m, 1) - Ac_m(2, ix_m-1, iy_m, 1)) / (2*HX_m) &
+            & - (Ac_m(1, ix_m, iy_m+1, 1) - Ac_m(1, ix_m, iy_m-1, 1)) / (2*HY_m)
+      Bmag(:,ix_m,iy_m,1) = Rc(:) * c_light
     end do
   end do
 !$omp end parallel do
@@ -620,22 +738,48 @@ subroutine calc_bmag_field_2dc()
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
       Y = (iy_m-0.5d0) * HY_m
-      Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
-            & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0) &
-            & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
-      Rc(2) = +0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m-1,iy_m+0) &
-            & -0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m+1,iy_m+0)
-      Rc(3) = +0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m-1) &
-            & -0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m+1) &
-            & -0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m-1,iy_m+0) &
-            & +0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m+1,iy_m+0)
-      Bmag(:,ix_m,iy_m) = Rc(:) * c_light
+      Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1,1) &
+            & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0,1) &
+            & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1,1)
+      Rc(2) = +0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m-1,iy_m+0,1) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(3,ix_m+1,iy_m+0,1)
+      Rc(3) = +0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m-1,1) &
+            & -0.50d0*(1.00d0/HY_m)*Ac_m(1,ix_m+0,iy_m+1,1) &
+            & -0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m-1,iy_m+0,1) &
+            & +0.50d0*(1.00d0/HX_m)*Ac_m(2,ix_m+1,iy_m+0,1)
+      Bmag(:,ix_m,iy_m,1) = Rc(:) * c_light
     end do
   end do
 !$omp end parallel do
 
   return
 end subroutine calc_bmag_field_2dc
+!===========================================================
+subroutine calc_bmag_field_3dnano()
+  use Global_variables, only: Ac_m, Bmag, &
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & NZvacB_m, NZvacT_m, HZ_m, &
+                            & HX_m, HY_m, c_light
+  implicit none
+  integer :: ix_m,iy_m,iz_m
+  real(8) :: rc(3)  ! rot Ac
+  ! calculate the magnetic field from the vector potential (2D case)
+  ! (written by M.Uemoto on 2016-11-22)
+  do iz_m=NZvacB_m, NZvacT_m
+  do iy_m=NYvacB_m, NYvacT_m
+    do ix_m=NXvacL_m, NXvacR_m
+      Rc(1) = + (Ac_m(3, ix_m, iy_m+1, iz_m) - Ac_m(3, ix_m, iy_m-1, iz_m)) / (2*HY_m) &
+	        & - (Ac_m(2, ix_m, iy_m, iz_m+1) - Ac_m(2, ix_m, iy_m, iz_m-1)) / (2*HZ_m)
+      Rc(2) = + (Ac_m(1, ix_m+1, iy_m, iz_m) - Ac_m(1, ix_m-1, iy_m, iz_m)) / (2*HX_m) &
+	        & - (Ac_m(3, ix_m+1, iy_m, iz_m) - Ac_m(3, ix_m-1, iy_m, iz_m)) / (2*HX_m)
+      Rc(3) = + (Ac_m(2, ix_m+1, iy_m, iz_m) - Ac_m(2, ix_m-1, iy_m, iz_m)) / (2*HX_m) &
+            & - (Ac_m(1, ix_m, iy_m+1, iz_m) - Ac_m(1, ix_m, iy_m-1, iz_m)) / (2*HY_m)
+      Bmag(:,ix_m,iy_m,iz_m) = Rc(:) * c_light
+    end do
+  end do
+  enddo
+  return
+end subroutine calc_bmag_field_3dnano
 !===========================================================
 subroutine calc_bmag_field()
   use Global_variables
@@ -647,53 +791,57 @@ subroutine calc_bmag_field()
     call calc_bmag_field_2d()
   case('2DC')
     call calc_bmag_field_2dc()
+  case('3Dnano')
+    call calc_bmag_field_3dnano()
   end select
   return
 end subroutine calc_bmag_field
 !===========================================================
 subroutine calc_energy_joule()
   use Global_variables, only: energy_joule, Elec, j_m, dt, aLxyz, &
-                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, pi
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & NZvacB_m, NZvacT_m, pi
   implicit none
-  integer :: ix_m,iy_m
+  integer :: ix_m,iy_m,iz_m
   ! calculate the Ohmic losses in the media
   ! (written by M.Uemoto on 2016-11-22)
-
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m) &
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,energy_joule,j_m,Elec,aLxyz) &
 !$    firstprivate(dt)
+  do iz_m=NZvacB_m,NZvacT_m
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
-      energy_joule(ix_m, iy_m) = energy_joule(ix_m, iy_m) &
-          & + sum(-j_m(:,ix_m,iy_m) * Elec(:,ix_m,iy_m)) * dt * aLxyz
+      energy_joule(ix_m,iy_m,iz_m) = energy_joule(ix_m,iy_m,iz_m) &
+          & + sum(-j_m(:,ix_m,iy_m,iz_m) * Elec(:,ix_m,iy_m,iz_m)) * dt * aLxyz
     end do
   end do
+  end do
 !$omp end parallel do
-
   return
 end subroutine calc_energy_joule
 !===========================================================
 subroutine calc_energy_elemag()
   use Global_variables, only: Elec, Bmag, energy_elemag, aLxyz, &
-                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, pi
+                            & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
+                            & NZvacB_m, NZvacT_m, pi
   implicit none
-  integer :: ix_m,iy_m
+  integer :: ix_m,iy_m,iz_m
   real(8) :: e2, b2
   ! calculate the total electromagnetic energy
   ! (written by M.Uemoto on 2016-11-22)
-
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m,e2,b2) &
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Bmag,energy_elemag,aLxyz)
+  do iz_m=NZvacB_m,NZvacT_m
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
-      e2 = sum(Elec(:, ix_m, iy_m) ** 2)
-      b2 = sum(Bmag(:, ix_m, iy_m) ** 2)
-      energy_elemag(ix_m, iy_m) = (1.0 / (8.0 * pi)) * aLxyz * (e2 + b2)
+      e2 = sum(Elec(:, ix_m,iy_m,iz_m) ** 2)
+      b2 = sum(Bmag(:, ix_m,iy_m,iz_m) ** 2)
+      energy_elemag(ix_m,iy_m,iz_m) = (1.0 / (8.0 * pi)) * aLxyz * (e2 + b2)
     end do
   end do
+  end do
 !$omp end parallel do
-
   return
 end subroutine calc_energy_elemag

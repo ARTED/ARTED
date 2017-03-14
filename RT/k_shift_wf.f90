@@ -28,7 +28,7 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
     Vloc_t(:)=Vloc(:)
     Vloc(:)=Vloc_GS(:)
   end if
-  zu_GS(:,:,:)=zu_GS0(:,:,:)
+!  zu_GS(:,:,:)=zu_GS0(:,:,:)
   call diag_omp
   do iter_GS=1,iter_GS_max
     call CG_omp(Ncg)
@@ -55,7 +55,7 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
     Vloc(:)=Vloc_t(:)
   end if
 
-  zu_GS0(:,:,:)=zu_GS(:,:,:)
+!  zu_GS0(:,:,:)=zu_GS(:,:,:)
 
   return
 End Subroutine k_shift_wf
@@ -72,7 +72,7 @@ Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max)
     Vloc_t(:)=Vloc(:)
     Vloc(:)=Vloc_GS(:)
   end if
-  zu_GS(:,:,:)=zu_GS0(:,:,:)
+!  zu_GS(:,:,:)=zu_GS0(:,:,:)
   call diag_omp
   do iter_GS=1,iter_GS_max
     call CG_omp(Ncg)

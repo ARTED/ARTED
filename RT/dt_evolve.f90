@@ -63,10 +63,10 @@ contains
   end subroutine
 end subroutine
 
-subroutine dt_evolve_KB_MS(ix_m,iy_m)
+subroutine dt_evolve_KB_MS(ix_m,iy_m,iz_m)
   use global_variables, only: propagator,kAc,kAc0,Ac_new_m,Ac_m
   implicit none
-  integer, intent(in) :: ix_m, iy_m
+  integer, intent(in) :: ix_m, iy_m, iz_m
 
   select case(propagator)
     case('default')
@@ -82,7 +82,7 @@ contains
     implicit none
     integer :: ixyz
     do ixyz=1,3
-      kAc(:,ixyz)=kAc0(:,ixyz)+(Ac_new_m(ixyz,ix_m,iy_m)+Ac_m(ixyz,ix_m,iy_m))/2d0
+      kAc(:,ixyz)=kAc0(:,ixyz)+(Ac_new_m(ixyz,ix_m,iy_m,iz_m)+Ac_m(ixyz,ix_m,iy_m,iz_m))/2d0
     enddo
 !$acc update device(kAc)
     call dt_evolve_omp_KB_MS
@@ -93,8 +93,8 @@ contains
     implicit none
     integer :: ixyz
     do ixyz=1,3
-      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_m(ixyz,ix_m,iy_m)
-      kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_new_m(ixyz,ix_m,iy_m)
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_m(ixyz,ix_m,iy_m,iz_m)
+      kAc_new(:,ixyz)=kAc0(:,ixyz)+Ac_new_m(ixyz,ix_m,iy_m,iz_m)
     enddo
 !$acc update device(kAc,kAc_new)
     call dt_evolve_etrs_omp_KB

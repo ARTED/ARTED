@@ -30,9 +30,8 @@ Program main
   integer :: iter,ik,ib,ia
   character(3) :: Rion_update
   character(10) :: functional_t
-  integer :: ix_m,iy_m,ixy_m
+  integer :: ix_m,iy_m,iz_m,ixyz_m
   integer :: index, n
-
 !$ integer :: omp_get_max_threads  
 
   call comm_init
@@ -210,7 +209,7 @@ Program main
     write(*,*) '-----------------------------------------------------------'
   end if
 
-  zu_GS0(:,:,:)=zu_GS(:,:,:)
+!  zu_GS0(:,:,:)=zu_GS(:,:,:)
 
   zu(:,:,:)=zu_GS(:,1:NBoccmax,:)
   Rion_eq=Rion
@@ -285,15 +284,15 @@ Program main
 
   Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! sato ---------------------------------------
-  if(NXYsplit /= 1)then
-    do ixy_m=NXY_s,NXY_e
-      zu_m(:,:,:,ixy_m)=zu(:,1:NBoccmax,:)
-      rho_m(:,ixy_m)=rho(:)
-      Vh_m(:,ixy_m)=Vh(:)
-      Vexc_m(:,ixy_m)=Vexc(:)
-      Eexc_m(:,ixy_m)=Eexc(:)
-      Vloc_m(:,ixy_m)=Vloc(:)
-      Vloc_old_m(:,:,ixy_m)=Vloc_old(:,:)
+  if(NXYZsplit /= 1)then
+    do ixyz_m=NXYZ_s,NXYZ_e
+      zu_m(:,:,:,ixyz_m)=zu(:,1:NBoccmax,:)
+      rho_m(:,ixyz_m)=rho(:)
+      Vh_m(:,ixyz_m)=Vh(:)
+      Vexc_m(:,ixyz_m)=Vexc(:)
+      Eexc_m(:,ixyz_m)=Eexc(:)
+      Vloc_m(:,ixyz_m)=Vloc(:)
+      Vloc_old_m(:,:,ixyz_m)=Vloc_old(:,:)
     end do
   end if
 ! sato ---------------------------------------
@@ -310,7 +309,7 @@ Program main
   write(file_energy_transfer, "(A,'energy-transfer.out')") trim(directory)
   write(file_ac_vac, "(A,'Ac_Vac.out')") trim(directory)
   write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
-  write(file_ac_m, "(A,'Ac_M',I4.4,'.out')") trim(directory), NXY_s
+  write(file_ac_m, "(A,'Ac_M',I4.4,'.out')") trim(directory), NXYZ_s
   
   if (comm_is_root(1)) then
 !    open(7,file=file_epst,position = position_option)
@@ -348,34 +347,35 @@ Program main
   RTiteratopm : do iter=entrance_iter+1,Nt ! sato
 
     call dt_evolve_Ac ! sato
-    Macro_loop : do ixy_m=NXY_s,NXY_e ! sato
+    Macro_loop : do ixyz_m=NXYZ_s,NXYZ_e ! sato
       call timer_begin(LOG_OTHER)
-      ix_m=NX_table(ixy_m)
-      iy_m=NY_table(ixy_m)
-      if(NXYsplit /= 1)then
-        zu(:,:,:)=zu_m(:,:,:,ixy_m)
-        Vh(:)=Vh_m(:,ixy_m)
-        Vexc(:)=Vexc_m(:,ixy_m)
-        Eexc(:)=Eexc_m(:,ixy_m)
-        Vloc(:)=Vloc_m(:,ixy_m)
-        Vloc_old(:,:)=Vloc_old_m(:,:,ixy_m)
+      ix_m=NX_table(ixyz_m)
+      iy_m=NY_table(ixyz_m)
+      iz_m=NZ_table(ixyz_m)
+      if(NXYZsplit /= 1)then
+        zu(:,:,:)=zu_m(:,:,:,ixyz_m)
+        Vh(:)=Vh_m(:,ixyz_m)
+        Vexc(:)=Vexc_m(:,ixyz_m)
+        Eexc(:)=Eexc_m(:,ixyz_m)
+        Vloc(:)=Vloc_m(:,ixyz_m)
+        Vloc_old(:,:)=Vloc_old_m(:,:,ixyz_m)
       end if
       call timer_end(LOG_OTHER)
 
-      call dt_evolve_KB_MS(ix_m,iy_m)
+      call dt_evolve_KB_MS(ix_m,iy_m,iz_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
-      if(NXYsplit /= 1)then
-        zu_m(:,:,:,ixy_m)=zu(:,:,:)
-        Vh_m(:,ixy_m)=Vh(:)
-        Vexc_m(:,ixy_m)=Vexc(:)
-        Eexc_m(:,ixy_m)=Eexc(:)
-        Vloc_m(:,ixy_m)=Vloc(:)
+      if(NXYZsplit /= 1)then
+        zu_m(:,:,:,ixyz_m)=zu(:,:,:)
+        Vh_m(:,ixyz_m)=Vh(:)
+        Vexc_m(:,ixyz_m)=Vexc(:)
+        Eexc_m(:,ixyz_m)=Eexc(:)
+        Vloc_m(:,ixyz_m)=Vloc(:)
       end if
-      kAc(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
-      kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
-      kAc(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m)
+      kAc(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m,iz_m)
+      kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m,iz_m)
+      kAc(:,3)=kAc0(:,3)+Ac_new_m(3,ix_m,iy_m,iz_m)
 !$acc update device(kAc)
 ! sato ---------------------------------------
       call timer_end(LOG_OTHER)
@@ -389,7 +389,7 @@ Program main
         jav(2)=0d0
       end if
       if(comm_is_root(2))then
-        jmatter_m_l(1:3,ix_m,iy_m)=jav(1:3)
+        jmatter_m_l(1:3,ixyz_m)=jav(1:3)
       end if
 ! sato ---------------------------------------
       call timer_end(LOG_OTHER)
@@ -411,7 +411,7 @@ Program main
     
       call timer_begin(LOG_OTHER)
       if(comm_is_root(2))then ! sato
-        energy_elec_Matter_l(ix_m,iy_m)=Eall-Eall0 ! sato
+        energy_elec_Matter_l(ixyz_m)=Eall-Eall0 ! sato
       end if ! sato
       call timer_end(LOG_OTHER)
 
@@ -420,12 +420,12 @@ Program main
       if (AD_RHO /= 'No' .and. mod(iter,100) == 0) then
         call k_shift_wf(Rion_update,2)
         if(comm_is_root(2))then ! sato
-          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
+          excited_electron_l(ixyz_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
         end if ! sato
       else if (iter == Nt ) then
         call k_shift_wf(Rion_update,2)
         if(comm_is_root(2))then ! sato
-          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
+          excited_electron_l(ixyz_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
         end if ! sato
       end if
       call timer_end(LOG_K_SHIFT_WF)
@@ -433,8 +433,13 @@ Program main
     end do Macro_loop
 
     call timer_begin(LOG_ALLREDUCE)
-    call comm_summation(jmatter_m_l,jmatter_m,3*NX_m*NY_m,proc_group(1))
-    j_m(:,1:NX_m,1:NY_m)=jmatter_m(:,1:NX_m,1:NY_m)
+    call comm_summation(jmatter_m_l,jmatter_m,3*NXYZ_m,proc_group(1))
+    do ixyz_m=1,NXYZ_m
+      ix_m=NX_table(ixyz_m)
+      iy_m=NY_table(ixyz_m)
+      iz_m=NZ_table(ixyz_m)
+      j_m(:,ix_m,iy_m,iz_m)=jmatter_m(:,ixyz_m)
+    end do
     if(mod(iter,10) == 1) then
       call comm_bcast(reentrance_switch,proc_group(1))
     end if
@@ -443,15 +448,15 @@ Program main
     call timer_begin(LOG_OTHER)
 !write section ================================================================================
     if(comm_is_root(1)) then
-      write(941,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,0,1)
+      write(941,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,0,1,1)
     end if
     if(procid(1) == ROOT_PROCID+1) then
       ix_m=min(NXvacR_m,NX_m+1)
-      write(942,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1)
+      write(942,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1,1)
     end if
     if(comm_is_root(2)) then
-      ix_m=NX_table(NXY_s)
-      write(943,'(7e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1), j_m(1:3,ix_m,1)
+      ix_m=NX_table(NXYZ_s)
+      write(943,'(7e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1,1), j_m(1:3,ix_m,1,1)
     end if
     
     call calc_elec_field()
@@ -464,50 +469,71 @@ Program main
       call timer_end(LOG_OTHER)
       
       call timer_begin(LOG_ALLREDUCE)
-      call comm_summation(energy_elec_Matter_l,energy_elec_Matter,NX_m*NY_m,proc_group(1))
+      call comm_summation(energy_elec_Matter_l,energy_elec_Matter,NXYZ_m,proc_group(1))
       call timer_end(LOG_ALLREDUCE)
 
       call timer_begin(LOG_OTHER)
 
-      energy_elec(1:NX_m,1:NY_m)=energy_elec_Matter(1:NX_m,1:NY_m) 
+      do ixyz_m=1,NXYZ_m
+        ix_m=NX_table(ixyz_m)
+        iy_m=NY_table(ixyz_m)
+        iz_m=NZ_table(ixyz_m)
+        energy_elec(ix_m,iy_m,iz_m)=energy_elec_Matter(ixyz_m) 
+      end do
       energy_total=energy_elemag+energy_elec
-      
-      n = iter / Nstep_write
+
+	  n = iter / Nstep_write
       if (mod(n, nprocs(1)) == procid(1)) then
         index = (n - procid(1)) / nprocs(1)
-        data_out(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Ac_new_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(4,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(5,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(6,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Elec(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(7,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(8,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(9,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=Bmag(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(10,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(11,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(12,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=j_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(13,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(14,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_joule(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(15,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
-        data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
+      data_out(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Ac_new_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Ac_new_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Ac_new_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(4,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Elec(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(5,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Elec(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(6,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Elec(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(7,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Bmag(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(8,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Bmag(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(9,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & Bmag(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(10,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & j_m(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(11,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & j_m(2,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(12,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & j_m(3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(13,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(14,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & energy_joule(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(15,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
+      data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
+        & energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
       end if
-      
-      if(comm_is_root(1))then
-        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
-          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
+
+	  if(comm_is_root(1))then
+        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m*HZ_m/aLxyz &
+          &,sum(energy_elemag)*HX_m*HY_m*HZ_m/aLxyz,sum(energy_total)*HX_m*HY_m*HZ_m/aLxyz
       end if
     end if
     call timer_end(LOG_OTHER)
 
     if (AD_RHO /= 'No' .and. mod(iter,100) == 0 ) then 
       call timer_begin(LOG_ALLREDUCE)
-      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
+      call comm_summation(excited_electron_l,excited_electron,NXYZ_m,proc_group(1))
       call timer_end(LOG_ALLREDUCE)
       if(comm_is_root(1))call write_excited_electron(iter)
     else if (iter == Nt ) then
       call timer_begin(LOG_ALLREDUCE)
-      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
+      call comm_summation(excited_electron_l,excited_electron,NXYZ_m,proc_group(1))
       call timer_end(LOG_ALLREDUCE)
       if(comm_is_root(1))call write_excited_electron(iter)
     end if
@@ -634,7 +660,7 @@ Subroutine Read_data
   use communication
   implicit none
   integer :: ia,i,j
-  integer :: ix_m,iy_m
+  integer :: ix_m,iy_m,iz_m
 
   if (comm_is_root()) then
     write(*,*) 'Nprocs=',nprocs(1)
@@ -677,12 +703,15 @@ Subroutine Read_data
     if((NKx <= 0).or.(NKy <= 0).or.(NKz <= 0)) then
       read(*,*) file_kw
     endif
-    read(*,*) FDTDdim ! sato
+    read(*,*) FDTDdim, chi_m, sigma_m ! sato
     read(*,*) TwoD_shape ! sato
-    read(*,*) NX_m,NY_m ! sato
-    read(*,*) HX_m,HY_m ! sato
-    read(*,*) NKsplit,NXYsplit ! sato
-    read(*,*) NXvacL_m,NXvacR_m ! sato
+    read(*,*) NX_m,NY_m,NZ_m ! sato
+    read(*,*) HX_m,HY_m,HZ_m ! sato
+    read(*,*) NKsplit,NXYZsplit ! sato
+    read(*,*) NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m,NZvacB_m,NZvacT_m ! sato
+    if(NX_m <= 0) then
+      read(*,*) file_macrogrid
+    endif
     read(*,*) NEwald, aEwald
     read(*,*) KbTev ! sato
 
@@ -712,11 +741,14 @@ Subroutine Read_data
     write(*,*) 'Sym=',Sym,'crystal structure=',crystal_structure !sym
     write(*,*) 'Nd,NLx,NLy,NLz,NKx,NKy,NKz=',Nd,NLx,NLy,NLz,NKx,NKy,NKz
     write(*,*) 'FDTDdim=',FDTDdim
+    write(*,*) 'chi_m,sigma_m=',chi_m,sigma_m
     write(*,*) 'TwoD_shape=',TwoD_shape 
-    write(*,*) 'NX_m,NY_m=',NX_m,NY_m
-    write(*,*) 'HX_m,HY_m=',HX_m,HY_m
-    write(*,*) 'NKsplit,NXYsplit=',NKsplit,NXYsplit
+    write(*,*) 'NX_m,NY_m,NZ_m=',NX_m,NY_m,NZ_m
+    write(*,*) 'HX_m,HY_m,HZ_m=',HX_m,HY_m,HZ_m
+    write(*,*) 'NKsplit,NXYZsplit=',NKsplit,NXYZsplit
     write(*,*) 'NXvacL_m,NXvacR_m=',NXvacL_m,NXvacR_m
+    write(*,*) 'NYvacB_m,NYvacT_m=',NYvacB_m,NYvacT_m
+    write(*,*) 'NZvacB_m,NZvacT_m=',NZvacB_m,NZvacT_m
     write(*,*) 'NEwald, aEwald =',NEwald, aEwald 
     write(*,*) 'KbTev=',KbTev ! sato
   end if
@@ -761,15 +793,24 @@ Subroutine Read_data
   call comm_bcast(NKy,proc_group(1))
   call comm_bcast(NKz,proc_group(1))
   call comm_bcast(FDTDdim,proc_group(1)) ! sato
+  call comm_bcast(chi_m,proc_group(1))
+  call comm_bcast(sigma_m,proc_group(1))
   call comm_bcast(TwoD_shape,proc_group(1)) ! sato
   call comm_bcast(NX_m,proc_group(1)) ! sato
   call comm_bcast(NY_m,proc_group(1)) ! sato
+  call comm_bcast(NZ_m,proc_group(1))
   call comm_bcast(HX_m,proc_group(1)) ! sato
   call comm_bcast(HY_m,proc_group(1)) ! sato
+  call comm_bcast(HZ_m,proc_group(1))
   call comm_bcast(NKsplit,proc_group(1)) ! sato
-  call comm_bcast(NXYsplit,proc_group(1)) ! sato
+  call comm_bcast(NXYZsplit,proc_group(1)) ! sato
   call comm_bcast(NXvacL_m,proc_group(1)) ! sato
   call comm_bcast(NXvacR_m,proc_group(1)) ! sato
+  call comm_bcast(NYvacB_m,proc_group(1)) ! sato
+  call comm_bcast(NYvacT_m,proc_group(1)) ! sato
+  call comm_bcast(NZvacB_m,proc_group(1)) ! sato
+  call comm_bcast(NZvacT_m,proc_group(1)) ! sato
+  call comm_bcast(file_macrogrid,proc_group(1))
   call comm_bcast(NEwald,proc_group(1))
   call comm_bcast(aEwald,proc_group(1))
   call comm_bcast(KbTev,proc_group(1)) ! sato
@@ -865,24 +906,62 @@ Subroutine Read_data
     call comm_bcast(NKxyz,proc_group(1))
   endif
 
+  if( 0<NX_m .and. 0<NY_m .and. 0<NZ_m) then
+    NXYZ_m=NX_m*NY_m*NZ_m
+  else
+    if(comm_is_root()) then
+      write(*,*) "Input macrogrid from file"
+      write(*,*) "file_macrogrid=", file_macrogrid
+      open(411, file=file_macrogrid, status="old")
+      read(411,*) NXYZ_m
+      close(411)
+      write(*,*) "NXYZ_m=",NXYZ_m
+    endif
+    call comm_bcast(NXYZ_m,proc_group(1))
+  endif
+  
 ! sato ---------------------------------------------------------------------------------------
-  if(NXYsplit /= 1 .and. NKsplit /=1) call err_finalize('cannot respond your request')
-  if(NX_m*NY_m*NKsplit/NXYsplit /= nprocs(1)) call err_finalize('NProcs is not good')
+  if(NXYZsplit /= 1 .and. NKsplit /=1) call err_finalize('cannot respond your request')
+!  if(NXYZ_m*NKsplit/NXYZsplit /= nprocs(1)) call err_finalize('NProcs is not good')
 
-  NXY_s=NXYsplit*procid(1)/NKsplit
-  NXY_e=(NXYsplit*(procid(1)+1)-1)/NKsplit
+!  NXYZ_s=NXYZsplit*procid(1)/NKsplit
+!  NXYZ_e=(NXYZsplit*(procid(1)+1)-1)/NKsplit
 
-  allocate(NX_table(0:NX_m*NY_m-1),NY_table(0:NX_m*NY_m-1))
-  i=-1
-  do ix_m=1,NX_m
+! In this version, we assume NKsplit=1.
+  if(NKsplit /= 1) stop 'Here we assume NKsplit = 1'
+  NXYZ_s=NXYZsplit*procid(1)
+  NXYZ_e=NXYZsplit*(procid(1)+1)-1
+  if(NXYZ_e > NXYZ_m) NXYZ_e=NXYZ_m
+
+  allocate(NX_table(0:NXYZ_m-1),NY_table(0:NXYZ_m-1),NZ_table(0:NXYZ_m-1))
+
+  if( 0<NX_m .and. 0<NY_m .and. 0<NZ_m) then
+    i=-1
+    do ix_m=1,NX_m
     do iy_m=1,NY_m
+    do iz_m=1,NZ_m
       i=i+1
       NX_table(i)=ix_m
       NY_table(i)=iy_m
+      NZ_table(i)=iz_m
     end do
-  end do
+    end do
+    end do
+  else
+    if(comm_is_root()) then
+      open(411, file=file_macrogrid, status="old")
+      read(411,*) i
+      do i=1,NXYZ_m
+        read(411,*) NX_table(i),NY_table(i),NZ_table(i)
+      end do
+        close(411)
+    endif
+    call comm_bcast(NX_table,proc_group(1))
+    call comm_bcast(NY_table,proc_group(1))
+    call comm_bcast(NZ_table,proc_group(1))
+  endif
 
-  macRANK=NXY_s
+  macRANK=NXYZ_s
   kRANK=mod(procid(1),NKsplit)
 
   call comm_set_level2_group(macRANK, kRANK)
@@ -980,7 +1059,8 @@ Subroutine Read_data
 
   allocate(occ(NB,NK),wk(NK),esp(NB,NK))
   allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
-  allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
+  allocate(zu_GS(NL,NB,NK_s:NK_e))
+!  allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
   allocate(zu(NL,NBoccmax,NK_s:NK_e))
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
   allocate(esp_var(NB,NK))
@@ -1039,41 +1119,41 @@ Subroutine Read_data
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
 
-  NYvacB_m = 1
-  NYvacT_m = NY_m  
-  allocate(Ac_m(1:3,NXvacL_m-1:NXvacR_m+1,0:NY_m+1))
-  allocate(Ac_old_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
-  allocate(Ac_new_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
-  allocate(g(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
-  allocate(Elec(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-  allocate(Bmag(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-  allocate(j_m(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-  allocate(jmatter_m(1:3,1:NX_m,1:NY_m))
-  allocate(jmatter_m_l(1:3,1:NX_m,1:NY_m))
+!  NYvacB_m = 1
+!  NYvacT_m = NY_m  
+  allocate(Ac_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1,NZvacB_m-1:NZvacT_m+1))
+  allocate(Ac_old_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1,NZvacB_m-1:NZvacT_m+1))
+  allocate(Ac_new_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1,NZvacB_m-1:NZvacT_m+1))
+  allocate(g(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1,NZvacB_m-1:NZvacT_m+1))
+  allocate(Elec(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+  allocate(Bmag(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+  allocate(j_m(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+  allocate(jmatter_m(1:3,1:NXYZ_m))
+  allocate(jmatter_m_l(1:3,1:NXYZ_m))
   jmatter_m_l=0d0;j_m=0d0
 
-  if(NXYsplit /= 1)then
-    allocate(zu_m(NL,NBoccmax,NK_s:NK_e,NXY_s:NXY_e))         
-    allocate(rho_m(NL,NXY_s:NXY_e))         
-    allocate(Vh_m(NL,NXY_s:NXY_e))         
-    allocate(Vexc_m(NL,NXY_s:NXY_e))         
-    allocate(Eexc_m(NL,NXY_s:NXY_e))         
-    allocate(Vloc_m(NL,NXY_s:NXY_e))
-    allocate(Vloc_old_m(NL,2,NXY_s:NXY_e))
+  if(NXYZsplit /= 1)then
+    allocate(zu_m(NL,NBoccmax,NK_s:NK_e,NXYZ_s:NXYZ_e))         
+    allocate(rho_m(NL,NXYZ_s:NXYZ_e))         
+    allocate(Vh_m(NL,NXYZ_s:NXYZ_e))         
+    allocate(Vexc_m(NL,NXYZ_s:NXYZ_e))         
+    allocate(Eexc_m(NL,NXYZ_s:NXYZ_e))         
+    allocate(Vloc_m(NL,NXYZ_s:NXYZ_e))
+    allocate(Vloc_old_m(NL,2,NXYZ_s:NXYZ_e))
   end if
-    allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m))
-    allocate(energy_elec_Matter_l(1:NX_m,1:NY_m))
-    allocate(energy_elec_Matter(1:NX_m,1:NY_m))
-    allocate(energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-    allocate(energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-    allocate(energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m))
-    allocate(excited_electron_l(1:NX_m,1:NY_m))
-    allocate(excited_electron(1:NX_m,1:NY_m))
-    energy_elec_Matter_l(:,:)=0d0
+    allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+    allocate(energy_elec_Matter_l(1:NXYZ_m))
+    allocate(energy_elec_Matter(1:NXYZ_m))
+    allocate(energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+    allocate(energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+    allocate(energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
+    allocate(excited_electron_l(1:NXYZ_m))
+    allocate(excited_electron(1:NXYZ_m))
+    energy_elec_Matter_l(:)=0d0
     excited_electron_l=0d0
     Ndata_out = floor(float(Nt) / Nstep_write)
     Ndata_out_per_proc = ceiling(float(NData_out + 1) / nprocs(1)) - 1
-    allocate(data_out(16,NXvacL_m:NXvacR_m,NY_m+1,0:Ndata_out_per_proc))
+    allocate(data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,0:Ndata_out_per_proc))
 ! sato ---------------------------------------------------------------------------------------
 
   if (comm_is_root()) then

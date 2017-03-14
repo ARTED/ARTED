@@ -90,17 +90,17 @@ subroutine incident_bessel_beam()
        x = ix_m * HX_m
        ! Ac_new_m
        tau = - x / vx
-       Ac_new_m(:,ix_m,iy_m) = f * sin2cos(tau, tpulse_1, omega_1, phi_CEP_1)
+       Ac_new_m(:,ix_m,iy_m,1) = f * sin2cos(tau, tpulse_1, omega_1, phi_CEP_1)
        ! Ac_m (previous time-step)
        tau = - x / vx - dt
-       Ac_m(:,ix_m,iy_m) =  f * sin2cos(tau, tpulse_1, omega_1, phi_CEP_1)
+       Ac_m(:,ix_m,iy_m,1) =  f * sin2cos(tau, tpulse_1, omega_1, phi_CEP_1)
      end do
   end do
   
   ! impose boundary condition
-  Ac_new_m(:,:,NYvacT_m+1) = 0.0
-  Ac_new_m(:,:,NYvacB_m-1) = Ac_new_m(:,:,NYvacB_m)
-  Ac_m(:,:,NYvacT_m+1) = 0.0
-  Ac_m(:,:,NYvacB_m-1) = Ac_m(:,:,NYvacB_m)
+  Ac_new_m(:,:,NYvacT_m+1,1) = 0.0
+  Ac_new_m(:,:,NYvacB_m-1,1) = Ac_new_m(:,:,NYvacB_m,1)
+  Ac_m(:,:,NYvacT_m+1,1) = 0.0
+  Ac_m(:,:,NYvacB_m-1,1) = Ac_m(:,:,NYvacB_m,1)
   return
 end subroutine incident_bessel_beam
