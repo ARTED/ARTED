@@ -353,12 +353,7 @@ Program main
       ix_m=NX_table(ixy_m)
       iy_m=NY_table(ixy_m)
       if(NXYsplit /= 1)then
-        zu(:,:,:)=zu_m(:,:,:,ixy_m)
-        Vh(:)=Vh_m(:,ixy_m)
-        Vexc(:)=Vexc_m(:,ixy_m)
-        Eexc(:)=Eexc_m(:,ixy_m)
-        Vloc(:)=Vloc_m(:,ixy_m)
-        Vloc_old(:,:)=Vloc_old_m(:,:,ixy_m)
+        call get_macro_data(ixy_m)
       end if
       call timer_end(LOG_OTHER)
 
@@ -367,11 +362,7 @@ Program main
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
       if(NXYsplit /= 1)then
-        zu_m(:,:,:,ixy_m)=zu(:,:,:)
-        Vh_m(:,ixy_m)=Vh(:)
-        Vexc_m(:,ixy_m)=Vexc(:)
-        Eexc_m(:,ixy_m)=Eexc(:)
-        Vloc_m(:,ixy_m)=Vloc(:)
+        call put_macro_data(ixy_m)
       end if
       kAc(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m)
       kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m)
@@ -609,6 +600,64 @@ Program main
   call comm_finalize
 
 contains
+  subroutine get_macro_data(ixy_m)
+    implicit none
+    integer, intent(in) :: ixy_m
+    integer :: il,ib,ik
+!$omp parallel default(none) &
+!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc, &
+!$           Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m,Vloc_old,Vloc_old_m) &
+!$    firstprivate(ixy_m)
+
+!$omp do collapse(2) private(ik,ib)
+    do ik=NK_s,NK_e
+    do ib=1,NBoccmax
+      zu(:,ib,ik) = zu_m(:,ib,ik,ixy_m)
+    end do
+    end do
+!$omp end do nowait
+
+!$omp do private(il)
+    do il=1,NL
+      Vh(il)         = Vh_m(il,ixy_m)
+      Vexc(il)       = Vexc_m(il,ixy_m)
+      Eexc(il)       = Eexc_m(il,ixy_m)
+      Vloc(il)       = Vloc_m(il,ixy_m)
+      Vloc_old(il,:) = Vloc_old_m(il,:,ixy_m)
+    end do
+!$omp end do
+
+!$omp end parallel
+  end subroutine
+
+  subroutine put_macro_data(ixy_m)
+    implicit none
+    integer, intent(in) :: ixy_m
+    integer :: il,ib,ik
+!$omp parallel default(none) &
+!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc,Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m) &
+!$    firstprivate(ixy_m)
+
+!$omp do collapse(2) private(ik,ib)
+    do ik=NK_s,NK_e
+    do ib=1,NBoccmax
+      zu_m(:,ib,ik,ixy_m) = zu(:,ib,ik)
+    end do
+    end do
+!$omp end do nowait
+
+!$omp do private(il)
+    do il=1,NL
+      Vh_m(il,ixy_m)   = Vh(il)
+      Vexc_m(il,ixy_m) = Vexc(il)
+      Eexc_m(il,ixy_m) = Eexc(il)
+      Vloc_m(il,ixy_m) = Vloc(il)
+    end do
+!$omp end do
+
+!$omp end parallel
+  end subroutine
+
   subroutine reset_gs_timer
     implicit none
     integer :: i
