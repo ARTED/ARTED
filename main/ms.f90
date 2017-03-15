@@ -310,7 +310,7 @@ Program main
   write(file_energy_transfer, "(A,'energy-transfer.out')") trim(directory)
   write(file_ac_vac, "(A,'Ac_Vac.out')") trim(directory)
   write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
-  write(file_ac_m, "(A,'Ac_M',I4.4,'.out')") trim(directory), NXY_s
+  write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(directory), NXY_s
   
   if (comm_is_root(1)) then
 !    open(7,file=file_epst,position = position_option)
