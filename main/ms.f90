@@ -203,6 +203,7 @@ Program main
     call timer_show_min ('current time       :', LOG_CURRENT)
     call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
     call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
   if(comm_is_root(1)) then
     write(*,*) 'This is the end of GS calculation'
@@ -553,6 +554,7 @@ Program main
     call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
     call timer_show_min ('k_shift_wf time    :', LOG_K_SHIFT_WF)
     call timer_show_min ('Other time         :', LOG_OTHER)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
   call write_performance(trim(directory)//'ms_performance')
 

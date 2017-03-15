@@ -235,7 +235,8 @@ contains
     integer :: nsize
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXY_e - NXY_s + 1)
     else
       nsize = (NK_e  - NK_s  + 1) * NBoccmax &
             * (NXY_e - NXY_s + 1)
@@ -258,7 +259,8 @@ contains
     FLOP = FLOP_scalar + (FLOP_reduction + FLOP_scatter) * sum(Mps(a_tbl(:)))
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXY_e - NXY_s + 1)
     else
       nsize = (NK_e  - NK_s  + 1) * NBoccmax &
             * (NXY_e - NXY_s + 1)
@@ -276,7 +278,8 @@ contains
     integer :: nsize
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXY_e - NXY_s + 1)
     else
       nsize = (NK_e  - NK_s  + 1) * NBoccmax &
             * (NXY_e - NXY_s + 1)
