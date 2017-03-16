@@ -311,7 +311,7 @@ Program main
   write(file_energy_transfer, "(A,'energy-transfer.out')") trim(directory)
   write(file_ac_vac, "(A,'Ac_Vac.out')") trim(directory)
   write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
-  write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(directory), NXY_s
+  write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(process_directory), NXY_s
   
   if (comm_is_root(1)) then
 !    open(7,file=file_epst,position = position_option)
@@ -683,6 +683,7 @@ Subroutine Read_data
   use opt_variables
   use environment
   use communication
+  use misc_routines
   implicit none
   integer :: ia,i,j
   integer :: ix_m,iy_m
@@ -774,6 +775,8 @@ Subroutine Read_data
 
   call comm_bcast(SYSname,proc_group(1))
   call comm_bcast(directory,proc_group(1))
+  write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
+  call create_directory(process_directory)
 !yabana
   call comm_bcast(functional,proc_group(1))
   call comm_bcast(cval,proc_group(1))
