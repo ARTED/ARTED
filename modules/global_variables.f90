@@ -124,18 +124,19 @@ Module Global_Variables
   integer :: NFSset_start=75,NFSset_every=25 !Fermi Surface (FS) set 
 
 ! file names, flags, etc
-  character(50) :: SYSname,directory
-  character(50) :: file_GS,file_RT
-  character(50) :: file_epst,file_epse
-  character(50) :: file_force_dR,file_j_ac
-  character(50) :: file_DoS,file_band
-  character(50) :: file_dns,file_ovlp,file_nex
-  character(50) :: file_kw ! non-uniform k-grid 
-  character(50) :: file_energy_transfer ! 940
-  character(50) :: file_ac_vac          ! 941
-  character(50) :: file_ac_vac_back     ! 942
-  character(50) :: file_ac_m            ! 943
-  character(50) :: file_ac              ! 902
+  character(128) :: SYSname,directory
+  character(256) :: file_GS,file_RT
+  character(256) :: file_epst,file_epse
+  character(256) :: file_force_dR,file_j_ac
+  character(256) :: file_DoS,file_band
+  character(256) :: file_dns,file_ovlp,file_nex
+  character(256) :: file_kw              ! non-uniform k-grid
+  character(256) :: file_energy_transfer ! 940
+  character(256) :: file_ac_vac          ! 941
+  character(256) :: file_ac_vac_back     ! 942
+  character(256) :: file_ac_m            ! 943
+  character(256) :: file_ac              ! 902
+  character(256) :: process_directory
 
   character(2) :: ext_field
   character(2) :: Longi_Trans
