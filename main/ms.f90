@@ -25,7 +25,7 @@ Program main
   use environment
   use performance_analyzer
   use communication
-  use misc_routines, only: get_wtime
+  use misc_routines
   implicit none
   integer :: iter,ik,ib,ia
   character(3) :: Rion_update
@@ -301,7 +301,7 @@ Program main
 
 !reentrance
 2 if (entrance_option == 'reentrance') then
-    position_option='append'
+    position_option='asis'
     if (MD_option /= 'Y') Rion_update = 'off'
   else
     position_option='rewind'
@@ -316,22 +316,25 @@ Program main
   write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(process_directory), NXY_s
   
   if (comm_is_root(1)) then
-!    open(7,file=file_epst,position = position_option)
-!    open(8,file=file_dns,position = position_option)
-!    open(9,file=file_force_dR,position = position_option)
-    open(940,file=file_energy_transfer, position = position_option)
-    open(941,file=file_ac_vac, position = position_option)
-!    if (ovlp_option == 'yes') then 
-!      open(404,file=file_ovlp,position = position_option) 
-!      open(408,file=file_nex,position = position_option) 
-!    end if
+    open(940,file=file_energy_transfer, position=position_option)
+    open(941,file=file_ac_vac, position=position_option)
+    if (entrance_option == 'reentrance') then
+      call seek_fileline(940, entrance_iter / Nstep_write + 2)
+      call seek_fileline(941, entrance_iter+2)
+    end if
   endif
   if (procid(1) == ROOT_PROCID+1) then
-    open(942,file=file_ac_vac_back, position = position_option)
+    open(942,file=file_ac_vac_back, position=position_option)
+    if (entrance_option == 'reentrance') then
+      call seek_fileline(942, entrance_iter+2)
+    end if
   end if
 
   if(comm_is_root(2))then
-    open(943,file=file_ac_m ,position = position_option)
+    open(943,file=file_ac_m, position=position_option)
+    if (entrance_option == 'reentrance') then
+      call seek_fileline(943, entrance_iter+2)
+    end if
   end if
 
   call comm_sync_all
