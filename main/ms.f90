@@ -330,6 +330,7 @@ Program main
 
   if(comm_is_root(2))then
     open(943,file=file_ac_m ,position = position_option)
+    write(943,"(A,2x,I6,2x,A,2x,I6)")"# Data of macro points",NXY_s,"-",NXY_e
   end if
 
   call comm_sync_all
@@ -442,8 +443,9 @@ Program main
       write(942,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1)
     end if
     if(comm_is_root(2)) then
-      ix_m=NX_table(NXY_s)
-      write(943,'(7e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1), j_m(1:3,ix_m,1)
+      write(943,'(99e26.16E3)') iter*dt, ( &
+           Ac_new_m(1:3,NX_table(ixy_m),NY_table(ixy_m)) &
+           ,j_m(1:3,NX_table(ixy_m),NY_table(ixy_m)),ixy_m=NXY_s,NXY_e)
     end if
     
     call calc_elec_field()
