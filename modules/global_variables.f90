@@ -31,6 +31,11 @@ Module Global_Variables
 !  real(8),parameter :: CU=0.002d0,DU=-0.0116d0
 !yabana
 
+  integer :: iter_now,entrance_iter
+  character(10) :: entrance_option    !initial or reentrance
+  real(8) :: Time_shutdown
+  real(8) :: Time_start,Time_now
+
 ! grid
   integer :: NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
   integer :: NKxyz 
@@ -151,10 +156,6 @@ Module Global_Variables
   integer :: NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
   integer :: NK_remainder,NG_remainder
 ! Timer
-  real(8) :: Time_shutdown
-  real(8) :: Time_start,Time_now
-  integer :: iter_now,entrance_iter
-  character(10) :: entrance_option    !initial or reentrance        
   character(10) :: position_option
 
 ! sato
@@ -177,9 +178,6 @@ Module Global_Variables
 
 ! Finite temperature
   real(8) :: KbTev
-
-! For reentrance 
-  character(50) :: cMyrank,file_reentrance
 
 ! multi scale
   character(20) :: FDTDdim,TwoD_shape
@@ -219,7 +217,10 @@ Module Global_Variables
   integer :: Ndata_out, Ndata_out_per_proc
   
 
-  integer :: reentrance_switch
+  integer :: reentrance_switch = 0
+
+  integer :: backup_frequency = 10000 ! # of iteration
+  logical :: need_backup      = .FALSE.
 
 
 #if defined(__KNC__) || defined(__AVX512F__)
