@@ -227,7 +227,7 @@ contains
   end subroutine
 
   function get_stencil_FLOP(chunk_size)
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt
+    use global_variables, only: NK_s,NK_e,NXYZ_s,NXYZ_e,NBoccmax,NL,Nt
     integer,intent(in),optional :: chunk_size
     real(8),parameter           :: FLOP = 158
 
@@ -235,15 +235,17 @@ contains
     integer :: nsize
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXYZ_e - NXYZ_s + 1)
     else
-      nsize = (NK_e - NK_s + 1) * NBoccmax
+      nsize = (NK_e - NK_s + 1) * NBoccmax &
+            * (NXYZ_e - NXYZ_s + 1)
     end if
     get_stencil_FLOP = nsize * 4*FLOP*NL * (Nt + 1)
   end function
 
   function get_pseudo_pt_FLOP(chunk_size)
-    use global_variables, only: NK_s,NK_e,NBoccmax,Nt,a_tbl,Mps
+    use global_variables, only: NK_s,NK_e,NXYZ_s,NXYZ_e,NBoccmax,Nt,a_tbl,Mps
     implicit none
     integer,intent(in),optional :: chunk_size
     real(8),parameter           :: FLOP_reduction = (2 + 6)     + 2
@@ -257,15 +259,17 @@ contains
     FLOP = FLOP_scalar + (FLOP_reduction + FLOP_scatter) * sum(Mps(a_tbl(:)))
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXYZ_e - NXYZ_s + 1)
     else
-      nsize = (NK_e - NK_s + 1) * NBoccmax
+      nsize = (NK_e - NK_s + 1) * NBoccmax &
+            * (NXYZ_e - NXYZ_s + 1)
     endif
     get_pseudo_pt_FLOP = nsize * 4*FLOP * (Nt + 1)
   end function
 
   function get_update_FLOP(chunk_size)
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt
+    use global_variables, only: NK_s,NK_e,NXYZ_s,NXYZ_e,NBoccmax,NL,Nt
     implicit none
     integer,intent(in),optional :: chunk_size
     real(8),parameter           :: FLOP = 6 + 2
@@ -274,9 +278,11 @@ contains
     integer :: nsize
 
     if(present(chunk_size)) then
-      nsize = chunk_size
+      nsize = chunk_size &
+            * (NXYZ_e - NXYZ_s + 1)
     else
-      nsize = (NK_e - NK_s + 1) * NBoccmax
+      nsize = (NK_e - NK_s + 1) * NBoccmax &
+            * (NXYZ_e - NXYZ_s + 1)
     endif
     get_update_FLOP = nsize * 4*FLOP*NL * (Nt + 1)
   end function

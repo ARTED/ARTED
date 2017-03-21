@@ -202,6 +202,7 @@ Program main
     call timer_show_min ('current time       :', LOG_CURRENT)
     call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
     call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
   if(comm_is_root(1)) then
     write(*,*) 'This is the end of GS calculation'
@@ -309,7 +310,7 @@ Program main
   write(file_energy_transfer, "(A,'energy-transfer.out')") trim(directory)
   write(file_ac_vac, "(A,'Ac_Vac.out')") trim(directory)
   write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
-  write(file_ac_m, "(A,'Ac_M',I4.4,'.out')") trim(directory), NXYZ_s
+  write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(directory), NXYZ_s
   
   if (comm_is_root(1)) then
 !    open(7,file=file_epst,position = position_option)
@@ -353,12 +354,7 @@ Program main
       iy_m=NY_table(ixyz_m)
       iz_m=NZ_table(ixyz_m)
       if(NXYZsplit /= 1)then
-        zu(:,:,:)=zu_m(:,:,:,ixyz_m)
-        Vh(:)=Vh_m(:,ixyz_m)
-        Vexc(:)=Vexc_m(:,ixyz_m)
-        Eexc(:)=Eexc_m(:,ixyz_m)
-        Vloc(:)=Vloc_m(:,ixyz_m)
-        Vloc_old(:,:)=Vloc_old_m(:,:,ixyz_m)
+        call get_macro_data(ixyz_m)
       end if
       call timer_end(LOG_OTHER)
 
@@ -367,11 +363,7 @@ Program main
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
       if(NXYZsplit /= 1)then
-        zu_m(:,:,:,ixyz_m)=zu(:,:,:)
-        Vh_m(:,ixyz_m)=Vh(:)
-        Vexc_m(:,ixyz_m)=Vexc(:)
-        Eexc_m(:,ixyz_m)=Eexc(:)
-        Vloc_m(:,ixyz_m)=Vloc(:)
+        call put_macro_data(ixyz_m)
       end if
       kAc(:,1)=kAc0(:,1)+Ac_new_m(1,ix_m,iy_m,iz_m)
       kAc(:,2)=kAc0(:,2)+Ac_new_m(2,ix_m,iy_m,iz_m)
@@ -482,7 +474,7 @@ Program main
       end do
       energy_total=energy_elemag+energy_elec
 
-	  n = iter / Nstep_write
+      n = iter / Nstep_write
       if (mod(n, nprocs(1)) == procid(1)) then
         index = (n - procid(1)) / nprocs(1)
       data_out(1,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m,index)= &
@@ -519,7 +511,7 @@ Program main
         & energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m)
       end if
 
-	  if(comm_is_root(1))then
+     if(comm_is_root(1))then
         write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m*HZ_m/aLxyz &
           &,sum(energy_elemag)*HX_m*HY_m*HZ_m/aLxyz,sum(energy_total)*HX_m*HY_m*HZ_m/aLxyz
       end if
@@ -588,6 +580,7 @@ Program main
     call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
     call timer_show_min ('k_shift_wf time    :', LOG_K_SHIFT_WF)
     call timer_show_min ('Other time         :', LOG_OTHER)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
   call write_performance(trim(directory)//'ms_performance')
 
@@ -635,6 +628,64 @@ Program main
   call comm_finalize
 
 contains
+  subroutine get_macro_data(ixyz_m)
+    implicit none
+    integer, intent(in) :: ixyz_m
+    integer :: il,ib,ik
+!$omp parallel default(none) &
+!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc, &
+!$           Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m,Vloc_old,Vloc_old_m) &
+!$    firstprivate(ixyz_m)
+
+!$omp do collapse(2) private(ik,ib)
+    do ik=NK_s,NK_e
+    do ib=1,NBoccmax
+      zu(:,ib,ik) = zu_m(:,ib,ik,ixyz_m)
+    end do
+    end do
+!$omp end do nowait
+
+!$omp do private(il)
+    do il=1,NL
+      Vh(il)         = Vh_m(il,ixyz_m)
+      Vexc(il)       = Vexc_m(il,ixyz_m)
+      Eexc(il)       = Eexc_m(il,ixyz_m)
+      Vloc(il)       = Vloc_m(il,ixyz_m)
+      Vloc_old(il,:) = Vloc_old_m(il,:,ixyz_m)
+   end do
+!$omp end do
+
+!$omp end parallel
+  end subroutine
+
+  subroutine put_macro_data(ixyz_m)
+    implicit none
+    integer, intent(in) :: ixyz_m
+    integer :: il,ib,ik
+!$omp parallel default(none) &
+!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc,Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m) &
+!$    firstprivate(ixyz_m)
+
+!$omp do collapse(2) private(ik,ib)
+    do ik=NK_s,NK_e
+    do ib=1,NBoccmax
+      zu_m(:,ib,ik,ixyz_m) = zu(:,ib,ik)
+    enddo
+    enddo
+!$omp end do nowait
+
+!$omp do private(il)
+    do il=1,NL
+      Vh_m(il,ixyz_m)   = Vh(il)
+      Vexc_m(il,ixyz_m) = Vexc(il)
+      Eexc_m(il,ixyz_m) = Eexc(il)
+      Vloc_m(il,ixyz_m) = Vloc(il)
+    end do
+!$omp end do
+
+!$omp end parallel
+  end subroutine
+
   subroutine reset_gs_timer
     implicit none
     integer :: i
@@ -951,10 +1002,10 @@ Subroutine Read_data
     if(comm_is_root()) then
       open(411, file=file_macrogrid, status="old")
       read(411,*) i
-      do i=1,NXYZ_m
+      do i=0,NXYZ_m-1
         read(411,*) NX_table(i),NY_table(i),NZ_table(i)
       end do
-        close(411)
+      close(411)
     endif
     call comm_bcast(NX_table,proc_group(1))
     call comm_bcast(NY_table,proc_group(1))
@@ -1128,8 +1179,8 @@ Subroutine Read_data
   allocate(Elec(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
   allocate(Bmag(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
   allocate(j_m(1:3,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
-  allocate(jmatter_m(1:3,1:NXYZ_m))
-  allocate(jmatter_m_l(1:3,1:NXYZ_m))
+  allocate(jmatter_m(1:3,0:NXYZ_m-1))
+  allocate(jmatter_m_l(1:3,0:NXYZ_m-1))
   jmatter_m_l=0d0;j_m=0d0
 
   if(NXYZsplit /= 1)then
@@ -1142,13 +1193,13 @@ Subroutine Read_data
     allocate(Vloc_old_m(NL,2,NXYZ_s:NXYZ_e))
   end if
     allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
-    allocate(energy_elec_Matter_l(1:NXYZ_m))
-    allocate(energy_elec_Matter(1:NXYZ_m))
+    allocate(energy_elec_Matter_l(0:NXYZ_m-1))
+    allocate(energy_elec_Matter(0:NXYZ_m-1))
     allocate(energy_elec(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
     allocate(energy_elemag(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
     allocate(energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,NZvacB_m:NZvacT_m))
-    allocate(excited_electron_l(1:NXYZ_m))
-    allocate(excited_electron(1:NXYZ_m))
+    allocate(excited_electron_l(0:NXYZ_m-1))
+    allocate(excited_electron(0:NXYZ_m-1))
     energy_elec_Matter_l(:)=0d0
     excited_electron_l=0d0
     Ndata_out = floor(float(Nt) / Nstep_write)

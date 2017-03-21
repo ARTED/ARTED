@@ -100,7 +100,7 @@ end subroutine write_energy
 subroutine write_excited_electron(iter)
   use Global_Variables
   implicit none
-  integer iter,ix_m,iy_m,i
+  integer iter,ix_m,iy_m,ixyz_m
   character(30) wf,citer
   
   write(citer,'(I6.6)')iter
@@ -109,18 +109,15 @@ subroutine write_excited_electron(iter)
   open(903,file=wf)
 
   if(NY_m==1) then
-    i=0
-    do ix_m=1,NX_m
-      i=i+1
-      write(903,'(2e26.16E3)') ix_m*HX_m,excited_electron(i)
+    do ixyz_m=0,NXYZ_m-1
+	  ix_m=NX_table(ixyz_m)
+      write(903,'(2e26.16E3)') ix_m*HX_m,excited_electron(ixyz_m)
     end do
   else
-    i=0
-    do iy_m=1,NY_m
-      do ix_m=1,NX_m
-        i=i+1
-        write(903,'(3e26.16E3)') ix_m*HX_m,iy_m*Hy_m,excited_electron(i)
-      end do
+    do ixyz_m=0,NXYZ_m-1
+	  ix_m=NX_table(ixyz_m)
+	  iy_m=NY_table(ixyz_m)
+      write(903,'(3e26.16E3)') ix_m*HX_m,iy_m*Hy_m,excited_electron(ixyz_m)
     end do
   end if
   close(903)
@@ -400,8 +397,8 @@ subroutine dt_evolve_Ac_1d
 !$    private(ix_m) &
 !$    shared(NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
   do ix_m=NXvacL_m-1,NXvacR_m+1
-    Ac_old_m(:,ix_m,1) = Ac_m    (:,ix_m,1)
-    Ac_m    (:,ix_m,1) = Ac_new_m(:,ix_m,1)
+    Ac_old_m(:,ix_m,1,1) = Ac_m    (:,ix_m,1,1)
+    Ac_m    (:,ix_m,1,1) = Ac_new_m(:,ix_m,1,1)
   end do
 !$omp end parallel do
 
@@ -434,8 +431,8 @@ subroutine dt_evolve_Ac_2d
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
   do iy_m=NYvacB_m-1,NYvacT_m+1
     do ix_m=NXvacL_m-1,NXvacR_m+1
-      Ac_old_m(:,ix_m,iy_m) = Ac_m    (:,ix_m,iy_m)
-      Ac_m    (:,ix_m,iy_m) = Ac_new_m(:,ix_m,iy_m)
+      Ac_old_m(:,ix_m,iy_m,1) = Ac_m    (:,ix_m,iy_m,1)
+      Ac_m    (:,ix_m,iy_m,1) = Ac_new_m(:,ix_m,iy_m,1)
     end do
   end do
 !$omp end parallel do
@@ -509,8 +506,8 @@ subroutine dt_evolve_Ac_2dc()
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Ac_m,Ac_old_m,Ac_new_m)
   do iy_m=NYvacB_m-1,NYvacT_m+1
     do ix_m=NXvacL_m-1,NXvacR_m+1
-      Ac_old_m(:,ix_m,iy_m) = Ac_m    (:,ix_m,iy_m)
-      Ac_m    (:,ix_m,iy_m) = Ac_new_m(:,ix_m,iy_m)
+      Ac_old_m(:,ix_m,iy_m,1) = Ac_m    (:,ix_m,iy_m,1)
+      Ac_m    (:,ix_m,iy_m,1) = Ac_new_m(:,ix_m,iy_m,1)
     end do
   end do
 !$omp end parallel do
@@ -523,7 +520,7 @@ subroutine dt_evolve_Ac_2dc()
     do ix_m=NXvacL_m,NXvacR_m
       Y = (iy_m - 0.50d0) * HY_m
       RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1,1) &
-            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0.1) &
+            & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0,1) &
             & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1,1) &
             & +0.25d0*(1.00d0/(HX_m*HY_m))*Ac_m(2,ix_m-1,iy_m-1,1) &
             & -0.50d0*(1.00d0/HX_m)*(1.00d0/Y)*Ac_m(2,ix_m-1,iy_m+0,1) &
@@ -570,8 +567,25 @@ subroutine dt_evolve_Ac_3Dnano
   integer :: ix_m,iy_m,iz_m
   real(8) :: RR(3) ! rot rot Ac
   ! (written by M.Uemoto on 2016-11-22)
-  Ac_old_m=Ac_m
-  Ac_m=Ac_new_m
+  
+!$omp parallel do collapse(3) default(none) &
+!$    private(iz_m,iy_m,ix_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,Ac_m,Ac_old_m,Ac_new_m)
+  do iz_m=NZvacB_m-1,NZvacT_m+1
+  do iy_m=NYvacB_m-1,NYvacT_m+1
+    do ix_m=NXvacL_m-1,NXvacR_m+1
+      Ac_old_m(:,ix_m,iy_m,iz_m) = Ac_m    (:,ix_m,iy_m,iz_m)
+      Ac_m    (:,ix_m,iy_m,iz_m) = Ac_new_m(:,ix_m,iy_m,iz_m)
+    end do
+  end do
+  enddo
+!$omp end parallel do
+
+!$omp parallel do collapse(3) default(none) &
+!$    private(iz_m,iy_m,ix_m,RR) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,HX_m,HY_m,HZ_m,Ac_m,j_m,Ac_old_m,Ac_new_m) &
+!$    firstprivate(dt)
+  do iz_m=NZvacB_m,NZvacT_m
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
       RR(1) = +(-1.00d0/HY_m**2) * Ac_m(1, ix_m, iy_m-1, iz_m) &
@@ -620,11 +634,31 @@ subroutine dt_evolve_Ac_3Dnano
         & -j_m(:,ix_m,iy_m,iz_m) * 4.0*pi*(dt**2) - RR(:)*(c_light*dt)**2 )
     end do
   end do
-  ! Boundary Condition
-    Ac_new_m(:,:,NYvacB_m-1,:)=Ac_new_m(:,:,NYvacT_m,:)
-    Ac_new_m(:,:,NYvacT_m+1,:)=Ac_new_m(:,:,NYvacB_m,:)
-    Ac_new_m(:,:,:,NZvacB_m-1)=Ac_new_m(:,:,:,NZvacT_m)
-    Ac_new_m(:,:,:,NZvacT_m+1)=Ac_new_m(:,:,:,NZvacB_m)
+  end do
+!$omp end parallel do
+
+! Boundary condition
+!$omp parallel do collapse(2) default(none) &
+!$    private(ix_m,iz_m) &
+!$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m,NZvacB_m,NZvacT_m)
+  do iz_m=NZvacB_m-1,NZvacT_m+1
+  do ix_m=NXvacL_m-1,NXvacR_m+1
+    Ac_new_m(:,ix_m,NYvacB_m-1,iz_m)=Ac_new_m(:,ix_m,NYvacT_m,iz_m)
+    Ac_new_m(:,ix_m,NYvacT_m+1,iz_m)=Ac_new_m(:,ix_m,NYvacB_m,iz_m)
+  enddo
+  enddo
+!$omp end parallel do
+!$omp parallel do collapse(2) default(none) &
+!$    private(ix_m,iy_m) &
+!$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m,NZvacB_m,NZvacT_m)
+  do iy_m=NYvacB_m-1,NYvacT_m+1
+  do ix_m=NXvacL_m-1,NXvacR_m+1
+    Ac_new_m(:,ix_m,iy_m,NZvacB_m-1)=Ac_new_m(:,ix_m,iy_m,NZvacT_m)
+    Ac_new_m(:,ix_m,iy_m,NZvacT_m+1)=Ac_new_m(:,ix_m,iy_m,NZvacB_m)
+  enddo
+  enddo
+!$omp end parallel do
+
     return
 end subroutine dt_evolve_Ac_3dnano
 !===========================================================
@@ -643,7 +677,7 @@ subroutine dt_evolve_Ac
   case('2DC')
     call dt_evolve_Ac_2dc()
   case('3Dnano')
-    call dt_evolve_Ac_3dnano()
+    call dt_evolve_Ac_3Dnano()
   end select
    
   call timer_end(LOG_DT_EVOLVE_AC)
@@ -663,7 +697,7 @@ subroutine calc_elec_field()
 
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m) &
-!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Ac_new_m,Ac_old_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,Elec,Ac_new_m,Ac_old_m) &
 !$    firstprivate(dt)
   do iz_m=NZvacB_m, NZvacT_m
   do iy_m=NYvacB_m, NYvacT_m
@@ -729,8 +763,8 @@ subroutine calc_bmag_field_2dc()
   implicit none
   integer :: ix_m,iy_m
   real(8) :: Y, Rc(3)  ! rot Ac
-  ! calculate the magnetic field from the vector potential (2D cylindal case)
-  ! (written by M.Uemoto on 2016-11-22)
+! calculate the magnetic field from the vector potential (2D cylindal case)
+! (written by M.Uemoto on 2016-11-22)
 
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m,Rc,Y) &
@@ -755,29 +789,34 @@ subroutine calc_bmag_field_2dc()
   return
 end subroutine calc_bmag_field_2dc
 !===========================================================
-subroutine calc_bmag_field_3dnano()
+subroutine calc_bmag_field_3Dnano()
   use Global_variables, only: Ac_m, Bmag, &
                             & NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, &
                             & NZvacB_m, NZvacT_m, HZ_m, &
                             & HX_m, HY_m, c_light
   implicit none
   integer :: ix_m,iy_m,iz_m
-  real(8) :: rc(3)  ! rot Ac
-  ! calculate the magnetic field from the vector potential (2D case)
-  ! (written by M.Uemoto on 2016-11-22)
+  real(8) :: Rc(3)  ! rot Ac
+! calculate the magnetic field from the vector potential (3D case)
+! (written by M.Uemoto on 2016-11-22)
+
+!$omp parallel do collapse(3) default(none) &
+!$    private(iy_m,ix_m,iz_m,Rc) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,HY_m,HX_m,HZ_m,Bmag,Ac_m)  
   do iz_m=NZvacB_m, NZvacT_m
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
       Rc(1) = + (Ac_m(3, ix_m, iy_m+1, iz_m) - Ac_m(3, ix_m, iy_m-1, iz_m)) / (2*HY_m) &
-	        & - (Ac_m(2, ix_m, iy_m, iz_m+1) - Ac_m(2, ix_m, iy_m, iz_m-1)) / (2*HZ_m)
-      Rc(2) = + (Ac_m(1, ix_m+1, iy_m, iz_m) - Ac_m(1, ix_m-1, iy_m, iz_m)) / (2*HX_m) &
-	        & - (Ac_m(3, ix_m+1, iy_m, iz_m) - Ac_m(3, ix_m-1, iy_m, iz_m)) / (2*HX_m)
+            & - (Ac_m(2, ix_m, iy_m, iz_m+1) - Ac_m(2, ix_m, iy_m, iz_m-1)) / (2*HZ_m)
+      Rc(2) = + (Ac_m(1, ix_m, iy_m, iz_m+1) - Ac_m(1, ix_m, iy_m, iz_m-1)) / (2*HZ_m) &
+            & - (Ac_m(3, ix_m+1, iy_m, iz_m) - Ac_m(3, ix_m-1, iy_m, iz_m)) / (2*HX_m)
       Rc(3) = + (Ac_m(2, ix_m+1, iy_m, iz_m) - Ac_m(2, ix_m-1, iy_m, iz_m)) / (2*HX_m) &
             & - (Ac_m(1, ix_m, iy_m+1, iz_m) - Ac_m(1, ix_m, iy_m-1, iz_m)) / (2*HY_m)
       Bmag(:,ix_m,iy_m,iz_m) = Rc(:) * c_light
     end do
   end do
   enddo
+!$omp end parallel do
   return
 end subroutine calc_bmag_field_3dnano
 !===========================================================
@@ -792,7 +831,7 @@ subroutine calc_bmag_field()
   case('2DC')
     call calc_bmag_field_2dc()
   case('3Dnano')
-    call calc_bmag_field_3dnano()
+    call calc_bmag_field_3Dnano()
   end select
   return
 end subroutine calc_bmag_field
@@ -805,9 +844,9 @@ subroutine calc_energy_joule()
   integer :: ix_m,iy_m,iz_m
   ! calculate the Ohmic losses in the media
   ! (written by M.Uemoto on 2016-11-22)
-!$omp parallel do collapse(2) default(none) &
-!$    private(iy_m,ix_m) &
-!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,energy_joule,j_m,Elec,aLxyz) &
+!$omp parallel do collapse(3) default(none) &
+!$    private(iy_m,ix_m,iz_m) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,energy_joule,j_m,Elec,aLxyz) &
 !$    firstprivate(dt)
   do iz_m=NZvacB_m,NZvacT_m
   do iy_m=NYvacB_m,NYvacT_m
@@ -830,9 +869,9 @@ subroutine calc_energy_elemag()
   real(8) :: e2, b2
   ! calculate the total electromagnetic energy
   ! (written by M.Uemoto on 2016-11-22)
-!$omp parallel do collapse(2) default(none) &
-!$    private(iy_m,ix_m,e2,b2) &
-!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,Elec,Bmag,energy_elemag,aLxyz)
+!$omp parallel do collapse(3) default(none) &
+!$    private(iy_m,ix_m,iz_m,e2,b2) &
+!$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,NZvacB_m,NZvacT_m,Elec,Bmag,energy_elemag,aLxyz)
   do iz_m=NZvacB_m,NZvacT_m
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
