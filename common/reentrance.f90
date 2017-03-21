@@ -400,7 +400,11 @@ subroutine prep_backup_values(is_backup)
   BACKUP(excited_electron)
 
   BACKUP(data_out)
+  BACKUP(data_local_Ac)
+  BACKUP(data_local_jm)
+  BACKUP(data_vac_Ac)
   BACKUP(Nstep_write)
+
 
   BACKUP(backup_frequency)
   BACKUP(need_backup)
