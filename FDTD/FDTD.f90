@@ -24,7 +24,7 @@ subroutine write_result(index)
   ! export results of each calculation step
   ! (written by M.Uemoto on 2016-11-22)
   iter = Nstep_write * (nprocs(1) * index + procid(1))
-  write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(directory), trim(SYSname), iter 
+  write(file_ac, "(A,A,'_Ac_',I6.6,'.out')") trim(process_directory), trim(SYSname), iter
   open(902, file=file_ac)
   select case(FDTDdim)
   case("1D")

@@ -552,6 +552,7 @@ Subroutine Read_data
   use opt_variables, only: symmetric_load_balancing, is_symmetric_mode
   use environment
   use communication
+  use misc_routines
   implicit none
   integer :: ia,i,j
 
@@ -629,6 +630,8 @@ Subroutine Read_data
 
   call comm_bcast(SYSname,proc_group(1))
   call comm_bcast(directory,proc_group(1))
+  write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
+  call create_directory(process_directory)
   call comm_bcast(functional,proc_group(1))
   call comm_bcast(cval,proc_group(1))
   call comm_bcast(propagator,proc_group(1))

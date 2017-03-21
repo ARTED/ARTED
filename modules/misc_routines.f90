@@ -19,6 +19,7 @@ module misc_routines
   public :: floor_pow2, ceiling_pow2
   public :: gen_logfilename
   public :: get_wtime
+  public :: create_directory
 
 private
 contains
@@ -68,4 +69,11 @@ contains
     real(8) :: omp_get_wtime
     get_wtime = omp_get_wtime()
   end function
+
+  ! NOTE: system() subroutine is not a Fortran standard.
+  subroutine create_directory(dirpath)
+    implicit none
+    character(*), intent(in) :: dirpath
+    call system('mkdir -p '//adjustl(trim(dirpath)))
+  end subroutine
 end module
