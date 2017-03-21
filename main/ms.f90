@@ -32,6 +32,7 @@ Program main
   character(10) :: functional_t
   integer :: ix_m,iy_m,ixy_m
   integer :: index, n
+  character(len=128) :: fmt
 
 !$ integer :: omp_get_max_threads  
 
@@ -316,28 +317,11 @@ Program main
   write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(process_directory), NXY_s
   
   if (comm_is_root(1)) then
-    open(940,file=file_energy_transfer, position=position_option)
-    open(941,file=file_ac_vac, position=position_option)
+    open(940,file=file_energy_transfer, position = position_option)
     if (entrance_option == 'reentrance') then
       call seek_fileline(940, entrance_iter / Nstep_write + 2)
-      call seek_fileline(941, entrance_iter+2)
     end if
   endif
-  if (procid(1) == ROOT_PROCID+1) then
-    open(942,file=file_ac_vac_back, position=position_option)
-    if (entrance_option == 'reentrance') then
-      call seek_fileline(942, entrance_iter+2)
-    end if
-  end if
-
-  if(comm_is_root(2))then
-    open(943,file=file_ac_m, position=position_option)
-    if (entrance_option == 'reentrance') then
-      call seek_fileline(943, entrance_iter+2)
-    else
-      write(943,"(A,2x,I6,2x,A,2x,I6)")"# Data of macro points",NXY_s,"-",NXY_e
-    end if
-  end if
 
   call comm_sync_all
 
@@ -441,16 +425,18 @@ Program main
     call timer_begin(LOG_OTHER)
 !write section ================================================================================
     if(comm_is_root(1)) then
-      write(941,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,0,1)
-    end if
-    if(procid(1) == ROOT_PROCID+1) then
       ix_m=min(NXvacR_m,NX_m+1)
-      write(942,'(4e26.16E3)') iter*dt, Ac_new_m(1:3,ix_m,1)
+      data_vac_Ac(1:3,1,iter) = Ac_new_m(1:3,0,1)
+      data_vac_Ac(1:3,2,iter) = Ac_new_m(1:3,ix_m,1)
     end if
     if(comm_is_root(2)) then
-      write(943,'(99e26.16E3)') iter*dt, ( &
-           Ac_new_m(1:3,NX_table(ixy_m),NY_table(ixy_m)) &
-           ,j_m(1:3,NX_table(ixy_m),NY_table(ixy_m)),ixy_m=NXY_s,NXY_e)
+      do ixy_m=NXY_s,NXY_e
+        ix_m=NX_table(ixy_m)
+        iy_m=NY_table(ixy_m)
+
+        data_local_Ac(1:3,ixy_m,iter) = Ac_new_m(1:3,ix_m,iy_m)
+        data_local_jm(1:3,ixy_m,iter) = j_m(1:3,ix_m,iy_m)
+      end do
     end if
     
     call calc_elec_field()
@@ -578,6 +564,30 @@ Program main
   if(comm_is_root(1)) write(*,*) 'This is the start of write section'
   call timer_begin(LOG_IO)
   call write_result_all
+
+  if (comm_is_root(1)) then
+    open(941,file=file_ac_vac, position = position_option)
+    do iter=0,Nt
+       write(941,"(7e26.16e3)")iter*dt,data_vac_Ac(1:3,1,iter) &
+            ,data_vac_Ac(1:3,2,iter)
+    end do
+    close(941)
+  end if
+
+
+
+  if(comm_is_root(2))then
+    write (fmt,"(A,I2,A)")"(",(NXY_e-NXY_s+1)*6+1,"e26.16e3)"
+    open(943,file=file_ac_m ,position = position_option)
+    write(943,"(A,2x,I6,2x,A,2x,I6)")"# Data of macro points",NXY_s,"-",NXY_e
+    do iter=0,Nt
+       write(943,fmt)iter*dt,(data_local_Ac(1:3,iter,ixy_m) &
+            ,data_local_jm(1:3,iter,ixy_m),ixy_m = NXY_s,NXY_e)
+    end do
+    close(943)
+  end if
+
+
   call timer_end(LOG_IO)
   if(comm_is_root(1)) then
     write(*,*) 'This is the end of write section'
@@ -601,14 +611,7 @@ Program main
 1 if(comm_is_root(1)) write(*,*)  'This calculation is shutdown successfully!'
   if(comm_is_root(1)) then
     close(940)
-    close(941)
   endif
-  if(procid(1) == ROOT_PROCID+1) then
-    close(942)
-  end if
-  if(comm_is_root(2)) then
-    close(943)
-  end if
   call comm_finalize
 
 contains
@@ -1144,6 +1147,8 @@ Subroutine Read_data
     Ndata_out = Nt / Nstep_write
     Ndata_out_per_proc = NData_out / nprocs(1)
     allocate(data_out(16,NXvacL_m:NXvacR_m,NY_m+1,0:Ndata_out_per_proc))
+    allocate(data_local_Ac(3,NXY_s:NXY_e,0:Nt),data_local_jm(3,NXY_s:NXY_e,0:Nt))
+    allocate(data_vac_Ac(3,2,0:Nt))
 ! sato ---------------------------------------------------------------------------------------
 
   if (comm_is_root()) then

@@ -213,6 +213,9 @@ Module Global_Variables
   real(8),allocatable :: excited_electron(:,:)
 
   real(8),allocatable :: data_out(:,:,:,:)
+  real(8),allocatable :: data_local_Ac(:,:,:)
+  real(8),allocatable :: data_local_jm(:,:,:)
+  real(8),allocatable :: data_vac_Ac(:,:,:)
   integer :: Nstep_write=100
   integer :: Ndata_out, Ndata_out_per_proc
   
