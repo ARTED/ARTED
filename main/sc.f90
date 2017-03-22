@@ -91,7 +91,7 @@ Program main
 ! yabana
   functional_t = functional
   if(functional_t == 'TBmBJ') functional = 'PZM'
-  call Exc_Cor('GS')
+  call Exc_Cor('GS',NBoccmax,zu_t)
   if(functional_t == 'TBmBJ') functional = 'TBmBJ'
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
@@ -156,7 +156,7 @@ Program main
 ! yabana
     functional_t = functional
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZM'
-    call Exc_Cor('GS')
+    call Exc_Cor('GS',NBoccmax,zu_t)
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'TBmBJ'
 ! yabana
     Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
@@ -211,7 +211,7 @@ Program main
 
   zu_GS0(:,:,:)=zu_GS(:,:,:)
 
-  zu(:,:,:)=zu_GS(:,1:NBoccmax,:)
+  zu_t(:,:,:)=zu_GS(:,1:NBoccmax,:)
   Rion_eq=Rion
   dRion(:,:,-1)=0.d0; dRion(:,:,0)=0.d0
 
@@ -219,7 +219,7 @@ Program main
   call psi_rho_GS
   call Hartree
 ! yabana
-  call Exc_Cor('GS')
+  call Exc_Cor('GS',NBoccmax,zu_t)
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
   Vloc_GS(:)=Vloc(:)
@@ -277,7 +277,7 @@ Program main
   do ixyz=1,3
     kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
   enddo
-  call current0
+  call current0(zu_t)
   javt(0,:)=jav(:)
 
   Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
@@ -335,13 +335,13 @@ Program main
       Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
     end if
 
-    call dt_evolve_KB(iter)
+    call dt_evolve_KB(iter,zu_t)
 
     do ixyz=1,3
       kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
     enddo
 !$acc update device(kAc,kAc_new)
-    call current_RT
+    call current_RT(zu_t)
 
     javt(iter+1,:)=jav(:)
     if (MD_option == 'Y') then
@@ -423,7 +423,7 @@ Program main
     end if
 !Adiabatic evolution
     if (AD_RHO /= 'No' .and. iter/100*100 == iter) then
-      call k_shift_wf(Rion_update,5)
+      call k_shift_wf(Rion_update,5,zu_t)
       if (comm_is_root()) then
         do ia=1,NI
           write(*,'(1x,i7,3f15.6)') ia,force(1,ia),force(2,ia),force(3,ia)
@@ -525,7 +525,7 @@ Program main
 !====Analyzing calculation====================
 
 !Adiabatic evolution
-  call k_shift_wf_last(Rion_update,10)
+  call k_shift_wf_last(Rion_update,10,zu_t)
 
   call Fourier_tr
 
@@ -860,7 +860,7 @@ Subroutine Read_data
   allocate(occ(NB,NK),wk(NK),esp(NB,NK))
   allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
   allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
-  allocate(zu(NL,NBoccmax,NK_s:NK_e))
+  allocate(zu_t(NL,NBoccmax,NK_s:NK_e))
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
   allocate(esp_var(NB,NK))
   allocate(NBocc(NK)) !redistribution

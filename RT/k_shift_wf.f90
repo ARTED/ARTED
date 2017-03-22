@@ -17,12 +17,13 @@
 !This file contain a subroutine.
 !Subroutine k_shift_wf(iter,iter_GS_max)
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
+Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max,zu)
   use Global_Variables
   use communication
   implicit none
   integer :: iter_GS,iter_GS_max,ik,ib1,ib2
   character(3) :: atomic_position_update_switch
+  complex(8),intent(in) :: zu(NL,NBoccmax,NK_s:NK_e)
 
   if(AD_RHO == 'GS')then
     Vloc_t(:)=Vloc(:)
@@ -60,13 +61,14 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max)
   return
 End Subroutine k_shift_wf
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max)
+Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max,zu)
   use Global_Variables
   use communication
   implicit none
   integer :: iter_GS,iter_GS_max,ik,ib1,ib2,ib,ia
   character(3) :: atomic_position_update_switch
   real(8) :: esp_all(NB,NK)
+  complex(8),intent(in) :: zu(NL,NBoccmax,NK_s:NK_e)
 
   if(AD_RHO == 'GS')then
     Vloc_t(:)=Vloc(:)

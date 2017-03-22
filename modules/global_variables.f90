@@ -96,7 +96,7 @@ Module Global_Variables
   real(8),allocatable :: rho_nlcc(:),tau_nlcc(:)
 
 ! wave functions, work array
-  complex(8),allocatable :: zu(:,:,:),zu_GS(:,:,:),zu_GS0(:,:,:)
+  complex(8),allocatable :: zu_t(:,:,:),zu_GS(:,:,:),zu_GS0(:,:,:)
   complex(8),allocatable :: tpsi(:),htpsi(:),zwork(:,:,:),ttpsi(:)
   real(8),allocatable :: work(:,:,:)
   real(8),allocatable :: esp_var(:,:)
@@ -232,7 +232,7 @@ Module Global_Variables
 # define MEM_ALIGNED 32
 #endif
 
-!dir$ attributes align:MEM_ALIGNED :: zu,zu_GS
+!dir$ attributes align:MEM_ALIGNED :: zu_t,zu_GS
 !dir$ attributes align:MEM_ALIGNED :: xk_omp,txk_omp,hxk_omp,pko_omp
 !dir$ attributes align:MEM_ALIGNED :: tpsi_omp,ttpsi_omp,htpsi_omp
 
