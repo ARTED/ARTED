@@ -530,6 +530,7 @@ Program main
 
     ! backup for system failure
     if (need_backup .and. iter > 0 .and. mod(iter, backup_frequency) == 0) then
+      if (comm_is_root()) call timer_show_current_hour('Backup...', LOG_ALL)
       call timer_end(LOG_DYNAMICS)
       call timer_end(LOG_ALL)
       iter_now=iter
@@ -698,6 +699,7 @@ Subroutine Read_data
   use environment
   use communication
   use misc_routines
+  use timer
   implicit none
   integer :: ia,i,j
   integer :: ix_m,iy_m
@@ -717,6 +719,7 @@ Subroutine Read_data
   call comm_bcast(Time_shutdown,proc_group(1))
 
   if(entrance_option == 'reentrance') then
+    if (comm_is_root()) call timer_show_current_hour('Restore...', LOG_ALL)
     call prep_Reentrance_Read
     return
   else if(entrance_option == 'new') then
