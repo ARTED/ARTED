@@ -317,12 +317,12 @@ Program main
   write(file_ac_vac_back, "(A,'Ac_Vac_back.out')") trim(directory)
   write(file_ac_m, "(A,'Ac_M',I6.6,'.out')") trim(process_directory), NXY_s
   
-  if (comm_is_root(1)) then
-    open(940,file=file_energy_transfer, position = position_option)
-    if (entrance_option == 'reentrance') then
-      call seek_fileline(940, entrance_iter / Nstep_write + 2)
-    end if
-  endif
+!  if (comm_is_root(1)) then
+!    open(940,file=file_energy_transfer, position = position_option)
+!    if (entrance_option == 'reentrance') then
+!      call seek_fileline(940, entrance_iter / Nstep_write + 2)
+!    end if
+!  endif
 
   call comm_sync_all
 
@@ -479,10 +479,10 @@ Program main
         data_out(16,NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m,index)=energy_total(NXvacL_m:NXvacR_m,NYvacB_m:NYvacT_m)
       end if
       
-      if(comm_is_root(1))then
-        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
-          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
-      end if
+!      if(comm_is_root(1))then
+!        write(940,'(4e26.16E3)')iter*dt,sum(energy_elec)*HX_m*HY_m/aLxyz &
+!          &,sum(energy_elemag)*HX_m*HY_m/aLxyz,sum(energy_total)*HX_m*HY_m/aLxyz
+!      end if
     end if
     call timer_end(LOG_OTHER)
 
@@ -610,9 +610,9 @@ Program main
   if (comm_is_root(1)) call timer_show_hour('Total time =',LOG_ALL)
 
 1 if(comm_is_root(1)) write(*,*)  'This calculation is shutdown successfully!'
-  if(comm_is_root(1)) then
-    close(940)
-  endif
+!  if(comm_is_root(1)) then
+!    close(940)
+!  endif
   call comm_finalize
 
 contains
