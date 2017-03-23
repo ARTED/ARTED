@@ -14,17 +14,22 @@
 !  limitations under the License.
 !
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-subroutine Total_Energy_omp(Rion_update,GS_RT)
-  use Global_Variables, only: zu,zu_GS,NB,NBoccmax
+subroutine Total_Energy_omp(Rion_update,GS_RT,ixy_m)
+  use Global_Variables, only: zu_t,zu_m,zu_GS,NB,NBoccmax
   use communication
   implicit none
   character(3),intent(in) :: Rion_update
   character(2),intent(in) :: GS_RT
+  integer,intent(in),optional :: ixy_m
 
   if (GS_RT == 'GS') then
     call impl(Rion_update,zu_GS,NB)
   else if (GS_RT == 'RT') then
-    call impl(Rion_update,zu,NBoccmax)
+    if (present(ixy_m)) then
+      call impl(Rion_update,zu_m(:,:,:,ixy_m),NBoccmax)
+    else
+      call impl(Rion_update,zu_t,NBoccmax)
+    end if
   end if
 
 contains

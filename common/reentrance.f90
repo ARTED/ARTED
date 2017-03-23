@@ -214,7 +214,7 @@ subroutine prep_backup_values(is_backup)
   BACKUP(tau_nlcc)
 
 ! wave functions, work array
-  BACKUP(zu)
+  BACKUP(zu_t)
   BACKUP(zu_GS)
   BACKUP(zu_GS0)
   BACKUP(esp_var)

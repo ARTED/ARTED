@@ -93,7 +93,7 @@ Program main
 ! yabana
   functional_t = functional
   if(functional_t == 'TBmBJ') functional = 'PZM'
-  call Exc_Cor('GS')
+  call Exc_Cor('GS',NBoccmax,zu_t)
   if(functional_t == 'TBmBJ') functional = 'TBmBJ'
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
@@ -158,7 +158,7 @@ Program main
 ! yabana
     functional_t = functional
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZM'
-    call Exc_Cor('GS')
+    call Exc_Cor('GS',NBoccmax,zu_t)
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'TBmBJ'
 ! yabana
     Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
@@ -214,7 +214,7 @@ Program main
 
   zu_GS0(:,:,:)=zu_GS(:,:,:)
 
-  zu(:,:,:)=zu_GS(:,1:NBoccmax,:)
+  zu_t(:,:,:)=zu_GS(:,1:NBoccmax,:)
   Rion_eq=Rion
   dRion(:,:,-1)=0.d0; dRion(:,:,0)=0.d0
 
@@ -222,7 +222,7 @@ Program main
   call psi_rho_GS
   call Hartree
 ! yabana
-  call Exc_Cor('GS')
+  call Exc_Cor('GS',NBoccmax,zu_t)
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
   Vloc_GS(:)=Vloc(:)
@@ -288,9 +288,12 @@ Program main
 
   Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! sato ---------------------------------------
-  if(NXYsplit /= 1)then
+  do ixy_m=NXY_s,NXY_e
+    zu_m(:,:,:,ixy_m)=zu_t(:,1:NBoccmax,:)
+  end do
+
+  if (NXYsplit /= 1) then
     do ixy_m=NXY_s,NXY_e
-      zu_m(:,:,:,ixy_m)=zu(:,1:NBoccmax,:)
       rho_m(:,ixy_m)=rho(:)
       Vh_m(:,ixy_m)=Vh(:)
       Vexc_m(:,ixy_m)=Vexc(:)
@@ -299,6 +302,8 @@ Program main
       Vloc_old_m(:,:,ixy_m)=Vloc_old(:,:)
     end do
   end if
+
+  deallocate(zu_t)
 ! sato ---------------------------------------
 
 !reentrance
@@ -324,8 +329,6 @@ Program main
 !    end if
 !  endif
 
-  call comm_sync_all
-
 !$acc enter data copyin(ik_table,ib_table)
 !$acc enter data copyin(lapx,lapy,lapz)
 !$acc enter data copyin(nabx,naby,nabz)
@@ -349,7 +352,7 @@ Program main
       end if
       call timer_end(LOG_OTHER)
 
-      call dt_evolve_KB_MS(ix_m,iy_m)
+      call dt_evolve_KB_MS(ixy_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
@@ -363,7 +366,7 @@ Program main
 ! sato ---------------------------------------
       call timer_end(LOG_OTHER)
 
-      call current_RT
+      call current_RT_MS(ixy_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
@@ -380,15 +383,15 @@ Program main
       javt(iter,:)=jav(:)
       if (MD_option == 'Y') then
 !$acc update self(zu)
-        call Ion_Force_omp(Rion_update,'RT')
+        call Ion_Force_omp(Rion_update,'RT',ixy_m)
         if (mod(iter, Nstep_write) == 0) then
-          call Total_Energy_omp(Rion_update,'RT')
+          call Total_Energy_omp(Rion_update,'RT',ixy_m)
         end if
       else
         if (mod(iter, Nstep_write) == 0) then
 !$acc update self(zu)
-          call Total_Energy_omp(Rion_update,'RT')
-          call Ion_Force_omp(Rion_update,'RT')
+          call Total_Energy_omp(Rion_update,'RT',ixy_m)
+          call Ion_Force_omp(Rion_update,'RT',ixy_m)
         end if
       end if
     
@@ -401,12 +404,12 @@ Program main
       call timer_begin(LOG_K_SHIFT_WF)
 !!Adiabatic evolution
 !      if (AD_RHO /= 'No' .and. mod(iter,100) == 0) then
-!        call k_shift_wf(Rion_update,2)
+!        call k_shift_wf(Rion_update,2,zu_m(:,:,:,ixy_m))
 !        if(comm_is_root(2))then ! sato
 !          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
 !        end if ! sato
 !      else if (iter == Nt ) then
-!        call k_shift_wf(Rion_update,2)
+!        call k_shift_wf(Rion_update,2,zu_m(:,:,:,ixy_m))
 !        if(comm_is_root(2))then ! sato
 !          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
 !        end if ! sato
@@ -619,20 +622,11 @@ contains
   subroutine get_macro_data(ixy_m)
     implicit none
     integer, intent(in) :: ixy_m
-    integer :: il,ib,ik
+    integer :: il
 !$omp parallel default(none) &
-!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc, &
+!$    shared(NL,Vh,Vh_m,Vexc, &
 !$           Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m,Vloc_old,Vloc_old_m) &
 !$    firstprivate(ixy_m)
-
-!$omp do collapse(2) private(ik,ib)
-    do ik=NK_s,NK_e
-    do ib=1,NBoccmax
-      zu(:,ib,ik) = zu_m(:,ib,ik,ixy_m)
-    end do
-    end do
-!$omp end do nowait
-
 !$omp do private(il)
     do il=1,NL
       Vh(il)         = Vh_m(il,ixy_m)
@@ -642,26 +636,16 @@ contains
       Vloc_old(il,:) = Vloc_old_m(il,:,ixy_m)
     end do
 !$omp end do
-
 !$omp end parallel
   end subroutine
 
   subroutine put_macro_data(ixy_m)
     implicit none
     integer, intent(in) :: ixy_m
-    integer :: il,ib,ik
+    integer :: il
 !$omp parallel default(none) &
-!$    shared(NK_s,NK_e,NBoccmax,NL,zu,zu_m,Vh,Vh_m,Vexc,Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m) &
+!$    shared(NL,Vh,Vh_m,Vexc,Vexc_m,Eexc,Eexc_m,Vloc,Vloc_m) &
 !$    firstprivate(ixy_m)
-
-!$omp do collapse(2) private(ik,ib)
-    do ik=NK_s,NK_e
-    do ib=1,NBoccmax
-      zu_m(:,ib,ik,ixy_m) = zu(:,ib,ik)
-    end do
-    end do
-!$omp end do nowait
-
 !$omp do private(il)
     do il=1,NL
       Vh_m(il,ixy_m)   = Vh(il)
@@ -670,7 +654,6 @@ contains
       Vloc_m(il,ixy_m) = Vloc(il)
     end do
 !$omp end do
-
 !$omp end parallel
   end subroutine
 
@@ -1059,7 +1042,7 @@ Subroutine Read_data
   allocate(occ(NB,NK),wk(NK),esp(NB,NK))
   allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
   allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
-  allocate(zu(NL,NBoccmax,NK_s:NK_e))
+  allocate(zu_t(NL,NBoccmax,NK_s:NK_e))
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
   allocate(esp_var(NB,NK))
   allocate(NBocc(NK)) !redistribution
@@ -1130,15 +1113,16 @@ Subroutine Read_data
   allocate(jmatter_m_l(1:3,1:NX_m,1:NY_m))
   jmatter_m_l=0d0;j_m=0d0
 
+  allocate(zu_m(NL,NBoccmax,NK_s:NK_e,NXY_s:NXY_e))
   if(NXYsplit /= 1)then
-    allocate(zu_m(NL,NBoccmax,NK_s:NK_e,NXY_s:NXY_e))         
-    allocate(rho_m(NL,NXY_s:NXY_e))         
-    allocate(Vh_m(NL,NXY_s:NXY_e))         
-    allocate(Vexc_m(NL,NXY_s:NXY_e))         
-    allocate(Eexc_m(NL,NXY_s:NXY_e))         
+    allocate(rho_m(NL,NXY_s:NXY_e))
+    allocate(Vh_m(NL,NXY_s:NXY_e))
+    allocate(Vexc_m(NL,NXY_s:NXY_e))
+    allocate(Eexc_m(NL,NXY_s:NXY_e))
     allocate(Vloc_m(NL,NXY_s:NXY_e))
     allocate(Vloc_old_m(NL,2,NXY_s:NXY_e))
   end if
+
     allocate(energy_joule(NXvacL_m:NXvacR_m, NYvacB_m:NYvacT_m))
     allocate(energy_elec_Matter_l(1:NX_m,1:NY_m))
     allocate(energy_elec_Matter(1:NX_m,1:NY_m))
