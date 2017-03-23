@@ -582,8 +582,8 @@ Program main
     open(943,file=file_ac_m ,position = position_option)
     write(943,"(A,2x,I6,2x,A,2x,I6)")"# Data of macro points",NXY_s,"-",NXY_e
     do iter=0,Nt
-       write(943,fmt)iter*dt,(data_local_Ac(1:3,iter,ixy_m) &
-            ,data_local_jm(1:3,iter,ixy_m),ixy_m = NXY_s,NXY_e)
+       write(943,fmt)iter*dt,(data_local_Ac(1:3,ixy_m,iter) &
+            ,data_local_jm(1:3,ixy_m,iter),ixy_m = NXY_s,NXY_e)
     end do
     close(943)
   end if
