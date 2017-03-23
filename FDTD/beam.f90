@@ -104,3 +104,31 @@ subroutine incident_bessel_beam()
   Ac_m(:,:,NYvacB_m-1) = Ac_m(:,:,NYvacB_m)
   return
 end subroutine incident_bessel_beam
+
+
+subroutine read_initial_ac_from_file()
+  use Global_Variables, only: SYSName, directory,file_ac_init, &
+                            & Ac_m, Ac_new_m
+  use communication, only: comm_is_root, comm_bcast, proc_group
+  implicit none
+  integer :: ix_m, iy_m
+  integer :: nx1_m, nx2_m, ny1_m, ny2_m
+  
+  write(file_ac_init, "(A,A,'_Ac_init.dat')") trim(directory), trim(SYSname)
+  if (comm_is_root(1)) then
+    Ac_m = 0.0
+    Ac_new_m = 0.0
+    open(944, file=trim(file_ac_init))
+    read(944, *) nx1_m, nx2_m
+    read(944, *) ny1_m, ny2_m
+    do iy_m = ny1_m, ny2_m
+      do ix_m = nx1_m, nx2_m
+        read(944, *) Ac_m(:, ix_m, iy_m), Ac_new_m(:, ix_m, iy_m)
+      end do
+    end do
+    close(944)
+  end if
+  call comm_bcast(Ac_m, proc_group(1))
+  call comm_bcast(Ac_new_m, proc_group(1))
+  return
+end subroutine 

@@ -1105,7 +1105,7 @@ Subroutine Read_data
 
   NYvacB_m = 1
   NYvacT_m = NY_m  
-  allocate(Ac_m(1:3,NXvacL_m-1:NXvacR_m+1,0:NY_m+1))
+  allocate(Ac_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
   allocate(Ac_old_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
   allocate(Ac_new_m(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))
   allocate(g(1:3,NXvacL_m-1:NXvacR_m+1,NYvacB_m-1:NYvacT_m+1))

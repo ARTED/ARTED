@@ -127,8 +127,12 @@ subroutine init_Ac_ms_2dc()
   jmatter_m=0d0
   jmatter_m_l=0d0
   energy_joule=0d0
-  call incident_bessel_beam()
-  
+  select case(AE_shape)
+  case('Asin2cos')
+    call incident_bessel_beam()
+  case('input')
+    call read_initial_ac_from_file()
+  end select 
   call comm_sync_all
   return
 end subroutine init_Ac_ms_2dc
