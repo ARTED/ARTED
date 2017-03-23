@@ -262,6 +262,7 @@ Program main
 
   deallocate(rho_in,rho_out)
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
+  deallocate(zu_GS,zu_GS0)
 !====GS calculation============================
 
 #ifdef ARTED_LBLK
@@ -398,18 +399,18 @@ Program main
       call timer_end(LOG_OTHER)
 
       call timer_begin(LOG_K_SHIFT_WF)
-!Adiabatic evolution
-      if (AD_RHO /= 'No' .and. mod(iter,100) == 0) then
-        call k_shift_wf(Rion_update,2)
-        if(comm_is_root(2))then ! sato
-          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
-        end if ! sato
-      else if (iter == Nt ) then
-        call k_shift_wf(Rion_update,2)
-        if(comm_is_root(2))then ! sato
-          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
-        end if ! sato
-      end if
+!!Adiabatic evolution
+!      if (AD_RHO /= 'No' .and. mod(iter,100) == 0) then
+!        call k_shift_wf(Rion_update,2)
+!        if(comm_is_root(2))then ! sato
+!          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
+!        end if ! sato
+!      else if (iter == Nt ) then
+!        call k_shift_wf(Rion_update,2)
+!        if(comm_is_root(2))then ! sato
+!          excited_electron_l(ix_m,iy_m)=sum(occ)-sum(ovlp_occ(1:NBoccmax,:))
+!        end if ! sato
+!      end if
       call timer_end(LOG_K_SHIFT_WF)
       
     end do Macro_loop
@@ -485,17 +486,17 @@ Program main
     end if
     call timer_end(LOG_OTHER)
 
-    if (AD_RHO /= 'No' .and. mod(iter,100) == 0 ) then 
-      call timer_begin(LOG_ALLREDUCE)
-      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
-      call timer_end(LOG_ALLREDUCE)
-      if(comm_is_root(1))call write_excited_electron(iter)
-    else if (iter == Nt ) then
-      call timer_begin(LOG_ALLREDUCE)
-      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
-      call timer_end(LOG_ALLREDUCE)
-      if(comm_is_root(1))call write_excited_electron(iter)
-    end if
+!    if (AD_RHO /= 'No' .and. mod(iter,100) == 0 ) then 
+!      call timer_begin(LOG_ALLREDUCE)
+!      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
+!      call timer_end(LOG_ALLREDUCE)
+!      if(comm_is_root(1))call write_excited_electron(iter)
+!    else if (iter == Nt ) then
+!      call timer_begin(LOG_ALLREDUCE)
+!      call comm_summation(excited_electron_l,excited_electron,NX_m*NY_m,proc_group(1))
+!      call timer_end(LOG_ALLREDUCE)
+!      if(comm_is_root(1))call write_excited_electron(iter)
+!    end if
 
     call timer_begin(LOG_OTHER)
     if (reentrance_switch == 1) then 
@@ -859,6 +860,10 @@ Subroutine Read_data
      if(comm_is_root())write(*,*)'Warning !! 2D calculation ! TwoD_shape is not good'
      TwoD_shape='periodic'
   end if
+
+  if(functional=='TBmBJ' .or. propagator=='etrs')call err_finalize('invalid functional or propagator.')
+
+  
 
 !sym ---
   select case(crystal_structure)
