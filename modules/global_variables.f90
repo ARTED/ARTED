@@ -141,6 +141,7 @@ Module Global_Variables
   character(256) :: file_ac_vac_back     ! 942
   character(256) :: file_ac_m            ! 943
   character(256) :: file_ac              ! 902
+  character(256) :: file_ac_init         ! 902
   character(256) :: process_directory
 
   character(2) :: ext_field
