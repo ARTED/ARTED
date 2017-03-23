@@ -44,7 +44,7 @@ subroutine prep_backup_values(is_backup)
       close(iounit)
     end if
     call comm_bcast(dump_filename, proc_group(1))
-    open(iounit, status='replace', form='unformatted', file=gen_filename(dump_filename, procid(1)))
+    open(iounit, status='replace', form='unformatted', file=gen_filename(dump_filename, procid(1)), buffered='no')
   else
     ! restore
     if(comm_is_root()) then
@@ -54,7 +54,7 @@ subroutine prep_backup_values(is_backup)
     call comm_bcast(directory, proc_group(1))
     call comm_bcast(dump_filename, proc_group(1))
     write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
-    open(iounit, status='old', form='unformatted', file=gen_filename(dump_filename, procid(1)))
+    open(iounit, status='old', form='unformatted', file=gen_filename(dump_filename, procid(1)), buffered='no')
   end if
 
 !============= backup values ==============
