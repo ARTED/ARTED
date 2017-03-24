@@ -100,7 +100,7 @@ subroutine incident_bessel_beam()
   ! impose boundary condition
   Ac_new_m(:,:,NYvacT_m+1) = 0.0d0
   Ac_new_m(2:3,:,NYvacB_m-1) = 0.0d0
-  Ac_new_m(1,:,NYvacB_m-1) = Ac_m(1,:,NYvacB_m)
+  Ac_new_m(1,:,NYvacB_m-1) = Ac_new_m(1,:,NYvacB_m)
   Ac_m(:,:,NYvacT_m+1) = 0.0d0
   Ac_m(2:3,:,NYvacB_m-1) = 0.0d0
   Ac_m(1,:,NYvacB_m-1) = Ac_m(1,:,NYvacB_m)
