@@ -460,7 +460,6 @@ subroutine dt_evolve_Ac_2dc()
   implicit none
   integer :: ix_m, iy_m
   real(8) :: Y, RR(3) ! rot rot Ac
-  ! (written by M.Uemoto on 2016-11-22)
 
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m) &
@@ -479,7 +478,7 @@ subroutine dt_evolve_Ac_2dc()
 !$    firstprivate(dt)
   do iy_m=NYvacB_m,NYvacT_m
     do ix_m=NXvacL_m,NXvacR_m
-      Y = (iy_m - 0.50d0) * HY_m
+      Y = iy_m * HY_m
       RR(1) = +(+0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m-1) &
             & +2.00d0*(1.00d0/HY_m**2)*Ac_m(1,ix_m+0,iy_m+0) &
             & +(-0.50d0*(1.00d0/HY_m)*(1.00d0/Y)-(1.00d0/HY_m**2))*Ac_m(1,ix_m+0,iy_m+1) &
@@ -512,8 +511,10 @@ subroutine dt_evolve_Ac_2dc()
 !$    private(ix_m) &
 !$    shared(Ac_new_m,NXvacL_m,NXvacR_m,NYvacB_m,NYvacT_m)
   do ix_m=NXvacL_m-1,NXvacR_m+1
-    Ac_new_m(:,ix_m,NYvacB_m-1)=Ac_new_m(:,ix_m,NYvacB_m)
-    Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
+    Ac_new_m(1,ix_m,NYvacB_m-1)=Ac_new_m(1,ix_m,NYvacB_m)
+    !!Following BCs are automatically satisfied by adequate initial state.
+    !Ac_new_m(2:3,ix_m,NYvacB_m-1)=0.0d0
+    !Ac_new_m(:,ix_m,NYvacT_m+1)=0.0d0
   enddo
 !$omp end parallel do
   return
@@ -546,8 +547,6 @@ subroutine calc_elec_field()
                             & dt
   implicit none
   integer ix_m,iy_m
-  ! calculate the electric field from the vector potential Ac
-  ! (written by M.Uemoto on 2016-11-22)
 
 !$omp parallel do collapse(2) default(none) &
 !$    private(iy_m,ix_m) &
@@ -623,7 +622,7 @@ subroutine calc_bmag_field_2dc()
 !$    shared(NYvacB_m,NYvacT_m,NXvacL_m,NXvacR_m,HY_m,HX_m,Bmag,Ac_m)
   do iy_m=NYvacB_m, NYvacT_m
     do ix_m=NXvacL_m, NXvacR_m
-      Y = (iy_m-0.5d0) * HY_m
+      Y = iy_m * HY_m
       Rc(1) = -0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m-1) &
             & +1.00d0*(1.00d0/Y)*Ac_m(3,ix_m+0,iy_m+0) &
             & +0.50d0*(1.00d0/HY_m)*Ac_m(3,ix_m+0,iy_m+1)
