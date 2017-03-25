@@ -33,6 +33,8 @@ Program main
   integer :: ix_m,iy_m,ixy_m
   integer :: index, n
   character(len=128) :: fmt
+  
+  real(8) calc_pulse_xcenter
 
 !$ integer :: omp_get_max_threads  
 
@@ -513,10 +515,12 @@ Program main
     end if
 
 !Timer
-    if (iter/1000*1000 == iter.and.comm_is_root(1)) then
-      write(*,*) 'iter =',iter
+    if ((mod(iter, 1000) == 0) .and. comm_is_root(1)) then
+      write(*,*) 'iter =', iter
+      write(*,*) "pulse_xcenter =", calc_pulse_xcenter() 
       call timer_show_current_hour('dynamics time      :', LOG_DYNAMICS)
     end if
+    
 
 !Timer for shutdown
     if (mod(iter,10) == 0) then
