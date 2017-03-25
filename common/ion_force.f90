@@ -17,8 +17,8 @@
 subroutine Ion_Force_omp(Rion_update,GS_RT,ixy_m)
   use Global_Variables, only: zu_t,zu_m,zu_GS,NB,NBoccmax
   implicit none
-  character(2),intent(in) :: GS_RT
-  character(3),intent(in) :: Rion_update
+  character(*),intent(in) :: Rion_update
+  character(*),intent(in) :: GS_RT
   integer,intent(in),optional :: ixy_m
 
   if(GS_RT == 'GS') then
@@ -37,7 +37,7 @@ contains
     use communication
     use timer
     implicit none
-    character(3),intent(in)  :: Rion_update
+    character(*),intent(in)  :: Rion_update
     integer,intent(in)       :: zu_NB
     complex(8),intent(inout) :: zutmp(NL,zu_NB,NK_s:NK_e)
 

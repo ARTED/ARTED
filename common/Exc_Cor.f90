@@ -18,7 +18,7 @@ subroutine Exc_Cor(GS_RT,NBtmp,zu)
   use Global_Variables
   use timer
   implicit none
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   integer,intent(in)       :: NBtmp
   complex(8),intent(inout) :: zu(NL,NBtmp,NK_s:NK_e)
   call timer_begin(LOG_EXC_COR)
@@ -79,7 +79,7 @@ End Subroutine Exc_Cor_PZM
 Subroutine Exc_Cor_PBE(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   real(8) :: agrho_s(NL)
   integer :: i
@@ -153,7 +153,7 @@ Subroutine Exc_Cor_TBmBJ(GS_RT)
   use Global_Variables
   implicit none
   real(8),parameter :: alpha=-0.012d0,beta=1.023d0,gamma=0.80d0
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   real(8) :: c,tau_s_jrho,D_s_jrho,Q_s,rhs,x_s,b_s,Vx_BR,Vx_MBJ
   real(8) :: trho,rs,rhos,ec,dec_drhoa,dec_drhob
@@ -232,7 +232,7 @@ end subroutine BR_Newton
 Subroutine Exc_Cor_TPSS(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   integer i
   real(8),parameter :: kappa=0.804d0,c=1.59096d0,e=1.537d0,mu=0.21951d0
   real(8),parameter :: b=0.40d0,d=2.8d0,C0=0.53d0
@@ -349,7 +349,7 @@ Subroutine Exc_Cor_TPSS(GS_RT)
 Subroutine Exc_Cor_VS98(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   real(8),parameter :: CF=3d0/5d0*(3*Pi**2)**(2d0/3d0)
   real(8),parameter :: alp_ex=0.00186726d0,alp_aa=0.00515088d0,alp_ab=0.00304966d0
   real(8),parameter :: a_ex=-0.9800683d0,a_aa=0.3270912d0,a_ab=0.7035010d0
@@ -922,7 +922,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   use Global_Variables
   use communication
   implicit none
-  character(2) :: GS_RT
+  character(*) :: GS_RT
   real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   integer :: ikb,ik,ib,i
   real(8) :: tau_s_l(NL),j_s_l(NL,3),ss(3)
