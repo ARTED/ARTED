@@ -368,8 +368,7 @@ Program main
 ! sato ---------------------------------------
       call timer_end(LOG_OTHER)
 
-!      call current_RT_MS(ixy_m)
-jav=0
+      call current_RT_MS(ixy_m)
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
