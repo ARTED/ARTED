@@ -708,19 +708,20 @@ real(8) function calc_pulse_xcenter()
   integer :: ix_m, iy_m
   real(8) :: x, ex_tot, e_tot
 
-  iy_m = (NYvacB_m + NYvacT_m) * 0.5
   ex_tot = 0.0
   e_tot = 0.0
-!$omp parallel do private(ix_m, x) & 
-!$    shared(iy_m, NXvacL_m, NXvacR_m, energy_elemag) &
+!$omp parallel do collapse(2) default(none) &
+!$    private(iy_m, ix_m, x) & 
+!$    shared(NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, HX_m, energy_elemag) &
 !$    reduction(+: ex_tot, e_tot)
+do iy_m = NYvacB_m, NYvacT_m
   do ix_m = NXvacL_m, NXvacR_m
     x = ix_m * HX_m
     e_tot = e_tot + energy_elemag(ix_m, iy_m)
     ex_tot = ex_tot + x * energy_elemag(ix_m, iy_m)
   end do
+end do
 !$omp end parallel do
   calc_pulse_xcenter = ex_tot / e_tot
   return
 end function calc_pulse_xcenter
-
