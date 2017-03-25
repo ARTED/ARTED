@@ -513,10 +513,12 @@ Program main
     end if
 
 !Timer
-    if (iter/1000*1000 == iter.and.comm_is_root(1)) then
-      write(*,*) 'iter =',iter
+    if ((mod(iter, 1000) == 0) .and. comm_is_root(1)) then
+      write(*,*) 'iter =', iter
+      write(*,*) "pulse_xcenter =", calc_pulse_xcenter() 
       call timer_show_current_hour('dynamics time      :', LOG_DYNAMICS)
     end if
+    
 
 !Timer for shutdown
     if (mod(iter,10) == 0) then
