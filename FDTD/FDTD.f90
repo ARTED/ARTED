@@ -708,7 +708,6 @@ real(8) function calc_pulse_xcenter()
   integer :: ix_m, iy_m
   real(8) :: x, ex_tot, e_tot
 
-  iy_m = (NYvacB_m + NYvacT_m) * 0.5
   ex_tot = 0.0
   e_tot = 0.0
 !$omp parallel do collapse(2) default(none) &
