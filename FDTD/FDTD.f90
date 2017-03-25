@@ -702,15 +702,17 @@ subroutine calc_energy_elemag()
 end subroutine calc_energy_elemag
 
 
-subroutine calc_pulse_xcenter()
-  use Global_variables, only: energy_elemag, NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, pi
+real(8) function calc_pulse_xcenter()
+  use Global_variables, only: energy_elemag, NYvacB_m, NYvacT_m, NXvacL_m, NXvacR_m, HX_m
   implicit none
   integer :: ix_m, iy_m
   real(8) :: x, ex_tot, e_tot
 
   iy_m = (NYvacB_m + NYvacT_m) * 0.5
+  ex_tot = 0.0
+  e_tot = 0.0
 !$omp parallel do private(ix_m, x) & 
-!$    shared(iy_m,NXvacL_m, NXvacR_m, energy_elemag) &
+!$    shared(iy_m, NXvacL_m, NXvacR_m, energy_elemag) &
 !$    reduction(+: ex_tot, e_tot)
   do ix_m = NXvacL_m, NXvacR_m
     x = ix_m * HX_m
@@ -718,6 +720,7 @@ subroutine calc_pulse_xcenter()
     ex_tot = ex_tot + x * energy_elemag(ix_m, iy_m)
   end do
 !$omp end parallel do
-  calc_pulse_xcenter = extot / etot
+  calc_pulse_xcenter = ex_tot / e_tot
   return
-subroutine calc_pulse_xcenter()
+end function calc_pulse_xcenter
+

@@ -33,6 +33,8 @@ Program main
   integer :: ix_m,iy_m,ixy_m
   integer :: index, n
   character(len=128) :: fmt
+  
+  real(8) calc_pulse_xcenter
 
 !$ integer :: omp_get_max_threads  
 
@@ -366,7 +368,8 @@ Program main
 ! sato ---------------------------------------
       call timer_end(LOG_OTHER)
 
-      call current_RT_MS(ixy_m)
+!      call current_RT_MS(ixy_m)
+jav=0
 
       call timer_begin(LOG_OTHER)
 ! sato ---------------------------------------
