@@ -326,9 +326,6 @@ Program main
   
 !  if (comm_is_root(1)) then
 !    open(940,file=file_energy_transfer, position = position_option)
-!    if (entrance_option == 'reentrance') then
-!      call seek_fileline(940, entrance_iter / Nstep_write + 2)
-!    end if
 !  endif
 
 !$acc enter data copyin(ik_table,ib_table)
