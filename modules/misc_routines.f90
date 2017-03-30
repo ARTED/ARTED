@@ -18,7 +18,6 @@ module misc_routines
 
   public :: floor_pow2, ceiling_pow2
   public :: gen_logfilename
-  public :: seek_fileline, get_sizeof_fileline
   public :: get_wtime
   public :: create_directory
 
@@ -71,32 +70,11 @@ contains
     get_wtime = omp_get_wtime()
   end function
 
-  ! NOTE: system() subroutine is not a Fortran standard.
+  ! NOTE: execute_command_line() is standardized at Fortran2008.
+  !       In specification, `Execute command line` is defined this feature.
   subroutine create_directory(dirpath)
     implicit none
     character(*), intent(in) :: dirpath
-    call system('mkdir -p '//adjustl(trim(dirpath)))
-  end subroutine
-
-  function get_sizeof_fileline(iounit)
-    implicit none
-    integer, intent(in) :: iounit
-    integer             :: get_sizeof_fileline
-    integer,parameter      :: maxlinesize = 1024
-    character(maxlinesize) :: buf
-    read (iounit, '(A)') buf
-    get_sizeof_fileline = len_trim(buf) + 1
-  end function
-
-  ! NOTE: Non standard function `fseek` is used at this routine.
-  subroutine seek_fileline(iounit, line)
-    implicit none
-    integer, intent(in) :: iounit
-    integer, intent(in) :: line
-    integer :: lsize, p
-    call fseek(iounit, 0, 0)
-    lsize = get_sizeof_fileline(iounit)
-    p     = lsize * (line - 1)
-    call fseek(iounit, p, 0)
+    call execute_command_line('mkdir -p '//adjustl(trim(dirpath)), wait=.true.)
   end subroutine
 end module
