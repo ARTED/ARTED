@@ -28,7 +28,7 @@ Program main
   use misc_routines, only: get_wtime
   implicit none
   integer :: iter,ik,ib,ia,i,ixyz
-  character(3) :: Rion_update
+  logical :: Rion_update
   character(10) :: functional_t
 !$ integer :: omp_get_max_threads  
 
@@ -58,7 +58,7 @@ Program main
   Time_start=get_wtime() !reentrance
   call comm_bcast(Time_start,proc_group(1))
 
-  Rion_update='on'
+  Rion_update = rion_update_on
 
   call Read_data
   if (entrance_option == 'reentrance' ) go to 2
@@ -91,14 +91,13 @@ Program main
 ! yabana
   functional_t = functional
   if(functional_t == 'TBmBJ') functional = 'PZM'
-  call Exc_Cor('GS',NBoccmax,zu_t)
+  call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
   if(functional_t == 'TBmBJ') functional = 'TBmBJ'
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
-!  call Total_Energy(Rion_update,'GS')
-  call Total_Energy_omp(Rion_update,'GS') ! debug
-  call Ion_Force_omp(Rion_update,'GS')
-  if (MD_option /= 'Y') Rion_update = 'off'
+  call Total_Energy_omp(Rion_update,calc_mode_gs) ! debug
+  call Ion_Force_omp(Rion_update,calc_mode_gs)
+  if (MD_option /= 'Y') Rion_update = rion_update_off
   Eall_GS(0)=Eall
 
   if(comm_is_root()) then
@@ -156,12 +155,12 @@ Program main
 ! yabana
     functional_t = functional
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZM'
-    call Exc_Cor('GS',NBoccmax,zu_t)
+    call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'TBmBJ'
 ! yabana
     Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
-    call Total_Energy_omp(Rion_update,'GS')
-    call Ion_Force_omp(Rion_update,'GS')
+    call Total_Energy_omp(Rion_update,calc_mode_gs)
+    call Ion_Force_omp(Rion_update,calc_mode_gs)
     call sp_energy_omp
     call current_GS
     Eall_GS(iter)=Eall
@@ -219,11 +218,11 @@ Program main
   call psi_rho_GS
   call Hartree
 ! yabana
-  call Exc_Cor('GS',NBoccmax,zu_t)
+  call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
   Vloc_GS(:)=Vloc(:)
-  call Total_Energy_omp(Rion_update,'GS')
+  call Total_Energy_omp(Rion_update,calc_mode_gs)
   Eall0=Eall
   if(comm_is_root()) write(*,*) 'Eall =',Eall
 
@@ -346,15 +345,15 @@ Program main
     javt(iter+1,:)=jav(:)
     if (MD_option == 'Y') then
 !$acc update self(zu)
-      call Ion_Force_omp(Rion_update,'RT')
+      call Ion_Force_omp(Rion_update,calc_mode_rt)
       if (iter/10*10 == iter) then
-        call Total_Energy_omp(Rion_update,'RT')
+        call Total_Energy_omp(Rion_update,calc_mode_rt)
       end if
     else
       if (iter/10*10 == iter) then
 !$acc update self(zu)
-        call Total_Energy_omp(Rion_update,'RT')
-        call Ion_Force_omp(Rion_update,'RT')
+        call Total_Energy_omp(Rion_update,calc_mode_rt)
+        call Ion_Force_omp(Rion_update,calc_mode_rt)
       end if
     end if
 

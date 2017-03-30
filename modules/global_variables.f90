@@ -227,6 +227,15 @@ Module Global_Variables
   logical :: need_backup      = .FALSE.
 
 
+  ! calculation mode
+  integer, parameter :: calc_mode_gs = 1000
+  integer, parameter :: calc_mode_rt = 1100
+
+  ! Rion update flag
+  logical, parameter :: rion_update_on  = .true.
+  logical, parameter :: rion_update_off = .false.
+
+
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
 #else
