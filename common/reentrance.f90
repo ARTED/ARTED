@@ -19,15 +19,16 @@ subroutine prep_backup_values(is_backup)
   use opt_variables,   only: opt_vars_initialize_p1, opt_vars_initialize_p2
   use backup_routines, only: backup_value
   use misc_routines,   only: get_wtime
-  use communication,   only: comm_sync_all, comm_bcast, comm_is_root, comm_set_level2_group, &
-                             procid, nprocs, proc_group
+  use communication
   implicit none
   logical, intent(in) :: is_backup
 
   integer, parameter :: iounit = 500
   character(256)     :: reent_filename, dump_filename
   real(8) :: beg_time, end_time
+#ifdef ARTED_MS
   integer :: gNt
+#endif
 
   call comm_sync_all; beg_time = get_wtime()
 
@@ -42,7 +43,9 @@ subroutine prep_backup_values(is_backup)
       write(iounit,*) Time_shutdown
       write(iounit,*) "'"//trim(directory)//"'"
       write(iounit,*) "'"//trim(dump_filename)//"'"
+#ifdef ARTED_MS
       write(iounit,'(I7,A)') Nt,'   ! Nt: If you want continuous execution, please change the value.'
+#endif
       close(iounit)
     end if
     call comm_bcast(dump_filename, proc_group(1))
@@ -52,11 +55,15 @@ subroutine prep_backup_values(is_backup)
     if(comm_is_root()) then
       read(*,*) directory
       read(*,*) dump_filename
+#ifdef ARTED_MS
       read(*,*) gNt
+#endif
     end if
     call comm_bcast(directory, proc_group(1))
     call comm_bcast(dump_filename, proc_group(1))
+#ifdef ARTED_MS
     call comm_bcast(gNt, proc_group(1))
+#endif
     write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
     open(iounit, status='old', form='unformatted', file=gen_filename(dump_filename, procid(1)), buffered='no')
   end if
@@ -427,6 +434,7 @@ subroutine prep_backup_values(is_backup)
     call opt_vars_initialize_p1
     call opt_vars_initialize_p2
 
+#ifdef ARTED_MS
   ! continuous execution (is available only multi-scale mode)
     if (gNt /= Nt) then
       if (comm_is_root()) then
@@ -437,6 +445,7 @@ subroutine prep_backup_values(is_backup)
       Ndata_out_per_proc = Ndata_out / nprocs(1)
       call resize_arrays
     end if
+#endif
   end if
 
   call comm_sync_all; end_time = get_wtime()
