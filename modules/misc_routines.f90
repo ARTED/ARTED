@@ -70,10 +70,11 @@ contains
     get_wtime = omp_get_wtime()
   end function
 
-  ! NOTE: system() subroutine is not a Fortran standard.
+  ! NOTE: execute_command_line() is standardized at Fortran2008.
+  !       In specification, `Execute command line` is defined this feature.
   subroutine create_directory(dirpath)
     implicit none
     character(*), intent(in) :: dirpath
-    call system('mkdir -p '//adjustl(trim(dirpath)))
+    call execute_command_line('mkdir -p '//adjustl(trim(dirpath)), wait=.true.)
   end subroutine
 end module

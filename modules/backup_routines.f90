@@ -14,7 +14,8 @@
 !  limitations under the License.
 !
 module backup_routines
-! NOTE: A Fortran2003 compiler is required to compiling this module.
+  ! NOTE: `allocatable dummy array` feature requires Fortran2003 compiler.
+  !       A feature is defined at `ISO TR 15581 Allocatable Enhancements`.
   implicit none
 
   public :: save_value
