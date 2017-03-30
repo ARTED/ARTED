@@ -177,7 +177,7 @@ Subroutine dt_evolve_omp_KB(zu)
 
   call psi_rho_RT(zu)
   call Hartree
-  call Exc_Cor('RT',NBoccmax,zu)
+  call Exc_Cor(calc_mode_rt,NBoccmax,zu)
 
 !$omp parallel do
   do i=1,NL
@@ -217,7 +217,7 @@ Subroutine dt_evolve_omp_KB(zu)
 
 ! yabana
   NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
-  call Exc_Cor('RT',NBoccmax,zu)
+  call Exc_Cor(calc_mode_rt,NBoccmax,zu)
   NVTX_END()
 ! yabana
 
@@ -358,7 +358,7 @@ Subroutine dt_evolve_etrs_omp_KB(zu)
      NVTX_END()
 
      NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
-     call Exc_Cor('RT',NBoccmax,zu)
+     call Exc_Cor(calc_mode_rt,NBoccmax,zu)
      NVTX_END()
 
 #ifdef _OPENACC
@@ -394,7 +394,7 @@ Subroutine dt_evolve_etrs_omp_KB(zu)
   NVTX_END()
 
   NVTX_BEG('dt_evolve_omp_KB(): Exc_Cor',6)
-  call Exc_Cor('RT',NBoccmax,zu)
+  call Exc_Cor(calc_mode_rt,NBoccmax,zu)
   NVTX_END()
 
 
@@ -484,7 +484,7 @@ Subroutine dt_evolve_omp_KB_MS(zu)
 
   call psi_rho_RT(zu)
   call Hartree
-  call Exc_Cor('RT',NBoccmax,zu)
+  call Exc_Cor(calc_mode_rt,NBoccmax,zu)
 
 !$omp parallel do
   do i=1,NL
@@ -522,7 +522,7 @@ Subroutine dt_evolve_omp_KB_MS(zu)
 
 ! yabana
   NVTX_BEG('dt_evolve_omp_KB_MS(): Hartree',5)
-  call Exc_Cor('RT',NBoccmax,zu)
+  call Exc_Cor(calc_mode_rt,NBoccmax,zu)
   NVTX_END()
 ! yabana
 
