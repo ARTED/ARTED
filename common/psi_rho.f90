@@ -117,7 +117,7 @@ contains
     end do
 !$omp end do
 
-    i = ceiling_pow2(NUMBER_THREADS/2)
+    i = ceiling_pow2(NUMBER_THREADS)/2
     do while(i > 0)
       if(mytid < i) then
         zrhotmp(0:NL-1,mytid) = zrhotmp(0:NL-1,mytid) + zrhotmp(0:NL-1,mytid + i)
