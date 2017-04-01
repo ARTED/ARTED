@@ -172,7 +172,7 @@ contains
     character(*),intent(in) :: str
     integer,intent(in)      :: id
     real(8) :: time,hour
-    time = get_wtime() - log_temp(id)
+    time = get_wtime() - log_temp(id) + log_time(id)
     hour = time / 3600
     write(*,*) str,time,'sec =',hour,'hour'
   end subroutine
@@ -192,7 +192,7 @@ contains
     character(*),intent(in) :: str
     integer,intent(in)      :: id
     real(8) :: time,mini
-    time = get_wtime() - log_temp(id)
+    time = get_wtime() - log_temp(id) + log_time(id)
     mini = time / 60
     write(*,*) str,time,'sec =',mini,'min'
   end subroutine
