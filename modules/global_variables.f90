@@ -235,6 +235,19 @@ Module Global_Variables
   logical, parameter :: rion_update_on  = .true.
   logical, parameter :: rion_update_off = .false.
 
+  interface 
+    subroutine total_Energy_omp(Rion_update,GS_RT,ixy_m)
+      integer,intent(in) :: GS_RT
+      logical,intent(in) :: Rion_update
+      integer,intent(in),optional :: ixy_m
+    end subroutine total_Energy_omp
+
+    subroutine Ion_Force_omp(Rion_update,GS_RT,ixy_m)
+      integer,intent(in) :: GS_RT
+      logical,intent(in) :: Rion_update
+      integer,intent(in),optional :: ixy_m
+    end subroutine Ion_Force_omp
+  end interface
 
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64

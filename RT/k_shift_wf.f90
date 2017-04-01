@@ -22,7 +22,7 @@ Subroutine k_shift_wf(atomic_position_update_switch,iter_GS_max,zu)
   use communication
   implicit none
   integer,intent(in) :: iter_GS_max
-  integer,intent(in) :: atomic_position_update_switch
+  logical,intent(in) :: atomic_position_update_switch
   complex(8),intent(in) :: zu(NL,NBoccmax,NK_s:NK_e)
   integer :: iter_GS,ik,ib1,ib2
 
@@ -67,7 +67,7 @@ Subroutine k_shift_wf_last(atomic_position_update_switch,iter_GS_max,zu)
   use communication
   implicit none
   integer,intent(in) :: iter_GS_max
-  integer,intent(in) :: atomic_position_update_switch
+  logical,intent(in) :: atomic_position_update_switch
   complex(8),intent(in) :: zu(NL,NBoccmax,NK_s:NK_e)
   real(8) :: esp_all(NB,NK)
   integer :: iter_GS,ik,ib1,ib2,ib,ia
