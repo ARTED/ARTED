@@ -26,9 +26,8 @@ subroutine prep_backup_values(is_backup)
   integer, parameter :: iounit = 500
   character(256)     :: reent_filename, dump_filename
   real(8) :: beg_time, end_time
-#ifdef ARTED_MS
   integer :: gNt
-#endif
+
 
   call comm_sync_all; beg_time = get_wtime()
 
@@ -39,13 +38,20 @@ subroutine prep_backup_values(is_backup)
       write(reent_filename,'(A,A,I6.6,A)') trim(SYSname),'_re_',iter_now,'.dat'
       write(dump_filename,'(A,A,A,I6.6)') 'dump_',trim(SYSname),'_',iter_now
       open(iounit, file=gen_filename(reent_filename))
-      write(iounit,*) 'reentrance'
-      write(iounit,*) Time_shutdown
-      write(iounit,*) "'"//trim(directory)//"'"
-      write(iounit,*) "'"//trim(dump_filename)//"'"
-#ifdef ARTED_MS
-      write(iounit,'(I7,A)') Nt,'   ! Nt: If you want continuous execution, please change the value.'
-#endif
+      write(iounit,"(A)") '&group_function'
+      write(iounit,"(A,A,A)") "cfunction='",trim(calc_mode),"'"
+      write(iounit,"(A)") '/'
+      write(iounit,"(A)") '&control'
+      write(iounit,"(A)") "entrance_option = 'reentrance'  "
+      write(iounit,"(A,e26.16e3)") "Time_shutdown=",Time_shutdown
+      write(iounit,"(A)") '/'
+      write(iounit,"(A)") '&reentrance'
+      write(iounit,"(A)") "'"//trim(directory)//"'  !directory"
+      write(iounit,"(A)") "'"//trim(dump_filename)//"'  !dump_filename"
+      if(calc_mode == calc_mode_ms)then
+         write(iounit,'(I7,A)')Nt,'  ! Nt: If you want continuous execution, please change the value.'
+      end if
+      write(iounit,"(A)") '/'
       close(iounit)
     end if
     call comm_bcast(dump_filename, proc_group(1))
@@ -53,17 +59,17 @@ subroutine prep_backup_values(is_backup)
   else
     ! restore
     if(comm_is_root()) then
-      read(*,*) directory
-      read(*,*) dump_filename
-#ifdef ARTED_MS
-      read(*,*) gNt
-#endif
+      open(iounit, file='.reenetrance.tmp', status='old')
+      read(iounit, *)directory
+      read(iounit, *)dump_filename
+      if(calc_mode == calc_mode_ms) read(iounit, *)gNt
+      close(iounit)
+
     end if
     call comm_bcast(directory, proc_group(1))
     call comm_bcast(dump_filename, proc_group(1))
-#ifdef ARTED_MS
-    call comm_bcast(gNt, proc_group(1))
-#endif
+    if(calc_mode == calc_mode_ms) call comm_bcast(gNt, proc_group(1))
+
     write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
     open(iounit, status='old', form='unformatted', file=gen_filename(dump_filename, procid(1)))
   end if
@@ -434,18 +440,18 @@ subroutine prep_backup_values(is_backup)
     call opt_vars_initialize_p1
     call opt_vars_initialize_p2
 
-#ifdef ARTED_MS
+    if(calc_mode == calc_mode_ms)then
   ! continuous execution (is available only multi-scale mode)
-    if (gNt /= Nt) then
-      if (comm_is_root()) then
-        print '(A,I7,A,I7)', '*** [Nt is updated] start continuous execution:',Nt,' to ',gNt
+      if (gNt /= Nt) then
+        if (comm_is_root()) then
+          print '(A,I7,A,I7)', '*** [Nt is updated] start continuous execution:',Nt,' to ',gNt
+        end if
+        Nt                 = gNt
+        Ndata_out          = Nt / Nstep_write
+        Ndata_out_per_proc = Ndata_out / nprocs(1)
+        call resize_arrays
       end if
-      Nt                 = gNt
-      Ndata_out          = Nt / Nstep_write
-      Ndata_out_per_proc = Ndata_out / nprocs(1)
-      call resize_arrays
     end if
-#endif
   end if
 
   call comm_sync_all; end_time = get_wtime()
