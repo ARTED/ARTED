@@ -95,6 +95,7 @@ contains
     ! control
     entrance_option = 'new'
     Time_shutdown = 86400
+    backup_frequency = 0
     entrance_iter = 0
     SYSname = ''
     directory = './'
@@ -187,6 +188,7 @@ contains
     namelist/control/ &
             & entrance_option, &
             & Time_shutdown, &
+            & backup_frequency, &
             & entrance_iter, &
             & SYSname, &
             & directory
@@ -298,6 +300,7 @@ contains
     
     call comm_bcast(entrance_option, proc_group(1))
     call comm_bcast(Time_shutdown, proc_group(1))
+    call comm_bcast(backup_frequency,proc_group(1))
     call comm_bcast(entrance_iter, proc_group(1))
     call comm_bcast(SYSname, proc_group(1))
     call comm_bcast(directory, proc_group(1))
