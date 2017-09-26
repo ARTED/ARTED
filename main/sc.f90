@@ -274,7 +274,7 @@ Program main
 
   call init_Ac
   do ixyz=1,3
-    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
+    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(0,ixyz)
   enddo
   call current0(zu_t)
   javt(0,:)=jav(:)
