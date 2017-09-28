@@ -1,11 +1,19 @@
 # ARTED: Ab-initio Real-Time Electron Dynamics Simulator
 
+- [Important announcement](#important-announcement-migration-from-arted-to-salmon)
 - [Overview](#overview)
 - [Build](#build)
 - [Execution](#execution)
 - [Test Environment](#test-environment)
 - [License](#license)
 - [Acknowledgement](#acknowledgement)
+
+## Important announcement: Migration from ARTED to SALMON
+
+The official development of ARTED has already ended, and all the features of
+ARTED have been taken over by SALMON, which is a newly developed open-source
+computer program. For more information, please visit SALMON’s website:
+[http://salmon-tddft.jp/](http://salmon-tddft.jp/)
 
 ## Overview
 
