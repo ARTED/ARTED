@@ -15,6 +15,8 @@
 !
 Subroutine Fermi_Dirac_distribution
   use Global_Variables
+  use communication
+  use misc_routines, only: get_wtime
   implicit none
   real(8) :: chemical_potential
   real(8) :: chem_max,chem_min,elec_num
@@ -24,15 +26,15 @@ Subroutine Fermi_Dirac_distribution
   integer :: ik,ib
   real(8) :: timer1,timer2
   
-  timer1=MPI_WTIME()
+  timer1=get_wtime()
   beta_FD=1d0/(KbTev/(2d0*Ry))
   allocate(occ_l(NB,NK),esp_l(NB,NK),esp_temp(NB,NK))
   occ_l=0d0 ; esp_l=0d0
   esp_l(:,NK_s:NK_e)=esp(:,NK_s:NK_e)
-  call MPI_ALLREDUCE(esp_l,esp_temp,NB*NK,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(esp_l,esp_temp,NB*NK,proc_group(2))
   chem_max=maxval(esp_temp)
   chem_min=minval(esp_temp)
-  if(myrank == 0)then
+  if(comm_is_root())then
     write(*,*)'max esp =',chem_max
     write(*,*)'min esp =',chem_min
   end if
@@ -41,13 +43,13 @@ Subroutine Fermi_Dirac_distribution
 
     do ik=NK_s,NK_e
       do ib=1,NB
-        occ_l(ib,ik)=2.d0/(NKx*NKy*NKz)*wk(ik) &
+        occ_l(ib,ik)=2.d0/(NKxyz)*wk(ik) &
           &/(exp(beta_FD*(esp(ib,ik)-chemical_potential))+1d0)
       end do
     end do
 
     st=sum(occ_l(:,NK_s:NK_e))
-    call MPI_ALLREDUCE(st,s,1,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+    call comm_summation(st,s,proc_group(2))
     elec_num=s
 
     if(abs(elec_num-dble(Nelec)) <= 1d-6)exit
@@ -62,12 +64,12 @@ Subroutine Fermi_Dirac_distribution
 
   end do
 
-  call MPI_ALLREDUCE(occ_l,occ,NB*NK,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(occ_l,occ,NB*NK,proc_group(2))
   st=sum(occ_l(Nelec/2+1:NB,NK_s:NK_e))
-  call MPI_ALLREDUCE(st,s,1,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(st,s,proc_group(2))
 
-  timer2=MPI_WTIME()
-  if(myrank == 0)then
+  timer2=get_wtime()
+  if(comm_is_root())then
     write(*,*)'Fermi-Dirac dist. time=',timer2-timer1,'sec'
     write(*,*)'chemical potential =',chemical_potential
     write(*,*)'elec_num =',elec_num

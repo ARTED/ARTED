@@ -2,16 +2,14 @@
 set(TARGET_SUFFIX               ".cpu")
 
 set(ARCH                        "-KHPC_ACE2")
+set(SIMD_SET                    "HPC_ACE2")
 set(OPENMP_FLAGS                "-Kopenmp")
 set(LAPACK_FLAGS                "-SSL2")
 set(ADDITIONAL_MACRO            "")
 set(ADDITIONAL_OPTIMIZE_FLAGS   "")
 
 set(Fortran_FLAGS_General       "-Cpp -Kocl,nooptmsg")
-set(C_FLAGS_General             "-Kocl,nooptmsg")
-
-set(Fortran_FLAGS_STENCIL       "")
-set(C_FLAGS_STENCIL             "-Xg -std=gnu99")
+set(C_FLAGS_General             "-Kocl,nooptmsg -Xg -std=gnu99")
 
 set(CMAKE_Fortran_COMPILER      "mpifrtpx")
 set(CMAKE_Fortran_FLAGS_DEBUG   "-O2 -g")
@@ -20,7 +18,7 @@ set(CMAKE_C_COMPILER            "mpifccpx")
 set(CMAKE_C_FLAGS_DEBUG         "-O2 -g")
 set(CMAKE_C_FLAGS_RELEASE       "-O3 -Kfast,simd=1")
 
-set(ENABLE_REDUCE_FOR_MANYCORE 1)
+set(ENABLE_REDUCE_FOR_MANYCORE ON)
 
 
 ########

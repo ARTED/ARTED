@@ -2,6 +2,7 @@
 set(TARGET_SUFFIX               ".cpu")
 
 set(ARCH                        "")
+set(SIMD_SET                    "HPC_ACE")
 set(OPENMP_FLAGS                "-Kopenmp")
 set(LAPACK_FLAGS                "-SSL2")
 set(ADDITIONAL_MACRO            "")
@@ -9,9 +10,6 @@ set(ADDITIONAL_OPTIMIZE_FLAGS   "")
 
 set(Fortran_FLAGS_General       "-Cpp -Kocl,nooptmsg")
 set(C_FLAGS_General             "-Kocl,nooptmsg")
-
-set(Fortran_FLAGS_STENCIL       "")
-set(C_FLAGS_STENCIL             "")
 
 set(CMAKE_Fortran_COMPILER      "mpifrtpx")
 set(CMAKE_Fortran_FLAGS_DEBUG   "-O2 -g")

@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Occupation_Redistribution
   use Global_Variables
+  use communication, only: comm_is_root
   implicit none
   integer,parameter :: NFSset=100,Nvc_min=1 !Nvc_min:number of primitive cell in our orthorhombic unit cell
   integer :: i,j,k,ib,ik
@@ -27,7 +28,7 @@ Subroutine Occupation_Redistribution
   integer,allocatable :: kv(:),kc(:),bv(:),bc(:)
   real(8),allocatable :: espv(:),espc(:)
 
-  if(Myrank == 0) then
+  if(comm_is_root()) then
     write(*,*) '-----------------------------------------------'
     write(*,*) '-----------------------------------------------'
     write(*,*) 'occupation redistribution is called'
@@ -57,13 +58,13 @@ Subroutine Occupation_Redistribution
       end if
     end do
   end do
-  if(Myrank == 0) then
+  if(comm_is_root()) then
     write(*,*) '# of valence electron above EFermi_min',Nv
     write(*,*) '# of conduction electron below EFermi_max',Nc
   end if
 !When cubic cell contain Nvc_min primitive cell,eigenvalues should be Nvc_min-fold degeneracy.
   if(Nv < Nvc_min .or. Nc < Nvc_min) then
-    if(Myrank == 0) then
+    if(comm_is_root()) then
       write(*,*) '=============================================================='
       write(*,*) 'occupation redistribution is not needed for too small Nv or Nc'
       write(*,*) '=============================================================='
@@ -99,7 +100,7 @@ Subroutine Occupation_Redistribution
     do i=1,Nc
       if (espc(i)<EFermi) Nc_below=Nc_below+nint(wk(kc(i)))
     end do
-    if(Myrank == 0) then
+    if(comm_is_root()) then
       write(*,*)'Nv_above,Nc_below =',Nv_above,Nc_below
     end if
     if(Nv_above==Nc_below) then
@@ -113,7 +114,7 @@ Subroutine Occupation_Redistribution
   call err_finalize('too long calcualtion')
 
 !Changing occupation distribution
-10 if (Myrank==0) write(*,*) 'EFermi =',EFermi
+10 if (comm_is_root()) write(*,*) 'EFermi =',EFermi
   do i=1,Nv
     if (espv(i)>EFermi) then
       NBocc(kv(i))=NBocc(kv(i))-1
@@ -129,15 +130,15 @@ Subroutine Occupation_Redistribution
     occ(NBocc(ik)+1:NB,ik)=0.d0
   end do
   NBoccmax=maxval(NBocc(:))
-  if (Myrank==0) then
+  if (comm_is_root()) then
     if (2*nint(sum(NBocc(:)*wk(:)))/=Nelec*NKxyz) call err_finalize('NBocc(ik) are inconsistent')
     write(*,*) 'NBoccmax became ',NBoccmax
     write(*,*) 'Ne_tot =',sum(occ)
   end if
   deallocate(kv,kc,bv,bc,espv,espc)
 
-  deallocate(zu)
-  allocate(zu(NL,NBoccmax,NK_s:NK_e))
+  deallocate(zu_t)
+  allocate(zu_t(NL,NBoccmax,NK_s:NK_e))
   deallocate(ik_table,ib_table)
   NKB=(NK_e-NK_s+1)*NBoccmax ! sato
   allocate(ik_table(NKB),ib_table(NKB)) ! sato

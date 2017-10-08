@@ -1,9 +1,11 @@
 'new'                               ! entrance_option 'reentrance' or 'new'
 1d10                                ! Time_shutdown (sec)
+0                                   ! backup frequency (# of iter), if less than equal to zero, we not create backup
 0                                   ! entrance_iter
 'Si'                                ! SYSname
 './data/'                                ! directory
 'PZ', 1.00d0                        ! functional 'PZ','PBE','TBmBJ','TPSS','VS98'
+'etrs'                              ! propagator 'default','etrs'
 'KY'                                ! ps_format 'KY','ABINIT','FHI'
 'n'          			    ! PSmask_option 'y' or 'n'
 0.8d0  1.8d0  15.d0                ! alpha_mask, gamma_mask, eta_mask
@@ -22,7 +24,7 @@
 'Tr'                        ! Longi_Trans 'longitudinal' or 'transverse'
 'N'                                ! MD_option 'Y' or 'N'
 'No'                                ! AD_RHO 'TD', 'GS' or 'No'
-100  0.02                         ! Nt,dt real-time parameter
+50  0.04                         ! Nt,dt real-time parameter
 0.005                               ! dAc (initial distortion in response)
 2000  0.001                         ! Nomega,domega :response
 'Asin2cos'                          ! AE_shape 'Asin2cos' or 'Esin2sin'

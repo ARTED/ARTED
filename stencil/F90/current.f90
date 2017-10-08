@@ -15,7 +15,7 @@
 !
 subroutine current_stencil(C,E,F,G,H)
   use global_variables, only: NLx,NLy,NLz,zI
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   use opt_variables, only: LBX => STENCIL_BLOCKING_X, LBY => STENCIL_BLOCKING_Y
 #endif
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
@@ -26,7 +26,7 @@ subroutine current_stencil(C,E,F,G,H)
   complex(8), intent(in)  :: E(0:NLz-1,0:NLy-1,0:NLx-1)
   real(8),    intent(out) :: F,G,H
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   integer    :: bx,by
 #endif
   integer    :: ix,iy,iz
@@ -63,7 +63,7 @@ subroutine current_stencil(C,E,F,G,H)
   G = 0
   F = 0
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   do bx=0,NLx-1,LBX
   do by=0,NLy-1,LBY
   do ix=bx,min(bx+LBX-1,NLx-1)
@@ -82,31 +82,34 @@ subroutine current_stencil(C,E,F,G,H)
   do iz=0,NLz-1
     w = conjg(E(iz,iy,ix))
 
-    v=(C( 9)*(E(IDZ(1))-E(IDZ(-1))) &
-    & +C(10)*(E(IDZ(2))-E(IDZ(-2))) &
-    & +C(11)*(E(IDZ(3))-E(IDZ(-3))) &
-    & +C(12)*(E(IDZ(4))-E(IDZ(-4))))
+    v=(C( 9)*E(IDZ(1)) &
+    & +C(10)*E(IDZ(2)) &
+    & +C(11)*E(IDZ(3)) &
+    & +C(12)*E(IDZ(4)))
 
     H = H + imag(w * v)
 
-    v=(C( 5)*(E(IDY(1))-E(IDY(-1))) &
-    & +C( 6)*(E(IDY(2))-E(IDY(-2))) &
-    & +C( 7)*(E(IDY(3))-E(IDY(-3))) &
-    & +C( 8)*(E(IDY(4))-E(IDY(-4))))
+    v=(C( 5)*E(IDY(1)) &
+    & +C( 6)*E(IDY(2)) &
+    & +C( 7)*E(IDY(3)) &
+    & +C( 8)*E(IDY(4)))
 
     G = G + imag(w * v)
 
-    v=(C( 1)*(E(IDX(1))-E(IDX(-1))) &
-    & +C( 2)*(E(IDX(2))-E(IDX(-2))) &
-    & +C( 3)*(E(IDX(3))-E(IDX(-3))) &
-    & +C( 4)*(E(IDX(4))-E(IDX(-4))))
+    v=(C( 1)*E(IDX(1)) &
+    & +C( 2)*E(IDX(2)) &
+    & +C( 3)*E(IDX(3)) &
+    & +C( 4)*E(IDX(4)))
 
     F = F + imag(w * v)
   end do
   end do
   end do
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   end do
   end do
 #endif
+  H = H * 2.0d0
+  G = G * 2.0d0
+  F = F * 2.0d0
 end subroutine

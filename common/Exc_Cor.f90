@@ -14,20 +14,23 @@
 !  limitations under the License.
 !
 !This file is "Exc_Cor.f90"
-Subroutine Exc_Cor(GS_RT)
+subroutine Exc_Cor(GS_RT,NBtmp,zu)
   use Global_Variables
-  use timelog
+  use timer
   implicit none
-  character(2) :: GS_RT
-  call timelog_begin(LOG_EXC_COR)
-  if(functional == 'PZ') call Exc_Cor_PZ
-  if(functional == 'PBE') call Exc_Cor_PBE(GS_RT)
+  integer,intent(in)       :: GS_RT
+  integer,intent(in)       :: NBtmp
+  complex(8),intent(inout) :: zu(NL,NBtmp,NK_s:NK_e)
+  call timer_begin(LOG_EXC_COR)
+  if(functional == 'PZ')    call Exc_Cor_PZ
+  if(functional == 'PZM')   call Exc_Cor_PZM
+  if(functional == 'PBE')   call Exc_Cor_PBE(GS_RT)
   if(functional == 'TBmBJ') call Exc_Cor_TBmBJ(GS_RT)
-  if(functional == 'TPSS') call Exc_Cor_TPSS(GS_RT)
-  if(functional == 'VS98') call Exc_Cor_VS98(GS_RT)
-  call timelog_end(LOG_EXC_COR)
-  return
-  end
+  if(functional == 'TPSS')  call Exc_Cor_TPSS(GS_RT)
+  if(functional == 'VS98')  call Exc_Cor_VS98(GS_RT)
+  call timer_end(LOG_EXC_COR)
+
+contains
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Exc_Cor_PZ()
   use Global_Variables
@@ -36,8 +39,10 @@ Subroutine Exc_Cor_PZ()
   integer :: i
   real(8) :: trho,e_xc,de_xc_drho
 
+!$acc kernels
 !  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 !!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
   do i=1,NL
     trho=2*rho_s(i)
@@ -45,14 +50,37 @@ Subroutine Exc_Cor_PZ()
     Eexc(i)=e_xc*trho
     Vexc(i)=e_xc+trho*de_xc_drho
   enddo
+!$acc end kernels
   return
 End Subroutine Exc_Cor_PZ
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+Subroutine Exc_Cor_PZM()
+  use Global_Variables
+  implicit none
+  real(8) :: rho_s(NL)
+  integer :: i
+  real(8) :: trho,e_xc,de_xc_drho
+
+!$acc kernels
+!  call rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
+  rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
+!!$omp parallel do private(i,trho,rs,V_xc,E_xc,rssq,rsln)
+  do i=1,NL
+    trho=2*rho_s(i)
+    call PZMxc(trho,e_xc,de_xc_drho)
+    Eexc(i)=e_xc*trho
+    Vexc(i)=e_xc+trho*de_xc_drho
+  enddo
+!$acc end kernels
+  return
+End Subroutine Exc_Cor_PZM
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Exc_Cor_PBE(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
-  real(8) :: rho_s(NL),tau_s(NL),j_s(3,NL),grho_s(3,NL),lrho_s(NL)
+  integer,intent(in) :: GS_RT
+  real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   real(8) :: agrho_s(NL)
   integer :: i
   real(8) :: omega
@@ -125,7 +153,7 @@ Subroutine Exc_Cor_TBmBJ(GS_RT)
   use Global_Variables
   implicit none
   real(8),parameter :: alpha=-0.012d0,beta=1.023d0,gamma=0.80d0
-  character(2) :: GS_RT
+  integer,intent(in) :: GS_RT
   real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   real(8) :: c,tau_s_jrho,D_s_jrho,Q_s,rhs,x_s,b_s,Vx_BR,Vx_MBJ
   real(8) :: trho,rs,rhos,ec,dec_drhoa,dec_drhob
@@ -204,7 +232,7 @@ end subroutine BR_Newton
 Subroutine Exc_Cor_TPSS(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
+  integer,intent(in) :: GS_RT
   integer i
   real(8),parameter :: kappa=0.804d0,c=1.59096d0,e=1.537d0,mu=0.21951d0
   real(8),parameter :: b=0.40d0,d=2.8d0,C0=0.53d0
@@ -316,12 +344,12 @@ Subroutine Exc_Cor_TPSS(GS_RT)
   enddo
 
   return
-  end
+  end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Exc_Cor_VS98(GS_RT)
   use Global_Variables
   implicit none
-  character(2) :: GS_RT
+  integer,intent(in) :: GS_RT
   real(8),parameter :: CF=3d0/5d0*(3*Pi**2)**(2d0/3d0)
   real(8),parameter :: alp_ex=0.00186726d0,alp_aa=0.00515088d0,alp_ab=0.00304966d0
   real(8),parameter :: a_ex=-0.9800683d0,a_aa=0.3270912d0,a_ab=0.7035010d0
@@ -401,7 +429,7 @@ Subroutine Exc_Cor_VS98(GS_RT)
  &   +nabz(4)*(dexc_dgrho(ifdz(4,i),3)-dexc_dgrho(ifdz(-4,i),3)) )
   enddo
   return
-  end
+  end subroutine
 
 SUBROUTINE fec_xz(x,z,alp,a,b,c,d,e,f,fxz,dfxz_dx,dfxz_dz)
   implicit none
@@ -416,20 +444,25 @@ SUBROUTINE fec_xz(x,z,alp,a,b,c,d,e,f,fxz,dfxz_dx,dfxz_dz)
   dfxz_dz=alp*(-a/gamma**2-2*(b*x**2+c*z)/gamma**3-3*(d*x**4+e*x**2*z+f*z**2)/gamma**4) &
  &      +c/gamma**2+(e*x**2+2*f*z)/gamma**3
   return
-  end
+  end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine PZxc(trho,exc,dexc_drho)
+!$acc routine seq
   implicit none
   real(8),parameter :: Pi=3.141592653589793d0
   real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
   real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
   real(8),parameter :: CU=0.002d0,DU=-0.0116d0
-  real(8) :: exc,dexc_drho
-  real(8) :: trho,ttrho,rs,rssq,rsln
+  real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
+  real(8) :: ttrho,rs,rssq,rsln
+  real(8),intent(in) :: trho
+  real(8),intent(out) :: exc
+  real(8),intent(out) :: dexc_drho
+
 
   ttrho=trho+1d-10
   rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
-  exc=-.4582d0/rs
+  exc=-const/rs
   dexc_drho=exc/(3*ttrho)
   if (rs>1d0) then
     rssq=sqrt(rs)
@@ -442,6 +475,35 @@ Subroutine PZxc(trho,exc,dexc_drho)
   endif
   return
 End Subroutine PZxc
+!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
+Subroutine PZMxc(trho,exc,dexc_drho)
+!$acc routine seq
+  implicit none
+  real(8),parameter :: Pi=3.141592653589793d0
+  real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
+  real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
+  real(8),parameter :: CU=0.2019151940622859d-2, DU=-0.1163206637891297d-1
+  real(8),parameter :: const = 0.75d0*(3d0/(2d0*pi))**(2d0/3d0)
+  real(8) :: ttrho,rs,rssq,rsln
+  real(8),intent(in) :: trho
+  real(8),intent(out) :: exc
+  real(8),intent(out) :: dexc_drho
+
+  ttrho=trho+1d-10
+  rs=(3d0/(4*Pi*ttrho))**(1d0/3d0)
+  exc=-const/rs
+  dexc_drho=exc/(3d0*ttrho)
+  if (rs>1d0) then
+    rssq=sqrt(rs)
+    exc=exc+gammaU/(1d0+beta1U*rssq+beta2U*rs)
+    dexc_drho=dexc_drho+gammaU*(0.5d0*beta1U*rssq+beta2U*rs)/(3d0*ttrho)/(1d0+beta1U*rssq+beta2U*rs)**2
+  else
+    rsln=log(rs)
+    exc=exc+AU*rsln+BU+CU*rs*rsln+DU*rs
+    dexc_drho=dexc_drho-rs/(3d0*ttrho)*(AU/rs+CU*(rsln+1d0)+DU)
+  endif
+  return
+End Subroutine PZMxc
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
   SUBROUTINE HSEFx(rho,ss,omega,FxHSE,drho_FxHSE,ds_FxHSE)
   implicit none
@@ -480,8 +542,8 @@ End Subroutine PZxc
   real(8) DHsw,DHsw12,DHsw32,DHsw52,DHsw72
   real(8) wsqDHsw,wsqDHsw3,wsqDHsw5,wsqDHsw7
   real(8) G_a,G_b,EG,ds_EGs,exer,exei
-  real(8) ei
-  real(8) derfc
+!  real(8) ei
+!  real(8) derfc
 
   s=ss
 ! s is modified to enforce Lieb-Oxford bound
@@ -629,17 +691,17 @@ End Subroutine PZxc
  &           +A/2*(ea2*w2/DHsb2+ea4*w4*2/DHsb3+ea6*w6*6/DHsb4+ea8*w8*24/DHsb5) &
  &           +A*sqpi*(ea1*w/4/DHsb32+ea3*w3*3d0/8d0/DHsb52 &
  &                   +ea5*w5*15d0/16d0/DHsb72+ea7*w7*105d0/32d0/DHsb92) ))
-  end
+  end subroutine
 
   FUNCTION ei(x)
   implicit none
-  real(8) ei,x,expint,xx
+  real(8) ei,x,xx
   integer,parameter :: one=1
   if(x.ge.0d0) stop 'bad x in ei'
   xx=-x
   ei=-expint(one,xx)
   return
-  end
+  end function
 
   FUNCTION expint(n,x)
   implicit none
@@ -697,7 +759,7 @@ End Subroutine PZxc
     stop 'series failed in expint'
   endif
   return
-  END
+  END function
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
   SUBROUTINE PBEc_old(rho,t,ec_unif,drs_ec_unif,H,drs_H,dt_H)
   implicit none
@@ -735,7 +797,7 @@ End Subroutine PZxc
  &            +beta/gamma*t**2*(2*Ah*t*Ah421-Ah21*(2*Ah*t+4*Ah**2*t**3))/Ah421**2) &
  &    /(1+beta/gamma*t**2*Ah21/Ah421)
   return
-  end
+  end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 ! Perdew-Wang correlation energy
 
@@ -788,7 +850,7 @@ End Subroutine PZxc
   dec_drhob=(-rs/3*decdrs-(zeta+1)*decdzeta)/(rhoa+rhob)
 
   return
-  end
+  end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 ! Perdew-Burke-Ernzerhof correlation energy
   SUBROUTINE PBEc(rhoa,rhob,grhoa,grhob,ec,dec_drhoa,dec_drhob,dec_dgrhoa,dec_dgrhob)
@@ -854,13 +916,14 @@ End Subroutine PZxc
   dec_dgrhob(:)=dH_dgrhob(:)
 
   return
-  end
+  end subroutine
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   use Global_Variables
+  use communication
   implicit none
-  character(2) :: GS_RT
-  real(8) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
+  integer,intent(in)    :: GS_RT
+  real(8),intent(inout) :: rho_s(NL),tau_s(NL),j_s(NL,3),grho_s(NL,3),lrho_s(NL)
   integer :: ikb,ik,ib,i
   real(8) :: tau_s_l(NL),j_s_l(NL,3),ss(3)
   complex(8) :: zs(3)
@@ -868,20 +931,22 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 
 !  allocate(tau_s_l_omp(NL,0:NUMBER_THREADS-1),j_s_l_omp(NL,3,0:NUMBER_THREADS-1)) ! sato
   rho_s=rho*0.5d0
+  if(flag_nlcc)rho_s = rho_s + 0.5d0*rho_nlcc
 
   tau_s_l_omp=0d0
   j_s_l_omp=0d0
 
-  if(GS_RT == 'GS')then
-  thr_id=0
+  if(GS_RT == calc_mode_gs)then
+
+    select case(Nd)
+    case(4)
+
+      thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
-
 !$omp do private(ik,ib,zs,i)
-    do ikb=1,NKB
-      ik=ik_table(ikb) ; ib=ib_table(ikb)  
-      select case(Nd)
-      case(4)
+      do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)  
         do i=1,NL
           zs(1)=nabx(1)*(zu_GS(ifdx(1,i),ib,ik)-zu_GS(ifdx(-1,i),ib,ik))&
             &  +nabx(2)*(zu_GS(ifdx(2,i),ib,ik)-zu_GS(ifdx(-2,i),ib,ik))&
@@ -904,26 +969,24 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           j_s_l_omp(i,2,thr_id)=j_s_l_omp(i,2,thr_id)+imag(conjg(zu_GS(i,ib,ik))*zs(2))*(occ(ib,ik)*0.5d0)
           j_s_l_omp(i,3,thr_id)=j_s_l_omp(i,3,thr_id)+imag(conjg(zu_GS(i,ib,ik))*zs(3))*(occ(ib,ik)*0.5d0)
         enddo
-
-
-      case default
-        call err_finalize('Nd /= 4')
-      end select
-    end do
-
+      end do
 !$omp end parallel
 
-  else  if(GS_RT == 'RT')then
+    case default
+      call err_finalize('Nd /= 4')
+    end select
+  
+  else  if(GS_RT == calc_mode_rt)then
 
-  thr_id=0
+    select case(Nd)
+    case(4)
+
+      thr_id=0
 !$omp parallel private(thr_id)
 !$  thr_id=omp_get_thread_num()
-
 !$omp do private(ik,ib,zs,i)
-    do ikb=1,NKB
-      ik=ik_table(ikb) ; ib=ib_table(ikb)  
-      select case(Nd)
-      case(4)
+      do ikb=1,NKB
+        ik=ik_table(ikb) ; ib=ib_table(ikb)  
         do i=1,NL
           zs(1)=nabx(1)*(zu(ifdx(1,i),ib,ik)-zu(ifdx(-1,i),ib,ik))&
             &  +nabx(2)*(zu(ifdx(2,i),ib,ik)-zu(ifdx(-2,i),ib,ik))&
@@ -946,13 +1009,12 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           j_s_l_omp(i,2,thr_id)=j_s_l_omp(i,2,thr_id)+imag(conjg(zu(i,ib,ik))*zs(2))*(occ(ib,ik)*0.5d0)
           j_s_l_omp(i,3,thr_id)=j_s_l_omp(i,3,thr_id)+imag(conjg(zu(i,ib,ik))*zs(3))*(occ(ib,ik)*0.5d0)
         enddo
-
-      case default
-        call err_finalize('Nd /= 4')
-      end select
-    end do
-
+      end do
 !$omp end parallel
+
+    case default
+      call err_finalize('Nd /= 4')
+    end select
 
   else
     call err_finalize('error in meta GGA')
@@ -962,8 +1024,8 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   j_s_l(:,1) = j_s_l_omp(:,1,0)
   j_s_l(:,2) = j_s_l_omp(:,2,0)
   j_s_l(:,3) = j_s_l_omp(:,3,0)
-  do thr_id = 1, NUMBER_THREADS-1
 
+  do thr_id = 1, NUMBER_THREADS-1
 !$omp parallel do    
     do i=1,NL
       tau_s_l(i) = tau_s_l(i) + tau_s_l_omp(i,thr_id)
@@ -973,9 +1035,10 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
     end do
   end do
 
+  call comm_summation(tau_s_l,tau_s,NL,proc_group(2))
+  call comm_summation(j_s_l,j_s,NL*3,proc_group(2))
 
-  call MPI_ALLREDUCE(tau_s_l,tau_s,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(j_s_l,j_s,NL*3,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  if(flag_nlcc)tau_s = tau_s + 0.5d0*tau_nlcc
 
   select case(Nd)
   case(4)
@@ -1010,6 +1073,7 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
           &+lapz(4)*(rho_s(ifdz(4,i))+rho_s(ifdz(-4,i)))
       lrho_s(i)=ss(1)+ss(2)+ss(3)
     enddo
+
   case default
     call err_finalize('Nd /= 4')
   end select
@@ -1020,24 +1084,124 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
   case("diamond")
      if(Sym == 4)then
         tau_s(:)=tau_s(:)*0.25d0
-        j_s(:,:)=j_s(:,:)*0.25d0
+        j_s(:,1:3)=j_s(:,1:3)*0.25d0
+
 !tau_s_l(NL),j_s_l(NL,3),ss(3)
 ! 1.T_3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
-           tau_s_l(itable_sym(1,i))=tau_s(i)+tau_s(itable_sym(1,i))
-           j_s_l(itable_sym(1,i),1)=-j_s(i,2)+j_s(itable_sym(1,i),1)
-           j_s_l(itable_sym(1,i),2)=j_s(i,1)+j_s(itable_sym(1,i),2)
-           j_s_l(itable_sym(1,i),3)=j_s(i,3)+j_s(itable_sym(1,i),3)
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(1,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(1,i),2)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(1,i),1)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(1,i),3)
         end do
 ! 2.T3*T3
 !$omp parallel do  private(ss,i)  
         do i=1,NL
-           tau_s(itable_sym(2,i))=tau_s_l(i)+tau_s_l(itable_sym(2,i))
-           j_s(itable_sym(2,i),1)=-j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
-           j_s(itable_sym(2,i),2)=-j_s_l(i,2)+j_s_l(itable_sym(2,i),2)
-           j_s(itable_sym(2,i),3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(2,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(2,i),2)
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
         end do
+
+     else if(Sym == 8)then
+        tau_s(:)=tau_s(:)/32d0
+        j_s(:,1:3)=j_s(:,1:3)/32d0
+
+! 1.T_4
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(4,i),1)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(4,i),2)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
+        end do        
+
+! 2.T_3*T_3
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(5,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(5,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(5,i),2)
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(5,i),3)
+        end do        
+        
+! 3.T_3
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(3,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(3,i),2)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(3,i),1)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(3,i),3)
+        end do
+
+! 4.T_1
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(1,i))
+           j_s(i,1)=j_s_l(i,1)+j_s_l(itable_sym(1,i),2)
+           j_s(i,2)=j_s_l(i,2)+j_s_l(itable_sym(1,i),1)
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(1,i),3)
+        end do        
+
+! 5.T_2
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(2,i))
+           j_s_l(i,1)=j_s(i,1)-j_s(itable_sym(2,i),2)
+           j_s_l(i,2)=j_s(i,2)-j_s(itable_sym(2,i),1)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(2,i),3)
+        end do        
+
+! 6. I
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)
+           j_s(i,1:3)=j_s_l(i,1:3)
+        end do        
+        
+     else if(Sym /= 1)then
+        call err_finalize('Bad crystal structure')
+     end if
+
+  case("diamond2")
+     if(Sym == 8)then
+        tau_s(:)=tau_s(:)*6.25d-2
+        j_s(:,1:3)=j_s(:,1:3)*6.25d-2
+
+!tau_s_l(NL),j_s_l(NL,3),ss(3)
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(4,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(4,i),2)
+           j_s_l(i,2)=j_s(i,2)-j_s(itable_sym(4,i),1)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(4,i),3)
+        end do        
+
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(2,i))
+           j_s(i,1)=j_s_l(i,1)+j_s_l(itable_sym(2,i),1)
+           j_s(i,2)=j_s_l(i,2)-j_s_l(itable_sym(2,i),2)
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(2,i),3)
+        end do        
+        
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s_l(i)=tau_s(i)+tau_s(itable_sym(3,i))
+           j_s_l(i,1)=j_s(i,1)+j_s(itable_sym(3,i),1)
+           j_s_l(i,2)=j_s(i,2)+j_s(itable_sym(3,i),2)
+           j_s_l(i,3)=j_s(i,3)+j_s(itable_sym(3,i),3)
+        end do
+
+!$omp parallel do  private(i)  
+        do i=1,NL
+           tau_s(i)=tau_s_l(i)+tau_s_l(itable_sym(1,i))
+           j_s(i,1)=j_s_l(i,1)-j_s_l(itable_sym(1,i),1)
+           j_s(i,2)=j_s_l(i,2)+j_s_l(itable_sym(1,i),2)
+           j_s(i,3)=j_s_l(i,3)+j_s_l(itable_sym(1,i),3)
+        end do        
+
      else if(Sym /= 1)then
         call err_finalize('Bad crystal structure')
      end if
@@ -1048,3 +1212,5 @@ Subroutine rho_j_tau(GS_RT,rho_s,tau_s,j_s,grho_s,lrho_s)
 
   return
 End Subroutine rho_j_tau
+
+end subroutine Exc_Cor

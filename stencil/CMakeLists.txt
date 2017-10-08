@@ -1,53 +1,50 @@
 ###
 ### Compile stencil computation sources
 ###
-set(CMAKE_Fortran_FLAGS "${ARCH} ${OPENMP_FLAGS} ${Fortran_FLAGS_General} ${Fortran_FLAGS_STENCIL}")
-set(CMAKE_C_FLAGS       "${ARCH} ${OPENMP_FLAGS} ${C_FLAGS_General} ${C_FLAGS_STENCIL}")
 
 ### Soruces for current and total_energy
-set(SOURCES_COMPILER_VEC
-    F90/current_compiler_vec.f90
-    F90/total_energy_compiler_vec.f90
-    )
 set(SOURCES_EXPLICIT_VEC
-    C/current_explicit_vec.c
-    C/total_energy_explicit_vec.c
+    C/${SIMD_SET}/current.c
+    C/${SIMD_SET}/total_energy.c
+    )
+set(SOURCES_COMPILER_VEC
+    F90/total_energy.f90
+    F90/current.f90
+    )
+set(SOURCES_ACC
+    F90/acc/current.f90
+    F90/acc/hpsi.f90
     )
 
+
 ### Sources for hpsi
-set(SOURCE_HPSI_ORIGINAL
-    F90/hpsi_compiler_vec_original.f90
-    )
-set(SOURCE_HPSI_F90_COMPILER_VEC
-    F90/hpsi_compiler_vec.f90
-    )
-set(SOURCE_HPSI_C_COMPILER_VEC
-    C/hpsi_compiler_vec.c
-    )
-set(SOURCE_HPSI_EXPLICIT_VEC
-    C/hpsi_explicit_vec.c
-    )
+set(SOURCE_HPSI_EXPLICIT_VEC   C/${SIMD_SET}/hpsi.c)
+set(SOURCE_HPSI_COMPILER_VEC   F90/hpsi.f90)
+set(SOURCE_HPSI_ORIGINAL       F90/hpsi_original.f90)
+
+if (ENABLE_EXPLICIT_VEC)
+  set(SOURCE_HPSI ${SOURCE_HPSI_EXPLICIT_VEC})
+else ()
+  set(SOURCE_HPSI ${SOURCE_HPSI_COMPILER_VEC})
+endif ()
+
+if (OPT_STENCIL)
+else ()
+  set(SOURCE_HPSI ${SOURCE_HPSI_ORIGINAL})
+endif ()
 
 
 ###
-if (OPT_STENCIL)
-  if (STENCIL_WITH_C)
-    if (EXPLICIT_VEC)
-      set(SOURCES ${SOURCE_HPSI_EXPLICIT_VEC})
-    else ()
-      set(SOURCES ${SOURCE_HPSI_C_COMPILER_VEC})
-    endif ()
-  else ()
-    set(SOURCES ${SOURCE_HPSI_F90_COMPILER_VEC})
-  endif ()
+if (ENABLE_EXPLICIT_VEC)
+  set(SOURCES_OMP ${SOURCE_HPSI} ${SOURCES_EXPLICIT_VEC})
 else ()
-  set(SOURCES ${SOURCE_HPSI_ORIGINAL})
+  set(SOURCES_OMP ${SOURCE_HPSI} ${SOURCES_COMPILER_VEC})
 endif ()
 
-if (EXPLICIT_VEC)
-  set(SOURCES ${SOURCES} ${SOURCES_EXPLICIT_VEC})
+if (ENABLE_OPENACC)
+  set(SOURCES ${SOURCES_ACC} ${SOURCE_HPSI_COMPILER_VEC} ${SOURCES_COMPILER_VEC})
 else ()
-  set(SOURCES ${SOURCES} ${SOURCES_COMPILER_VEC})
+  set(SOURCES ${SOURCES_OMP})
 endif ()
 
 add_library(${STENCIL_LIB} STATIC ${SOURCES})

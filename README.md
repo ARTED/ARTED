@@ -1,76 +1,106 @@
 # ARTED: Ab-initio Real-Time Electron Dynamics Simulator
 
+- [Important announcement](#important-announcement-migration-from-arted-to-salmon)
+- [Overview](#overview)
+- [Build](#build)
+- [Execution](#execution)
+- [Test Environment](#test-environment)
+- [License](#license)
+- [Acknowledgement](#acknowledgement)
+
+## Important announcement: Migration from ARTED to SALMON
+
+The official development of ARTED has already ended, and all the features of
+ARTED have been taken over by SALMON, which is a newly developed open-source
+computer program. For more information, please visit SALMON’s website:
+[http://salmon-tddft.jp/](http://salmon-tddft.jp/)
+
+## Overview
+
 ARTED (Ab-initio Real-Time Electron Dynamics simulator) is an open-source
-computer codes for first-principles calculations of electron dynamics and
-light-matter interactions. It is based on time-dependent density functional theory
+computer program for first-principles calculations of electron dynamics and
+light-matter interactions [1,2]. It is based on time-dependent density functional theory
 solving time-dependent Kohn-Sham equation in real time using pseudopotentials
 and real-space grid representation.
 
 ARTED has been developed in such a way that it runs
 optimally in the following supercomputer platforms:
 
-- K-computer
-- Fujitsu FX100 supercomputer system
+- K-computer [3]
+- Fujitsu FX100 supercomputer system [4]
 - Linux PC Cluster with x86-64 CPU
-- Linux PC Cluster with Intel Xeon Phi (Knights Corner)
+- Linux PC Cluster with Intel Knights Landing [4]
+- Linux PC Cluster with Intel Knights Corner [5]
+- Linux PC Cluster with NVIDIA GPU (OpenACC, Kepler and newer GPUs)
 
 ARTED has been developed by ARTED developers with support from
 Center for Computational Sciences, University of Tsukuba.
+
+### Reference
+1. G. F. Bertsch, J.-I. Iwata, Angel Rubio, and K. Yabana: "Real-space, real-time method for the dielectric function", [Phys. Rev. B 62, 7998 (2000)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.62.7998).
+2. K. Yabana, T. Sugiyama, Y. Shinohara, T. Otobe, and G. F. Bertsch: "Time-dependent density functional theory for strong electromagnetic fields in crystalline solids", [Phys. Rev. B  85, 045134 (2012)](http://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045134).
+3. Shunsuke A. Sato, and Kazuhiro Yabana: "Maxwell + TDDFT multi-scale simulation for laser-matter interaction", [J. Adv. Simulat. Sci. Eng. 1, 98 (2014)](https://www.jstage.jst.go.jp/article/jasse/1/1/1_98/_article).
+4. Yuta Hirokawa: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Many-Core Systems", [SC16 ACM SRC Poster (2016)](http://sc16.supercomputing.org/presentation/?id=spost147&sess=sess408).
+5. Yuta Hirokawa, Taisuke Boku, Shunsuke A. Sato, and Kazuhiro Yabana: "Electron Dynamics Simulation with Time-Dependent Density Functional Theory on Large Scale Symmetric Mode Xeon Phi Cluster", [IEEE IPDPS Workshop PDSEC'16 (2016)](http://ieeexplore.ieee.org/abstract/document/7530004/).
 
 
 ## Build
 
 We use [CMake](https://cmake.org/) cross-platform build tools.
 
-CMake detects the below configurations automatically,
+CMake detects the following configurations automatically,
 
 - MPI Fortran/C compiler
-- OpenMP flag
+- OpenMP compile flag
 - LAPACK(/BLAS) libraries
+
+CMake software version **must** be 2.8 or later.
+We recommend *3.0* or later versions.
 
 ### for your computer
 
-    $ ./build
+    $ mkdir ./build_temp
+    $ cd build_temp
+    $ ../configure.py && make
     or
-    $ mkdir build_dir
-    $ cd build_dir
+    $ mkdir build_temp
+    $ cd build_temp
     $ cmake .. && make
 
-### for COMA at CCS, University of Tsukuba
+You can specify compilers and/or compiler options.
 
-    $ ./build -t sc intel avx knc
+    $ ../configure.py FC=mpiifort CC=mpiicc FFLAGS="-xAVX" CFLAGS="-restrict -xAVX"
+
+### for Supercomputer systems and clusters
+
+We provide the build configuration of the systems with CMake cross-compile mode.
+
+    $ mkdir build_temp
+    $ cd build_temp
+    $ ../configure.py --arch=<COMPILER>-<SYSTEM> && make
     or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=intel-knc && make
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=intel-avx && make
+    $ mkdir build_temp
+    $ cd build_temp
+    $ cmake -D CMAKE_TOOLCHAIN_FILE=<COMPILER>-<SYSTEM> .. && make
 
-### for K-computer at RIKEN AICS
+For example, the following command builds the application for K-computer.
 
-    $ ./build -t sc fujitsu k
-    or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=fujitsu-k && make
+    $ ../configure.py --arch=fujitsu-k
 
-### for FX100 system at Nagoya University
+CMake searches the cross-compile configuration files below `platform` directory.
+If you want execution at the system that configuration file is not provided, you can create it yourself.
 
-    $ ./built fujitsu fx100
-    or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=fujitsu-fx100 && make
+### Select the simulation mode
 
-### Generic version (GNU compiler)
+ARTED provides two simulation modes, Single-cell (sc) and Multi-scale (ms).
+The default target is sc mode. You can select a target with `-t TARGET, --target=TARGET` option in `configure.py` script.
+For help type `./configure.py -h`.
 
-    $ ./built fujitsu fx100
-    or
-    $ mkdir build_dir
-    $ cd builld_dir
-    $ cmake -D CMAKE_PLATFORM_TOOLCHAIN=gnu-generic && make
+    $ ../configure.py -t sc        # build for SC (default)
+    $ ../configure.py --target=ms  # build for MS
 
 
-## Execution/Simulation
+## Execution
 
 Please read to jobscript directory files.
 
@@ -79,25 +109,45 @@ Please read to jobscript directory files.
 
 ## Test Environment
 
-### COMA at CCS, University of Tsukuba
+### Intel Knights Landing
 
-1. Intel Compiler version 16.0.2
+Oakforest-PACS at JCAHPC, The University of Tokyo and University of Tsukuba
+
+1. Intel Compiler version 17.0.1
 2. Intel MPI 5.1.3
 3. Intel MKL 11.3.2
 
-### K-computer at RIKEN AICS
+### Intel x86-64 CPU with Intel Knights Corner
 
-1. Fujitsu Compiler version K-1.2.0-20-1
+COMA at CCS, University of Tsukuba
 
-### FX100 system at Nagoya University
+1. Intel Compiler version 16.0.2
+1. Intel MPI 5.1.3
+1. Intel MKL 11.3.2
 
-1. Fujitsu Compiler Driver Version 2.0.0
+### x86-64 CPUs with NVIDIA Kepler GPU
 
-### GNU Compiler (Generic version)
+HA-PACS/TCA at CCS, University of Tsukuba
+
+1. PGI Compiler 16.4
+2. OpenMPI 1.10.3 or MVAPICH2 GDR 2.1
+3. CUDA 7.5.18
+
+### x86-64 CPUs (General version)
 
 1. GCC version 4.4.7
 2. OpenMPI 1.10.3
 3. LAPACK 3.6.0
+
+### Supercomputer system
+
+K-computer at RIKEN AICS
+
+1. Fujitsu Compiler version K-1.2.0-20-1
+
+FX100 system at Nagoya University
+
+1. Fujitsu Compiler Driver Version 2.0.0
 
 
 ## License
@@ -118,3 +168,8 @@ ARTED is available under Apache License version 2.0.
     See the License for the specific language governing permissions and
     limitations under the License.
 
+## Acknowledgement
+
+### NVIDIA GPU support with OpenACC
+
+Thanks to Mr. Akira Naruse (NVIDIA Corporation)

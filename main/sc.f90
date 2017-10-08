@@ -20,42 +20,45 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Program main
   use Global_Variables
-  use timelog
+  use timer
   use opt_variables
   use environment
+  use performance_analyzer
+  use communication
+  use misc_routines, only: get_wtime
   implicit none
   integer :: iter,ik,ib,ia,i,ixyz
-  character(3) :: Rion_update
+  logical :: Rion_update
   character(10) :: functional_t
 !$ integer :: omp_get_max_threads  
 
-  call MPI_init(ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,Nprocs,ierr)
-  call MPI_COMM_RANK(MPI_COMM_WORLD,Myrank,ierr)
+  call comm_init
 
-  call timelog_initialize
+  call timer_initialize
   call load_environments
 
-  if(Myrank == 0) then
+  if(comm_is_root()) then
     write(*,'(2A)')'ARTED ver. = ',ARTED_ver
     call print_optimize_message
   end if
 
-  NEW_COMM_WORLD=MPI_COMM_WORLD
   NUMBER_THREADS=1
 !$  NUMBER_THREADS=omp_get_max_threads()
 !$  if(iter*0 == 0) then
-!$    if(myrank == 0)write(*,*)'parallel = Hybrid'
+!$    if(comm_is_root())write(*,*)'parallel = Hybrid'
 !$  else
-  if(myrank == 0)write(*,*)'parallel = Flat MPI'
+  if(comm_is_root())write(*,*)'parallel = Flat MPI'
 !$  end if
 
-  if(myrank == 0)write(*,*)'NUMBER_THREADS = ',NUMBER_THREADS
+  if(comm_is_root())write(*,*)'NUMBER_THREADS = ',NUMBER_THREADS
 
-  etime1=MPI_WTIME()
-  Time_start=MPI_WTIME() !reentrance
-  call MPI_BCAST(Time_start,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  Rion_update='on'
+  call timer_begin(LOG_ALL)
+
+  call timer_begin(LOG_STATIC)
+  Time_start=get_wtime() !reentrance
+  call comm_bcast(Time_start,proc_group(1))
+
+  Rion_update = rion_update_on
 
   call Read_data
   if (entrance_option == 'reentrance' ) go to 2
@@ -77,7 +80,7 @@ Program main
   rho_in(1:NL,1)=rho(1:NL)
   call input_pseudopotential_YS !shinohara
 !  call input_pseudopotential_KY !shinohara
-!  call MPI_FINALIZE(ierr) !!debug shinohara
+!  call comm_finalize !!debug shinohara
 !  stop !!debug shinohara
   call prep_ps_periodic('initial    ')
 
@@ -87,23 +90,26 @@ Program main
   call Hartree
 ! yabana
   functional_t = functional
-  if(functional_t == 'TBmBJ') functional = 'PZ'
-  call Exc_Cor('GS')
+  if(functional_t == 'TBmBJ') functional = 'PZM'
+  call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
   if(functional_t == 'TBmBJ') functional = 'TBmBJ'
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
-!  call Total_Energy(Rion_update,'GS')
-  call Total_Energy_omp(Rion_update,'GS') ! debug
-  call Ion_Force_omp(Rion_update,'GS')
-  if (MD_option /= 'Y') Rion_update = 'off'
+  call Total_Energy_omp(Rion_update,calc_mode_gs) ! debug
+  call Ion_Force_omp(Rion_update,calc_mode_gs)
+  if (MD_option /= 'Y') Rion_update = rion_update_off
   Eall_GS(0)=Eall
 
-  if(Myrank == 0) write(*,*) 'This is the end of preparation for ground state calculation'
-  if(Myrank == 0) write(*,*) '-----------------------------------------------------------'
+  if(comm_is_root()) then
+    write(*,*) 'This is the end of preparation for ground state calculation'
+    call timer_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
-  call timelog_reset
+  call reset_gs_timer
+  call timer_begin(LOG_GROUND_STATE)
   do iter=1,Nscf
-    if (Myrank == 0)  write(*,*) 'iter = ',iter
+    if (comm_is_root())  write(*,*) 'iter = ',iter
     if( kbTev < 0d0 )then ! sato
       if (FSset_option == 'Y') then
         if (iter/NFSset_every*NFSset_every == iter .and. iter >= NFSset_start) then
@@ -116,7 +122,7 @@ Program main
           if (minval(esp_cb_min(:))-maxval(esp_vb_max(:))<0.d0) then
             call Occupation_Redistribution
           else
-            if (Myrank == 0) then
+            if (comm_is_root()) then
               write(*,*) '======================================='
               write(*,*) 'occupation redistribution is not needed'
               write(*,*) '======================================='
@@ -126,7 +132,7 @@ Program main
       end if
     else if( iter /= 1 )then ! sato
       call Fermi_Dirac_distribution
-      if((Myrank == 0).and.(iter == Nscf))then
+      if((comm_is_root()).and.(iter == Nscf))then
         open(126,file='occ.out')
         do ik=1,NK
           do ib=1,NB
@@ -148,21 +154,21 @@ Program main
     call Hartree
 ! yabana
     functional_t = functional
-    if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZ'
-    call Exc_Cor('GS')
+    if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'PZM'
+    call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
     if(functional_t == 'TBmBJ' .and. iter < 20) functional = 'TBmBJ'
 ! yabana
     Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
-    call Total_Energy_omp(Rion_update,'GS')
-    call Ion_Force_omp(Rion_update,'GS')
+    call Total_Energy_omp(Rion_update,calc_mode_gs)
+    call Ion_Force_omp(Rion_update,calc_mode_gs)
     call sp_energy_omp
-    call current_GS_omp_KB
+    call current_GS
     Eall_GS(iter)=Eall
     esp_var_ave(iter)=sum(esp_var(:,:))/(NK*Nelec/2)
     esp_var_max(iter)=maxval(esp_var(:,:))
     dns_diff(iter)=sqrt(sum((rho_out(:,iter)-rho_in(:,iter))**2))*Hxyz
 
-    if (Myrank == 0) then
+    if (comm_is_root()) then
       write(*,*) 'Total Energy = ',Eall_GS(iter),Eall_GS(iter)-Eall_GS(iter-1)
       write(*,'(a28,3e15.6)') 'jav(1),jav(2),jav(3)= ',jav(1),jav(2),jav(3)
       write(*,'(4(i3,f12.6,2x))') (ib,esp(ib,1),ib=1,NB)
@@ -172,37 +178,39 @@ Program main
       write(*,*) 'var_ave,var_max=',esp_var_ave(iter),esp_var_max(iter)
       write(*,*) 'dns. difference =',dns_diff(iter)
       if (iter/20*20 == iter) then
-         etime2=MPI_WTIME()
          write(*,*) '====='
-         write(*,*) 'elapse time=',etime2-etime1,'sec=',(etime2-etime1)/60,'min'
+         call timer_show_current_min('elapse time=',LOG_ALL)
       end if
       write(*,*) '-----------------------------------------------'
     end if
   end do
-  etime2 = MPI_WTIME()
+  call timer_end(LOG_GROUND_STATE)
 
-  if(Myrank == 0) then
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-    call timelog_show_hour('Ground State time  :', LOG_DYNAMICS)
-    call timelog_show_min ('CG time            :', LOG_CG)
-    call timelog_show_min ('Gram Schmidt time  :', LOG_GRAM_SCHMIDT)
-    call timelog_show_min ('diag time          :', LOG_DIAG)
-    call timelog_show_min ('sp_energy time     :', LOG_SP_ENERGY)
-    call timelog_show_min ('hpsi time          :', LOG_HPSI)
-    call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
-    call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
-    call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
-    call timelog_show_min ('Hartree time       :', LOG_HARTREE)
-    call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
-    call timelog_show_min ('current time       :', LOG_CURRENT)
-    call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
-    call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+  if(comm_is_root()) then
+    call timer_show_hour('Ground State time  :', LOG_GROUND_STATE)
+    call timer_show_min ('CG time            :', LOG_CG)
+    call timer_show_min ('Gram Schmidt time  :', LOG_GRAM_SCHMIDT)
+    call timer_show_min ('diag time          :', LOG_DIAG)
+    call timer_show_min ('sp_energy time     :', LOG_SP_ENERGY)
+    call timer_show_min ('hpsi time          :', LOG_HPSI)
+    call timer_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
+    call timer_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
+    call timer_show_min ('psi_rho time       :', LOG_PSI_RHO)
+    call timer_show_min ('Hartree time       :', LOG_HARTREE)
+    call timer_show_min ('Exc_Cor time       :', LOG_EXC_COR)
+    call timer_show_min ('current time       :', LOG_CURRENT)
+    call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
+    call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
   end if
-  if(Myrank == 0) write(*,*) 'This is the end of GS calculation'
+  if(comm_is_root()) then
+    write(*,*) 'This is the end of GS calculation'
+    call timer_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
   zu_GS0(:,:,:)=zu_GS(:,:,:)
 
-  zu(:,:,:)=zu_GS(:,1:NBoccmax,:)
+  zu_t(:,:,:)=zu_GS(:,1:NBoccmax,:)
   Rion_eq=Rion
   dRion(:,:,-1)=0.d0; dRion(:,:,0)=0.d0
 
@@ -210,23 +218,22 @@ Program main
   call psi_rho_GS
   call Hartree
 ! yabana
-  call Exc_Cor('GS')
+  call Exc_Cor(calc_mode_gs,NBoccmax,zu_t)
 ! yabana
   Vloc(1:NL)=Vh(1:NL)+Vpsl(1:NL)+Vexc(1:NL)
   Vloc_GS(:)=Vloc(:)
-  call Total_Energy_omp(Rion_update,'GS')
+  call Total_Energy_omp(Rion_update,calc_mode_gs)
   Eall0=Eall
-  if(Myrank == 0) write(*,*) 'Eall =',Eall
+  if(comm_is_root()) write(*,*) 'Eall =',Eall
 
-  etime2=MPI_WTIME()
-  if (Myrank == 0) then
+  call timer_end(LOG_STATIC)
+  if (comm_is_root()) then
     write(*,*) '-----------------------------------------------'
-    write(*,*) 'static time=',etime2-etime1,'sec=', (etime2-etime1)/60,'min'
+    call timer_show_min('static time=',LOG_STATIC)
     write(*,*) '-----------------------------------------------'
   end if
-  etime1=etime2
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     write(*,*) '-----------------------------------------------'
     write(*,*) '----some information for Band map--------------'
     do ik=1,NK 
@@ -247,20 +254,32 @@ Program main
     write(*,*) '-----------------------------------------------'
   end if
 
-#ifndef ARTED_DEBUG
   call write_GS_data
-#endif
 
   deallocate(rho_in,rho_out)
   deallocate(Eall_GS,esp_var_ave,esp_var_max,dns_diff)
 !====GS calculation============================
 
-  if(Myrank == 0) write(*,*) 'This is the end of preparation for Real time calculation'
+#ifdef ARTED_LBLK
+  call opt_vars_init_t4ppt()
+#endif
+
+  if(comm_is_root()) then
+    write(*,*) 'This is the end of preparation for Real time calculation'
+    call timer_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
 !====RT calculation============================
 
   call init_Ac
+  do ixyz=1,3
+    kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(0,ixyz)
+  enddo
+  call current0(zu_t)
+  javt(0,:)=jav(:)
 
+  Vloc_old(:,1) = Vloc(:); Vloc_old(:,2) = Vloc(:)
 ! yabana
 !  kAc0=kAc
 ! yabana
@@ -272,9 +291,10 @@ Program main
   else
     position_option='rewind'
     entrance_iter=-1
+    call reset_rt_timer
   end if
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     open(7,file=file_epst,position = position_option)
     open(8,file=file_dns,position = position_option)
     open(9,file=file_force_dR,position = position_option)
@@ -284,36 +304,24 @@ Program main
     end if
   endif
 
+  call comm_sync_all
 
+!$acc enter data copyin(ik_table,ib_table)
+!$acc enter data copyin(lapx,lapy,lapz)
+!$acc enter data copyin(nabx,naby,nabz)
+!$acc enter data copyin(modx,mody,modz)
+!$acc enter data copyin(zJxyz,zKxyz)
+!$acc enter data copyin(uV,iuV)
 
-  call timelog_reset
-  call timelog_enable_verbose
+!$acc enter data create(kAc)
+
 #ifdef ARTED_USE_PAPI
   call papi_begin
 #endif
-  etime1=MPI_WTIME()
+
+  call timer_begin(LOG_DYNAMICS)
+!$acc enter data copyin(zu)
   do iter=entrance_iter+1,Nt
-    do ixyz=1,3
-      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter,ixyz)
-    enddo
-
-    call dt_evolve_omp_KB(iter)
-    call current_omp_KB
-
-    javt(iter,:)=jav(:)
-    if (MD_option == 'Y') then
-      call Ion_Force_omp(Rion_update,'RT')
-      if (iter/10*10 == iter) then
-        call Total_Energy_omp(Rion_update,'RT')
-      end if
-    else
-      if (iter/10*10 == iter) then
-        call Total_Energy_omp(Rion_update,'RT')
-        call Ion_Force_omp(Rion_update,'RT')
-      end if
-    end if
-
-    call timelog_begin(LOG_OTHER)
 
     if (Longi_Trans == 'Lo') then 
       Ac_ind(iter+1,:)=2*Ac_ind(iter,:)-Ac_ind(iter-1,:)-4*Pi*javt(iter,:)*dt**2
@@ -325,6 +333,32 @@ Program main
     else if (Longi_Trans == 'Tr') then 
       Ac_tot(iter+1,:)=Ac_ext(iter+1,:)
     end if
+
+    call dt_evolve_KB(iter,zu_t)
+
+    do ixyz=1,3
+      kAc(:,ixyz)=kAc0(:,ixyz)+Ac_tot(iter+1,ixyz)
+    enddo
+!$acc update device(kAc,kAc_new)
+    call current_RT(zu_t)
+
+    javt(iter+1,:)=jav(:)
+    if (MD_option == 'Y') then
+!$acc update self(zu)
+      call Ion_Force_omp(Rion_update,calc_mode_rt)
+      if (iter/10*10 == iter) then
+        call Total_Energy_omp(Rion_update,calc_mode_rt)
+      end if
+    else
+      if (iter/10*10 == iter) then
+!$acc update self(zu)
+        call Total_Energy_omp(Rion_update,calc_mode_rt)
+        call Ion_Force_omp(Rion_update,calc_mode_rt)
+      end if
+    end if
+
+    call timer_begin(LOG_OTHER)
+
 
     E_ext(iter,:)=-(Ac_ext(iter+1,:)-Ac_ext(iter-1,:))/(2*dt)
     E_ind(iter,:)=-(Ac_ind(iter+1,:)-Ac_ind(iter-1,:))/(2*dt)
@@ -351,7 +385,7 @@ Program main
     endif
     Eall=Eall+Tion
 !write section
-    if (iter/10*10 == iter.and.Myrank == 0) then
+    if (iter/10*10 == iter.and.comm_is_root()) then
       write(*,'(1x,f10.4,8f12.6,f22.14)') iter*dt,&
            &E_ext(iter,1),E_tot(iter,1),&
            &E_ext(iter,2),E_tot(iter,2),&
@@ -364,19 +398,17 @@ Program main
            &Eall,Eall-Eall0,Tion
       write(9,'(1x,100e16.6E3)') iter*dt,((force(ixyz,ia),ixyz=1,3),ia=1,NI),((dRion(ixyz,ia,iter),ixyz=1,3),ia=1,NI)
     endif
-#ifndef ARTED_DEBUG
 !Dynamical Density
-    if (iter/100*100 == iter.and.Myrank == 0) then
+    if (iter/100*100 == iter.and.comm_is_root()) then
       write(8,'(1x,i10)') iter
       do i=1,NL
         write(8,'(1x,2e16.6E3)') rho(i),(rho(i)-rho_gs(i))
       enddo
     endif
-#endif
 
 
 !j_Ac writing
-    if(Myrank == 0)then
+    if(comm_is_root())then
       if (iter/1000*1000 == iter .or. iter == Nt) then
         open(407,file=file_j_ac)
         do i=0,Nt
@@ -390,8 +422,8 @@ Program main
     end if
 !Adiabatic evolution
     if (AD_RHO /= 'No' .and. iter/100*100 == iter) then
-      call k_shift_wf(Rion_update,2)
-      if (Myrank == 0) then
+      call k_shift_wf(Rion_update,5,zu_t)
+      if (comm_is_root()) then
         do ia=1,NI
           write(*,'(1x,i7,3f15.6)') ia,force(1,ia),force(2,ia),force(3,ia)
         end do
@@ -407,63 +439,72 @@ Program main
 
 
 !Timer
-    if (iter/1000*1000 == iter.and.Myrank == 0) then
-      etime2=MPI_WTIME()
-      call timelog_set(LOG_DYNAMICS, etime2 - etime1)
-      call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
-      call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
-      call timelog_show_min ('Hartree time       :', LOG_HARTREE)
-      call timelog_show_min ('current time       :', LOG_CURRENT)
+    if (iter/1000*1000 == iter.and.comm_is_root()) then
+      call timer_show_current_hour('dynamics time      :', LOG_DYNAMICS)
+      call timer_show_min         ('dt_evolve time     :', LOG_DT_EVOLVE)
+      call timer_show_min         ('Hartree time       :', LOG_HARTREE)
+      call timer_show_min         ('current time       :', LOG_CURRENT)
     end if
 !Timer for shutdown
     if (iter/10*10 == iter) then
-      Time_now=MPI_WTIME()
-      call MPI_BCAST(Time_now,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-      if (Myrank == 0 .and. iter/100*100 == iter) then
+      Time_now=get_wtime()
+      call comm_bcast(Time_now,proc_group(1))
+      if (comm_is_root() .and. iter/100*100 == iter) then
         write(*,*) 'Total time =',(Time_now-Time_start)
       end if
       if ((Time_now - Time_start)>Time_shutdown) then 
-        call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-        write(*,*) Myrank,'iter =',iter
+        call comm_sync_all
+        write(*,*) procid(1),'iter =',iter
         iter_now=iter
+!$acc update self(zu)
+        call timer_end(LOG_DYNAMICS)
         call prep_Reentrance_write
         go to 1
       end if
     end if
 
-    call timelog_end(LOG_OTHER)
+    call timer_end(LOG_OTHER)
+
+    ! backup for system failure
+    if (need_backup .and. iter > 0 .and. mod(iter, backup_frequency) == 0) then
+      call timer_end(LOG_DYNAMICS)
+      call timer_end(LOG_ALL)
+      iter_now=iter
+      call prep_Reentrance_write
+      call timer_begin(LOG_ALL)
+      call timer_begin(LOG_DYNAMICS)
+    end if
   enddo !end of RT iteraction========================
-  etime2=MPI_WTIME()
+!$acc exit data copyout(zu)
+  call timer_end(LOG_DYNAMICS)
+
 #ifdef ARTED_USE_PAPI
   call papi_end
 #endif
-  call timelog_disable_verbose
 
-  if(Myrank == 0) then
-    call timelog_set(LOG_DYNAMICS, etime2 - etime1)
+  if(comm_is_root()) then
 #ifdef ARTED_USE_PAPI
-    call papi_result(timelog_get(LOG_DYNAMICS))
+    call papi_result(timer_get(LOG_DYNAMICS))
 #endif
-    call timelog_show_hour('dynamics time      :', LOG_DYNAMICS)
-    call timelog_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
-    call timelog_show_min ('hpsi time          :', LOG_HPSI)
-    call timelog_show_min (' - init time       :', LOG_HPSI_INIT)
-    call timelog_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
-    call timelog_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
-    call timelog_show_min (' - update time     :', LOG_HPSI_UPDATE)
-    print *, ' - stencil GFLOPS  :', get_stencil_gflops(timelog_get(LOG_HPSI_STENCIL))
-#ifdef ARTED_PROFILE_THREADS
-    call write_threads_performance
-#endif
-    call timelog_show_min ('psi_rho time       :', LOG_PSI_RHO)
-    call timelog_show_min ('Hartree time       :', LOG_HARTREE)
-    call timelog_show_min ('Exc_Cor time       :', LOG_EXC_COR)
-    call timelog_show_min ('current time       :', LOG_CURRENT)
-    call timelog_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
-    call timelog_show_min ('Ion_Force time     :', LOG_ION_FORCE)
-    call timelog_show_min ('Other time         :', LOG_OTHER)
+    call timer_show_hour('dynamics time      :', LOG_DYNAMICS)
+    call timer_show_min ('dt_evolve time     :', LOG_DT_EVOLVE)
+    call timer_show_min ('hpsi time          :', LOG_HPSI)
+    call timer_show_min (' - init time       :', LOG_HPSI_INIT)
+    call timer_show_min (' - stencil time    :', LOG_HPSI_STENCIL)
+    call timer_show_min (' - pseudo pt. time :', LOG_HPSI_PSEUDO)
+    call timer_show_min (' - update time     :', LOG_HPSI_UPDATE)
+    call timer_show_min ('psi_rho time       :', LOG_PSI_RHO)
+    call timer_show_min ('Hartree time       :', LOG_HARTREE)
+    call timer_show_min ('Exc_Cor time       :', LOG_EXC_COR)
+    call timer_show_min ('current time       :', LOG_CURRENT)
+    call timer_show_min ('Total_Energy time  :', LOG_TOTAL_ENERGY)
+    call timer_show_min ('Ion_Force time     :', LOG_ION_FORCE)
+    call timer_show_min ('Other time         :', LOG_OTHER)
+    call timer_show_min ('Allreduce time     :', LOG_ALLREDUCE)
   end if
-  if(Myrank == 0) then
+  call write_performance(trim(directory)//'sc_performance')
+
+  if(comm_is_root()) then
     close(7)
     close(8)
     close(9)
@@ -473,51 +514,70 @@ Program main
     end if
   endif
 
-  if(Myrank == 0) write(*,*) 'This is the end of RT calculation'
-
-#ifdef ARTED_DEBUG
-  call err_finalize('force shutdown.')
-#endif
+  if(comm_is_root()) then
+    write(*,*) 'This is the end of RT calculation'
+    call timer_show_current_hour('elapse time=',LOG_ALL)
+    write(*,*) '-----------------------------------------------------------'
+  end if
 
 !====RT calculation===========================
 !====Analyzing calculation====================
 
 !Adiabatic evolution
-  call k_shift_wf_last(Rion_update,10)
+  call k_shift_wf_last(Rion_update,10,zu_t)
 
   call Fourier_tr
 
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
 
-  if (Myrank == 0) write(*,*) 'This is the end of all calculation'
-  Time_now=MPI_WTIME()
-  if (Myrank == 0 ) write(*,*) 'Total time =',(Time_now-Time_start)
+  if (comm_is_root()) write(*,*) 'This is the end of all calculation'
+  Time_now=get_wtime()
+  call timer_end(LOG_ALL)
+  if (comm_is_root()) call timer_show_hour('Total time =',LOG_ALL)
 
-1 if(Myrank == 0) write(*,*)  'This calculation is shutdown successfully!'
-  call MPI_FINALIZE(ierr)
+1 if(comm_is_root()) write(*,*)  'This calculation is shutdown successfully!'
+  call comm_finalize
 
+contains
+  subroutine reset_gs_timer
+    implicit none
+    integer :: i
+    do i = LOG_CG,LOG_GRAM_SCHMIDT
+      call timer_reset(i)
+    end do
+    call reset_rt_timer
+  end subroutine
+
+  subroutine reset_rt_timer
+    implicit none
+    integer :: i
+    do i = LOG_DT_EVOLVE,LOG_ALLREDUCE
+      call timer_reset(i)
+    end do
+  end subroutine
 End Program Main
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Read_data
   use Global_Variables
   use opt_variables, only: symmetric_load_balancing, is_symmetric_mode
   use environment
+  use communication
+  use misc_routines
   implicit none
   integer :: ia,i,j
 
-  if (Myrank == 0) then
-    write(*,*) 'Nprocs=',Nprocs
-    write(*,*) 'Myrank=0:  ',Myrank
+  if (comm_is_root()) then
+    write(*,*) 'nprocs(1)=',nprocs(1)
+    write(*,*) 'procid(1)=0:  ',procid(1)
 
     read(*,*) entrance_option
     write(*,*) 'entrance_option=',entrance_option
     read(*,*) Time_shutdown
     write(*,*) 'Time_shutdown=',Time_shutdown,'sec'
-
   end if
 
-  call MPI_BCAST(entrance_option,10,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Time_shutdown,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call comm_bcast(entrance_option,proc_group(1))
+  call comm_bcast(Time_shutdown,proc_group(1))
 
   if(entrance_option == 'reentrance') then
     call prep_Reentrance_Read
@@ -528,22 +588,31 @@ Subroutine Read_data
   end if
 
 
-  if(Myrank == 0)then
+  if(comm_is_root())then
+    read(*,*) backup_frequency
+    need_backup = (backup_frequency > 0)
     read(*,*) entrance_iter
     read(*,*) SYSname
     read(*,*) directory
 !yabana
     read(*,*) functional, cval
 !yabana
+    read(*,*) propagator
     read(*,*) ps_format !shinohara
     read(*,*) PSmask_option !shinohara
     read(*,*) alpha_mask, gamma_mask, eta_mask !shinohara
     read(*,*) aL,ax,ay,az
     read(*,*) Sym,crystal_structure ! sym
     read(*,*) Nd,NLx,NLy,NLz,NKx,NKy,NKz
+    !uemoto
+    if ((NKx <= 0) .or. (NKy <= 0) .or. (NKz <= 0)) then
+      read(*,*) file_kw
+    endif
     read(*,*) NEwald, aEwald
     read(*,*) KbTev ! sato
 
+    write(*,*) 'need backup?',need_backup
+    if (need_backup) write(*,*) '  frequency (# of iter) :',backup_frequency
     write(*,*) 'entrance_iter=',entrance_iter
     write(*,*) SYSname
     write(*,*) directory
@@ -551,6 +620,7 @@ Subroutine Read_data
     write(*,*) 'functional=',functional
     if(functional == 'TBmBJ') write(*,*) 'cvalue=',cval
 !yabana
+    write(*,*) 'propagator=',propagator
     write(*,*) 'ps_format =',ps_format !shinohara
     write(*,*) 'PSmask_option =',PSmask_option !shinohara
     write(*,*) 'alpha_mask, gamma_mask, eta_mask =',alpha_mask, gamma_mask, eta_mask !shinohara
@@ -572,52 +642,68 @@ Subroutine Read_data
     write(*,*) 'KbTev=',KbTev ! sato
   end if
 
-  call MPI_BCAST(SYSname,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(directory,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-!yabana
-  call MPI_BCAST(functional,10,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(cval,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-!yabana
+  call comm_bcast(backup_frequency,proc_group(1))
+  call comm_bcast(need_backup,proc_group(1))
 
-  call MPI_BCAST(ps_format,10,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)!shinohara
-  call MPI_BCAST(PSmask_option,1,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)!shinohara
-  call MPI_BCAST(alpha_mask,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr) !shinohara
-  call MPI_BCAST(gamma_mask,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr) !shinohara
-  call MPI_BCAST(eta_mask,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr) !shinohara
+  call comm_bcast(SYSname,proc_group(1))
+  call comm_bcast(directory,proc_group(1))
+  write (process_directory,'(A,A,I5.5,A)') trim(directory),'/work_p',procid(1),'/'
+  call create_directory(process_directory)
+  call comm_bcast(functional,proc_group(1))
+  call comm_bcast(cval,proc_group(1))
+  call comm_bcast(propagator,proc_group(1))
 
-  call MPI_BCAST(file_GS,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_RT,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_epst,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_epse,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_force_dR,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_j_ac,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)  
-  call MPI_BCAST(file_DoS,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_band,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_dns,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_ovlp,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(file_nex,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(aL,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(ax,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(ay,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(az,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Sym,1,MPI_Integer,0,MPI_COMM_WORLD,ierr) !sym
-  call MPI_BCAST(crystal_structure,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Nd,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NLx,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NLy,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NLz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NKx,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NKy,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NKz,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NEwald,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(aEwald,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(KbTev,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr) ! sato
+  call comm_bcast(ps_format,proc_group(1))
+  call comm_bcast(PSmask_option,proc_group(1))
+  call comm_bcast(alpha_mask,proc_group(1))
+  call comm_bcast(gamma_mask,proc_group(1))
+  call comm_bcast(eta_mask,proc_group(1))
+
+  call comm_bcast(file_GS,proc_group(1))
+  call comm_bcast(file_RT,proc_group(1))
+  call comm_bcast(file_epst,proc_group(1))
+  call comm_bcast(file_epse,proc_group(1))
+  call comm_bcast(file_force_dR,proc_group(1))
+  call comm_bcast(file_j_ac,proc_group(1))
+  call comm_bcast(file_DoS,proc_group(1))
+  call comm_bcast(file_band,proc_group(1))
+  call comm_bcast(file_dns,proc_group(1))
+  call comm_bcast(file_ovlp,proc_group(1))
+  call comm_bcast(file_nex,proc_group(1))
+  call comm_bcast(aL,proc_group(1))
+  call comm_bcast(ax,proc_group(1))
+  call comm_bcast(ay,proc_group(1))
+  call comm_bcast(az,proc_group(1))
+  call comm_bcast(Sym,proc_group(1))
+  call comm_bcast(crystal_structure,proc_group(1))
+  call comm_bcast(Nd,proc_group(1))
+  call comm_bcast(NLx,proc_group(1))
+  call comm_bcast(NLy,proc_group(1))
+  call comm_bcast(NLz,proc_group(1))
+  call comm_bcast(NKx,proc_group(1))
+  call comm_bcast(NKy,proc_group(1))
+  call comm_bcast(NKz,proc_group(1))
+  call comm_bcast(NEwald,proc_group(1))
+  call comm_bcast(aEwald,proc_group(1))
+  call comm_bcast(KbTev,proc_group(1))
 
 
 !sym ---
   select case(crystal_structure)
+  case("diamond2")
+     if(functional == "PZ" .or. functional == "PZM" .or. functional == "TBmBJ")then
+        if(Sym == 8)then
+           if((mod(NLx,2)+mod(NLy,2)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
+           if(NLx /= NLy)call err_finalize('Bad grid point: NLx /= NLy')
+           if(NKx /= NKy)call err_finalize('NKx /= NKy')
+        else if(Sym /=1)then
+           call err_finalize('Bad crystal structure')
+        end if
+     else
+        if(Sym /= 1)call err_finalize('Bad crystal structure')
+     end if
   case("diamond")
-     if(functional == "PZ")then
+     if(functional == "PZ" .or. functional == "PZM" .or. functional == "TBmBJ")then
         if(Sym == 8)then
            if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
            if(NLx /= NLy)call err_finalize('Bad grid point')
@@ -628,15 +714,16 @@ Subroutine Read_data
         else if(Sym /= 1)then
            call err_finalize('Bad crystal structure')
         end if
-     else if(functional == "TBmBJ")then
-        if(Sym == 4)then
-           if(NLx /= NLy)call err_finalize('Bad grid point')
-           if(NKx /= NKy) call err_finalize('NKx /= NKy')
-        else if(Sym /= 1)then
-           call err_finalize('Bad crystal structure')
-        end if
      else
         if(Sym /= 1)call err_finalize('Bad crystal structure')
+     end if
+  case("tetragonal")
+     if(functional == "PZ" .or. functional == "PZM")then
+        if((mod(NLx,4)+mod(NLy,4)+mod(NLz,4)) /= 0)call err_finalize('Bad grid point')
+        if(NLx /= NLy)call err_finalize('Bad grid point')
+        if(NKx /= NKy) call err_finalize('NKx /= NKy')
+     else if(Sym /= 1)then
+        call err_finalize('Bad crystal structure')
      end if
   case default
      if(Sym /= 1)call err_finalize('Bad symmetry')
@@ -646,7 +733,7 @@ Subroutine Read_data
   if(mod(NKx,2)+mod(NKy,2)+mod(NKz,2) /= 0) call err_finalize('NKx,NKy,NKz /= even')
   if(mod(NLx,2)+mod(NLy,2)+mod(NLz,2) /= 0) call err_finalize('NLx,NLy,NLz /= even')
   
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
 
   aLx=ax*aL;    aLy=ay*aL;    aLz=az*aL
   aLxyz=aLx*aLy*aLz
@@ -655,51 +742,67 @@ Subroutine Read_data
   Hxyz=Hx*Hy*Hz
   NL=NLx*NLy*NLz
   NG=NL
-  NKxyz=NKx*NKy*NKz
 
-  select case(Sym)
-  case(1)
-    NK=NKx*NKy*NKz
-  case(4)
-    NK=(NKx/2)*(NKy/2)*NKz
-  case(8)
-    NK=NKz*(NKx/2)*((NKx/2)+1)/2
-  end select
+  ! Added by M.Uemoto on 2016-07-07
+  if (0<NKx .and. 0<NKy .and. 0<NKy) then
+    ! Use uniform rectangular k-grid
+    NKxyz=NKx*NKy*NKz
+    select case(Sym)
+    case(1)
+      NK=NKx*NKy*NKz
+    case(4)
+      NK=(NKx/2)*(NKy/2)*NKz
+    case(8)
+      NK=NKz*(NKx/2)*((NKx/2)+1)/2
+    end select
+  else
+    ! Use non-uniform k-points
+    if (comm_is_root()) then
+      write(*,*) "Use non-uniform k-points distribution"
+      write(*,*) "file_kw=", file_kw
+      open(410, file=file_kw, status="old")
+      read(410, *) NK, NKxyz
+      close(410)
+      write(*,*) "NK=", NK, "NKxyz=", NKxyz      
+    endif
+    call comm_bcast(NK,proc_group(1))
+    call comm_bcast(NKxyz,proc_group(1))
+  endif
 
-  NK_ave=NK/Nprocs; NK_remainder=NK-NK_ave*Nprocs
-  NG_ave=NG/Nprocs; NG_remainder=NG-NG_ave*Nprocs
+  NK_ave=NK/nprocs(1); NK_remainder=NK-NK_ave*nprocs(1)
+  NG_ave=NG/nprocs(1); NG_remainder=NG-NG_ave*nprocs(1)
 
   if(is_symmetric_mode() == 1 .and. ENABLE_LOAD_BALANCER == 1) then
-    call symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,Myrank,Nprocs)
+    call symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,procid(1),nprocs(1))
   else
-    if (NK/Nprocs*Nprocs == NK) then
-      NK_s=NK_ave*Myrank+1
-      NK_e=NK_ave*(Myrank+1)
+    if (NK/nprocs(1)*nprocs(1) == NK) then
+      NK_s=NK_ave*procid(1)+1
+      NK_e=NK_ave*(procid(1)+1)
     else
-      if (Myrank < (Nprocs-1) - NK_remainder + 1) then
-        NK_s=NK_ave*Myrank+1
-        NK_e=NK_ave*(Myrank+1)
+      if (procid(1) < (nprocs(1)-1) - NK_remainder + 1) then
+        NK_s=NK_ave*procid(1)+1
+        NK_e=NK_ave*(procid(1)+1)
       else
-        NK_s=NK-(NK_ave+1)*((Nprocs-1)-Myrank)-NK_ave
-        NK_e=NK-(NK_ave+1)*((Nprocs-1)-Myrank)
+        NK_s=NK-(NK_ave+1)*((nprocs(1)-1)-procid(1))-NK_ave
+        NK_e=NK-(NK_ave+1)*((nprocs(1)-1)-procid(1))
       end if
     end if
-    if(Myrank == Nprocs-1 .and. NK_e /= NK) call err_finalize('prep. NK_e error')
+    if(procid(1) == nprocs(1)-1 .and. NK_e /= NK) call err_finalize('prep. NK_e error')
   end if
 
-  if (NG/Nprocs*Nprocs == NG) then
-    NG_s=NG_ave*Myrank+1
-    NG_e=NG_ave*(Myrank+1)
+  if (NG/nprocs(1)*nprocs(1) == NG) then
+    NG_s=NG_ave*procid(1)+1
+    NG_e=NG_ave*(procid(1)+1)
   else
-    if (Myrank < (Nprocs-1) - NG_remainder + 1) then
-      NG_s=NG_ave*Myrank+1
-      NG_e=NG_ave*(Myrank+1)
+    if (procid(1) < (nprocs(1)-1) - NG_remainder + 1) then
+      NG_s=NG_ave*procid(1)+1
+      NG_e=NG_ave*(procid(1)+1)
     else
-      NG_s=NG-(NG_ave+1)*((Nprocs-1)-Myrank)-NG_ave
-      NG_e=NG-(NG_ave+1)*((Nprocs-1)-Myrank) 
+      NG_s=NG-(NG_ave+1)*((nprocs(1)-1)-procid(1))-NG_ave
+      NG_e=NG-(NG_ave+1)*((nprocs(1)-1)-procid(1))
     end if
   end if
-  if(Myrank == Nprocs-1 .and. NG_e /= NG) call err_finalize('prep. NG_e error')
+  if(procid(1) == nprocs(1)-1 .and. NG_e /= NG) call err_finalize('prep. NG_e error')
 
   allocate(lap(-Nd:Nd),nab(-Nd:Nd))
   allocate(lapx(-Nd:Nd),lapy(-Nd:Nd),lapz(-Nd:Nd))
@@ -707,8 +810,9 @@ Subroutine Read_data
   allocate(Lx(NL),Ly(NL),Lz(NL),Gx(NG),Gy(NG),Gz(NG))
   allocate(Lxyz(0:NLx-1,0:NLy-1,0:NLz-1))
   allocate(ifdx(-Nd:Nd,1:NL),ifdy(-Nd:Nd,1:NL),ifdz(-Nd:Nd,1:NL))
-  allocate(kAc(NK,3),kAc0(NK,3))
+  allocate(kAc(NK,3),kAc0(NK,3),kAc_new(NK,3))
   allocate(Vh(NL),Vexc(NL),Eexc(NL),rho(NL),Vpsl(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
+  allocate(Vloc_new(NL),Vloc_old(NL,2))
 !yabana
   allocate(tmass(NL),tjr(NL,3),tjr2(NL),tmass_t(NL),tjr_t(NL,3),tjr2_t(NL))
 !yabana
@@ -735,7 +839,7 @@ Subroutine Read_data
   allocate(itable_sym(Sym,NL)) ! sym
   allocate(rho_l(NL),rho_tmp1(NL),rho_tmp2(NL)) !sym
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     read(*,*) NB,Nelec
     write(*,*) 'NB,Nelec=',NB,Nelec
   endif
@@ -746,23 +850,23 @@ Subroutine Read_data
   end if
 
 
-  call MPI_BCAST(Nelec,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr) ! sato
-  call MPI_BCAST(NB,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NBoccmax,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_bcast(Nelec,proc_group(1)) ! sato
+  call comm_bcast(NB,proc_group(1))
+  call comm_bcast(NBoccmax,proc_group(1))
+  call comm_sync_all
   NKB=(NK_e-NK_s+1)*NBoccmax ! sato
 
   allocate(occ(NB,NK),wk(NK),esp(NB,NK))
   allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
   allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
-  allocate(zu(NL,NBoccmax,NK_s:NK_e))
+  allocate(zu_t(NL,NBoccmax,NK_s:NK_e))
   allocate(ik_table(NKB),ib_table(NKB)) ! sato
   allocate(esp_var(NB,NK))
   allocate(NBocc(NK)) !redistribution
   NBocc(:)=NBoccmax
   allocate(esp_vb_min(NK),esp_vb_max(NK)) !redistribution
   allocate(esp_cb_min(NK),esp_cb_max(NK)) !redistribution
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     read(*,*) FSset_option
     read(*,*) Ncg
     read(*,*) Nmemory_MB,alpha_MB
@@ -785,34 +889,35 @@ Subroutine Read_data
     write(*,*) 'AD_RHO =', AD_RHO
     write(*,*) 'Nt,dt=',Nt,dt
   endif
-  call MPI_BCAST(FSset_option,1,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Ncg,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Nmemory_MB,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(alpha_MB,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NFSset_start,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NFSset_every,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Nscf,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(ext_field,2,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Longi_Trans,2,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(MD_option,1,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(AD_RHO,2,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Nt,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(dt,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(entrance_option,12,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-!  call MPI_BCAST(Time_shutdown,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(entrance_iter,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_bcast(FSset_option,proc_group(1))
+  call comm_bcast(Ncg,proc_group(1))
+  call comm_bcast(Nmemory_MB,proc_group(1))
+  call comm_bcast(alpha_MB,proc_group(1))
+  call comm_bcast(NFSset_start,proc_group(1))
+  call comm_bcast(NFSset_every,proc_group(1))
+  call comm_bcast(Nscf,proc_group(1))
+  call comm_bcast(ext_field,proc_group(1))
+  call comm_bcast(Longi_Trans,proc_group(1))
+  call comm_bcast(MD_option,proc_group(1))
+  call comm_bcast(AD_RHO,proc_group(1))
+  call comm_bcast(Nt,proc_group(1))
+  call comm_bcast(dt,proc_group(1))
+  call comm_bcast(entrance_option,proc_group(1))
+!  call comm_bcast(Time_shutdown,proc_group(1))
+  call comm_bcast(entrance_iter,proc_group(1))
+  call comm_sync_all
+
   if(ext_field /= 'LF' .and. ext_field /= 'LR' ) call err_finalize('incorrect option for ext_field')
   if(Longi_Trans /= 'Lo' .and. Longi_Trans /= 'Tr' ) call err_finalize('incorrect option for Longi_Trans')
   if(AD_RHO /= 'TD' .and. AD_RHO /= 'GS' .and. AD_RHO /= 'No' ) call err_finalize('incorrect option for Longi_Trans')
 
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_sync_all
 
-  allocate(javt(0:Nt,3))
+  allocate(javt(0:Nt+1,3))
   allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
   allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     read(*,*) dAc
     read(*,*) Nomega,domega
     read(*,*) AE_shape
@@ -835,24 +940,24 @@ Subroutine Read_data
     write(*,*) '===========ion configuration================'
     write(*,*) 'NI,NE=',NI,NE
   endif
-  call MPI_BCAST(dAc,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Nomega,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(domega,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(AE_shape,8,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(IWcm2_1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(tpulsefs_1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(omegaev_1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(phi_CEP_1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Epdir_1,3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(IWcm2_2,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(tpulsefs_2,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(omegaev_2,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(phi_CEP_2,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Epdir_2,3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(T1_T2fs,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NI,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(NE,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_bcast(dAc,proc_group(1))
+  call comm_bcast(Nomega,proc_group(1))
+  call comm_bcast(domega,proc_group(1))
+  call comm_bcast(AE_shape,proc_group(1))
+  call comm_bcast(IWcm2_1,proc_group(1))
+  call comm_bcast(tpulsefs_1,proc_group(1))
+  call comm_bcast(omegaev_1,proc_group(1))
+  call comm_bcast(phi_CEP_1,proc_group(1))
+  call comm_bcast(Epdir_1,proc_group(1))
+  call comm_bcast(IWcm2_2,proc_group(1))
+  call comm_bcast(tpulsefs_2,proc_group(1))
+  call comm_bcast(omegaev_2,proc_group(1))
+  call comm_bcast(phi_CEP_2,proc_group(1))
+  call comm_bcast(Epdir_2,proc_group(1))
+  call comm_bcast(T1_T2fs,proc_group(1))
+  call comm_bcast(NI,proc_group(1))
+  call comm_bcast(NE,proc_group(1))
+  call comm_sync_all
   if(AE_shape /= 'Asin2cos' .and. AE_shape /= 'Esin2sin' &
     &.and. AE_shape /= 'input' .and. AE_shape /= 'Asin2_cw' ) call err_finalize('incorrect option for AE_shape')
 
@@ -868,7 +973,7 @@ Subroutine Read_data
   allocate(udVtbl(Nrmax,0:Lmax,NE),dudVtbl(Nrmax,0:Lmax,NE))
   allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))                         
 
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     read(*,*) (Zatom(j),j=1,NE)
     read(*,*) (Lref(j),j=1,NE)
     do ia=1,NI
@@ -884,11 +989,11 @@ Subroutine Read_data
     end do
   endif
 
-  call MPI_BCAST(Zatom,NE,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Kion,NI,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Lref,NE,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Rion,3*NI,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call comm_bcast(Zatom,proc_group(1))
+  call comm_bcast(Kion,proc_group(1))
+  call comm_bcast(Lref,proc_group(1))
+  call comm_bcast(Rion,proc_group(1))
+  call comm_sync_all
 
   Rion(1,:)=Rion(1,:)*aLx
   Rion(2,:)=Rion(2,:)*aLy
@@ -897,497 +1002,15 @@ Subroutine Read_data
   return
 End Subroutine Read_data
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-subroutine prep_Reentrance_Read
-  use Global_Variables
-  use timelog,       only: timelog_reentrance_read
-  use opt_variables, only: opt_vars_initialize_p1, opt_vars_initialize_p2
-  implicit none
-  real(8) :: time_in,time_out
-
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  time_in=MPI_WTIME()
-
-  if(Myrank == 0) then
-    read(*,*) directory
-  end if
-  call MPI_BCAST(directory,50,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
-
-  write(cMyrank,'(I5.5)')Myrank
-  file_reentrance=trim(directory)//'tmp_re.'//trim(cMyrank)
-  open(500,file=file_reentrance,form='unformatted')
-
-  read(500) iter_now,entrance_iter
-  ! need to exclude from reading data: 
-  ! Time_shutdown, Time_start, Time_now,iter_now,entrance_iter,entrance_option
-
-!======== read section ===========================
-!== read data ===!
-
-!ARTED version
-!  character(50),parameter :: ARTED_ver='ARTED_sc.2014.08.10.0'
-
-! constants
-!  real(8),parameter :: Pi=3.141592653589793d0
-!  complex(8),parameter :: zI=(0.d0,1.d0)
-!  real(8),parameter :: a_B=0.529177d0,Ry=13.6058d0
-!  real(8),parameter :: umass=1822.9d0
-
-!yabana
-!! DFT parameters
-!  real(8),parameter :: gammaU=-0.1423d0,beta1U=1.0529d0
-!  real(8),parameter :: beta2U=0.3334d0,AU=0.0311d0,BU=-0.048d0
-!  real(8),parameter :: CU=0.002d0,DU=-0.0116d0
-!yabana
-
-! grid 
-  read(500) NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
-  read(500) NKxyz 
-  read(500) aL,ax,ay,az,aLx,aLy,aLz,aLxyz
-  read(500) bLx,bLy,bLz,Hx,Hy,Hz,Hxyz
-
-! pseudopotential
-!  integer,parameter :: Nrmax=3000,Lmax=4
-  read(500) ps_type
-  read(500) ps_format !shinohara
-  read(500) PSmask_option != 'n' !shinohara
-  read(500) alpha_mask, gamma_mask, eta_mask!shinohara
-  read(500) Nps,Nlma
-
-! material
-  read(500) NI,NE,NB,NBoccmax
-  read(500) Ne_tot
-
-! physical quantities
-  read(500) Eall,Eall0,jav(3),Tion
-  read(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
-
-!yabana
-  read(500) Nelec !FS set
-
-
-! Bloch momentum,laser pulse, electric field
-!  real(8) :: f0,Wcm2,pulseT,wave_length,omega,pulse_time,pdir(3),phi_CEP=0.00*2*pi
-  read(500) AE_shape
-  read(500) f0_1,IWcm2_1,tpulsefs_1,omegaev_1,omega_1,tpulse_1,Epdir_1(3),phi_CEP_1 ! sato
-  read(500) f0_2,IWcm2_2,tpulsefs_2,omegaev_2,omega_2,tpulse_2,Epdir_2(3),phi_CEP_2 ! sato
-  read(500) T1_T2fs,T1_T2
-
-! control parameters
-  read(500) NEwald                      !Ewald summation
-  read(500) aEwald
-  read(500) Ncg                        !# of conjugate gradient (cg)
-  read(500) dt,dAc,domega
-  read(500) Nscf,Nt,Nomega
-  read(500) Nmemory_MB                   !Modified-Broyden (MB) method
-  read(500) alpha_MB
-  read(500) NFSset_start,NFSset_every !Fermi Surface (FS) set 
-
-! file names, flags, etc
-  read(500) SYSname,directory
-  read(500) file_GS,file_RT
-  read(500) file_epst,file_epse
-  read(500) file_force_dR,file_j_ac
-  read(500) file_DoS,file_band
-  read(500) file_dns,file_ovlp,file_nex
-  read(500) ext_field
-  read(500) Longi_Trans
-  read(500) FSset_option,MD_option
-  read(500) AD_RHO !ovlp_option
-!yabana
-  read(500) functional
-  read(500) cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
-!yabana
-
-! MPI
-!  include 'mpif.h'
-!  read(500) Myrank,Nprocs,ierr
-!  read(500) NEW_COMM_WORLD,NEWPROCS,NEWRANK ! sato
-  read(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
-  read(500) NK_remainder,NG_remainder
-  read(500) etime1,etime2
-! Timer
-!  read(500) Time_shutdown
-!  read(500) Time_start,Time_now
-!  read(500) iter_now,entrance_iter
-!  read(500) entrance_option    !initial or reentrance        
-  read(500) position_option
-
-
-! omp
-!  integer :: NUMBER_THREADS
-  read(500) NKB
-
-! sym
-  read(500) crystal_structure !sym
-
-! Finite temperature
-  read(500) KbTev
-
-! For reentrance 
-  read(500) cMyrank,file_reentrance
-
-
-! allocatable
-  allocate(Lx(NL),Ly(NL),Lz(NL),Gx(NG),Gy(NG),Gz(NG))
-  allocate(ifdx(-Nd:Nd,1:NL),ifdy(-Nd:Nd,1:NL),ifdz(-Nd:Nd,1:NL))
-  allocate(lap(-Nd:Nd),nab(-Nd:Nd))
-  allocate(lapx(-Nd:Nd),lapy(-Nd:Nd),lapz(-Nd:Nd))
-  allocate(nabx(-Nd:Nd),naby(-Nd:Nd),nabz(-Nd:Nd))
-  allocate(Lxyz(0:NLx-1,0:NLy-1,0:NLz-1))
-
-  read(500) Lx(:),Ly(:),Lz(:),Lxyz(:,:,:)
-  read(500) ifdx(:,:),ifdy(:,:),ifdz(:,:)
-  read(500) Gx(:),Gy(:),Gz(:)
-  read(500) lap(:),nab(:)
-  read(500) lapx(:),lapy(:),lapz(:)
-  read(500) nabx(:),naby(:),nabz(:)
-
-  allocate(Mps(NI),Jxyz(Nps,NI),Jxx(Nps,NI),Jyy(Nps,NI),Jzz(Nps,NI))
-  allocate(Mlps(NE),Lref(NE),Zps(NE),NRloc(NE))
-  allocate(NRps(NE),inorm(0:Lmax,NE),iuV(Nlma),a_tbl(Nlma))
-  allocate(rad(Nrmax,NE),Rps(NE),vloctbl(Nrmax,NE),udVtbl(Nrmax,0:Lmax,NE))
-  allocate(radnl(Nrmax,NE))
-  allocate(Rloc(NE),uV(Nps,Nlma),duV(Nps,Nlma,3),anorm(0:Lmax,NE))
-  allocate(dvloctbl(Nrmax,NE),dudVtbl(Nrmax,0:Lmax,NE))
-
-  read(500) Mps(:),Jxyz(:,:),Jxx(:,:),Jyy(:,:),Jzz(:,:)
-  read(500) Mlps(:),Lref(:),Zps(:),NRloc(:)
-  read(500) NRps(:),inorm(:,:),iuV(:),a_tbl(:)
-  read(500) rad(:,:),Rps(:),vloctbl(:,:),udVtbl(:,:,:)
-  read(500) radnl(:,:)
-  read(500) Rloc(:),uV(:,:),duV(:,:,:),anorm(:,:)
-  read(500) dvloctbl(:,:),dudVtbl(:,:,:)
-
-  allocate(Zatom(NE),Kion(NI))
-  allocate(Rion(3,NI),Mass(NE),Rion_eq(3,NI),dRion(3,NI,-1:Nt+1))
-  allocate(occ(NB,NK),wk(NK))
-  
-  read(500) Zatom(:),Kion(:)
-  read(500) Rion(:,:),Mass(:),Rion_eq(:,:),dRion(:,:,:)
-  read(500) occ(:,:),wk(:)
-
-
-  allocate(javt(0:Nt,3))
-  allocate(Vpsl(NL),Vh(NL),Vexc(NL),Eexc(NL),Vloc(NL),Vloc_GS(NL),Vloc_t(NL))
-  allocate(tmass(NL),tjr(NL,3),tjr2(NL),tmass_t(NL),tjr_t(NL,3),tjr2_t(NL))
-  allocate(dVloc_G(NG_s:NG_e,NE))
-  allocate(rho(NL),rho_gs(NL))
-  allocate(rhoe_G(NG_s:NG_e),rhoion_G(NG_s:NG_e))
-  allocate(force(3,NI),esp(NB,NK),force_ion(3,NI))
-  allocate(Floc(3,NI),Fnl(3,NI),Fion(3,NI))                         
-  allocate(ovlp_occ_l(NB,NK),ovlp_occ(NB,NK))
-
-  read(500) javt(:,:)
-  read(500) Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)
-  read(500) tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
-  read(500) dVloc_G(:,:)
-  read(500) rho(:),rho_gs(:)
-!  real(8),allocatable :: rho_in(:,:),rho_out(:,:) !MB method
-  read(500) rhoe_G(:),rhoion_G(:)
-  read(500) force(:,:),esp(:,:),force_ion(:,:)
-  read(500) Floc(:,:),Fnl(:,:),Fion(:,:)               
-  read(500) ovlp_occ_l(:,:),ovlp_occ(:,:)
-
-
-  allocate(NBocc(NK)) !redistribution
-  allocate(esp_vb_min(NK),esp_vb_max(NK)) !redistribution
-  allocate(esp_cb_min(NK),esp_cb_max(NK)) !redistribution
-!  allocate(Eall_GS(0:Nscf),esp_var_ave(1:Nscf),esp_var_max(1:Nscf),dns_diff(1:Nscf))
-
-  read(500) NBocc(:) !FS set
-  read(500) esp_vb_min(:),esp_vb_max(:) !FS set
-  read(500) esp_cb_min(:),esp_cb_max(:) !FS set
-!  read(500) Eall_GS(:),esp_var_ave(:),esp_var_max(:),dns_diff(:)
-
-  allocate(zu_GS(NL,NB,NK_s:NK_e),zu_GS0(NL,NB,NK_s:NK_e))
-  allocate(zu(NL,NBoccmax,NK_s:NK_e))
-  allocate(tpsi(NL),htpsi(NL),zwork(-Nd:NLx+Nd-1,-Nd:NLy+Nd-1,-Nd:NLz+Nd-1),ttpsi(NL))
-  allocate(work(-Nd:NLx+Nd-1,-Nd:NLy+Nd-1,-Nd:NLz+Nd-1))
-  allocate(esp_var(NB,NK))
-
-! wave functions, work array
-  read(500) zu(:,:,:),zu_GS(:,:,:),zu_GS0(:,:,:)
-!  read(500) tpsi(:),htpsi(:),zwork(:,:,:),ttpsi(:)
-!  read(500) work(:,:,:)
-  read(500) esp_var(:,:)
-
-  allocate(nxyz(-NLx/2:NLx/2-1,-NLy/2:NLy/2-1,-NLz/2:NLz/2-1)) !Hartree
-  allocate(rho_3D(0:NLx-1,0:NLy-1,0:NLz-1),Vh_3D(0:NLx-1,0:NLy-1,0:NLz-1))!Hartree
-  allocate(rhoe_G_temp(1:NG),rhoe_G_3D(-NLx/2:NLx/2-1,-NLy/2:NLy/2-1,-NLz/2:NLz/2-1))!Hartree
-  allocate(f1(0:NLx-1,0:NLy-1,-NLz/2:NLz/2-1),f2(0:NLx-1,-NLy/2:NLy/2-1,-NLz/2:NLz/2-1))!Hartree
-  allocate(f3(-NLx/2:NLx/2-1,-NLy/2:NLy/2-1,0:NLz-1),f4(-NLx/2:NLx/2-1,0:NLy-1,0:NLz-1))!Hartree
-  allocate(eGx(-NLx/2:NLx/2-1,0:NLx-1),eGy(-NLy/2:NLy/2-1,0:NLy-1),eGz(-NLz/2:NLz/2-1,0:NLz-1))!Hartree
-  allocate(eGxc(-NLx/2:NLx/2-1,0:NLx-1),eGyc(-NLy/2:NLy/2-1,0:NLy-1),eGzc(-NLz/2:NLz/2-1,0:NLz-1))!Hartree
-
-! variables for 4-times loop in Fourier transportation
-  read(500) nxyz(:,:,:)
-  read(500) rho_3D(:,:,:),Vh_3D(:,:,:)
-  read(500) rhoe_G_temp(:),rhoe_G_3D(:,:,:)
-  read(500) f1(:,:,:),f2(:,:,:),f3(:,:,:),f4(:,:,:)
-  read(500) eGx(:,:),eGy(:,:),eGz(:,:),eGxc(:,:),eGyc(:,:),eGzc(:,:)
-
-  allocate(E_ext(0:Nt,3),E_ind(0:Nt,3),E_tot(0:Nt,3))
-  allocate(kAc(NK,3),kAc0(NK,3))
-  allocate(Ac_ext(-1:Nt+1,3),Ac_ind(-1:Nt+1,3),Ac_tot(-1:Nt+1,3))
-
-  read(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  read(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
-  read(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
-
-  allocate(ekr(Nps,NI)) ! sato
-  allocate(ekr_omp(Nps,NI,NK_s:NK_e))
-  allocate(tpsi_omp(NL,0:NUMBER_THREADS-1),htpsi_omp(NL,0:NUMBER_THREADS-1)) ! sato
-  allocate(ttpsi_omp(NL,0:NUMBER_THREADS-1)) ! sato
-  allocate(xk_omp(NL,0:NUMBER_THREADS-1),hxk_omp(NL,0:NUMBER_THREADS-1)) ! sato
-  allocate(gk_omp(NL,0:NUMBER_THREADS-1),pk_omp(NL,0:NUMBER_THREADS-1)) ! sato
-  allocate(pko_omp(NL,0:NUMBER_THREADS-1),txk_omp(NL,0:NUMBER_THREADS-1)) ! sato
-  allocate(ik_table(NKB),ib_table(NKB)) ! sato
-
-! sato
-  read(500) ekr(:,:)  
-! omp
-!  integer :: NUMBER_THREADS
-  read(500) ekr_omp(:,:,:)
-  read(500) tpsi_omp(:,:),ttpsi_omp(:,:),htpsi_omp(:,:)
-  read(500) xk_omp(:,:),hxk_omp(:,:),gk_omp(:,:),pk_omp(:,:),pko_omp(:,:),txk_omp(:,:)
-  read(500) ik_table(:),ib_table(:)
-
-
-  allocate(tau_s_l_omp(NL,0:NUMBER_THREADS-1),j_s_l_omp(NL,3,0:NUMBER_THREADS-1)) ! sato
-  read(500) tau_s_l_omp(:,:),j_s_l_omp(:,:,:)
-
-  allocate(itable_sym(Sym,NL)) ! sym
-  allocate(rho_l(NL),rho_tmp1(NL),rho_tmp2(NL)) !sym
-
-  read(500) itable_sym(:,:) ! sym
-  read(500) rho_l(:),rho_tmp1(:),rho_tmp2(:) !sym
-
-  call timelog_reentrance_read(500)
-  call opt_vars_initialize_p1
-  call opt_vars_initialize_p2
-
-!== read data ===!  
-
-  close(500)
-
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  time_out=MPI_WTIME()
-
-  if(myrank == 0)write(*,*)'Reentrance time read =',time_out-time_in,' sec'
-
-  return
-end subroutine prep_Reentrance_Read
-!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-subroutine prep_Reentrance_write
-  use Global_Variables
-  use timelog, only: timelog_reentrance_write
-  implicit none
-  real(8) :: time_in,time_out
-
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  time_in=MPI_WTIME()
-
-  if (Myrank == 0) then
-    open(501,file=trim(directory)//trim(SYSname)//'_re.dat')
-    write(501,*) "'reentrance'"! entrance_option
-    write(501,*) Time_shutdown
-    write(501,*) "'"//trim(directory)//"'"
-    close(501)
-  end if
-
-
-  write(cMyrank,'(I5.5)')Myrank
-
-  file_reentrance=trim(directory)//'tmp_re.'//trim(cMyrank)
-  open(500,file=file_reentrance,form='unformatted')
-
-  write(500) iter_now,iter_now !iter_now=entrance_iter
-
-  
-!======== write section ===========================
-!== write data ===!  
-
-! grid 
-  write(500) NLx,NLy,NLz,Nd,NL,NG,NKx,NKy,NKz,NK,Sym,nGzero
-  write(500) NKxyz 
-  write(500) aL,ax,ay,az,aLx,aLy,aLz,aLxyz
-  write(500) bLx,bLy,bLz,Hx,Hy,Hz,Hxyz
-
-! pseudopotential
-!  integer,parameter :: Nrmax=3000,Lmax=4
-  write(500) ps_type
-  write(500) ps_format !shinohara
-  write(500) PSmask_option != 'n' !shinohara
-  write(500) alpha_mask, gamma_mask, eta_mask!shinohara
-  write(500) Nps,Nlma
-
-! material
-  write(500) NI,NE,NB,NBoccmax
-  write(500) Ne_tot
-
-! physical quantities
-  write(500) Eall,Eall0,jav(3),Tion
-  write(500) Ekin,Eloc,Enl,Eh,Exc,Eion,Eelemag                      
-
-!yabana
-  write(500) Nelec !FS set
-
-
-! Bloch momentum,laser pulse, electric field
-!  real(8) :: f0,Wcm2,pulseT,wave_length,omega,pulse_time,pdir(3),phi_CEP=0.00*2*pi
-  write(500) AE_shape
-  write(500) f0_1,IWcm2_1,tpulsefs_1,omegaev_1,omega_1,tpulse_1,Epdir_1(3),phi_CEP_1 ! sato
-  write(500) f0_2,IWcm2_2,tpulsefs_2,omegaev_2,omega_2,tpulse_2,Epdir_2(3),phi_CEP_2 ! sato
-  write(500) T1_T2fs,T1_T2
-
-! control parameters
-  write(500) NEwald                      !Ewald summation
-  write(500) aEwald
-  write(500) Ncg
-  write(500) dt,dAc,domega
-  write(500) Nscf,Nt,Nomega
-  write(500) Nmemory_MB                   !Modified-Broyden (MB) method
-  write(500) alpha_MB
-  write(500) NFSset_start,NFSset_every !Fermi Surface (FS) set 
-
-! file names, flags, etc
-  write(500) SYSname,directory
-  write(500) file_GS,file_RT
-  write(500) file_epst,file_epse
-  write(500) file_force_dR,file_j_ac
-  write(500) file_DoS,file_band
-  write(500) file_dns,file_ovlp,file_nex
-  write(500) ext_field
-  write(500) Longi_Trans
-  write(500) FSset_option,MD_option
-  write(500) AD_RHO !ovlp_option
-!yabana
-  write(500) functional
-  write(500) cval ! cvalue for TBmBJ. If cval<=0, calculated in the program
-!yabana
-
-! MPI
-!  include 'mpif.h'
-!  write(500) Myrank,Nprocs,ierr
-!  write(500) NEW_COMM_WORLD,NEWPROCS,NEWRANK ! sato
-  write(500) NK_ave,NG_ave,NK_s,NK_e,NG_s,NG_e
-  write(500) NK_remainder,NG_remainder
-  write(500) etime1,etime2
-! Timer
-!  write(500) Time_shutdown
-!  write(500) Time_start,Time_now
-!  write(500) iter_now,entrance_iter
-!  write(500) entrance_option    !initial or reentrance        
-  write(500) position_option
-
-
-! omp
-!  integer :: NUMBER_THWRITES
-  write(500) NKB
-
-! sym
-  write(500) crystal_structure !sym
-
-! Finite temperature
-  write(500) KbTev
-
-! For reentrance 
-  write(500) cMyrank,file_reentrance
-
-
-! allocatable
-
-  write(500) Lx(:),Ly(:),Lz(:),Lxyz(:,:,:)
-  write(500) ifdx(:,:),ifdy(:,:),ifdz(:,:)
-  write(500) Gx(:),Gy(:),Gz(:)
-  write(500) lap(:),nab(:)
-  write(500) lapx(:),lapy(:),lapz(:)
-  write(500) nabx(:),naby(:),nabz(:)
-
-  write(500) Mps(:),Jxyz(:,:),Jxx(:,:),Jyy(:,:),Jzz(:,:)
-  write(500) Mlps(:),Lref(:),Zps(:),NRloc(:)
-  write(500) NRps(:),inorm(:,:),iuV(:),a_tbl(:)
-  write(500) rad(:,:),Rps(:),vloctbl(:,:),udVtbl(:,:,:)
-  write(500) radnl(:,:)
-  write(500) Rloc(:),uV(:,:),duV(:,:,:),anorm(:,:)
-  write(500) dvloctbl(:,:),dudVtbl(:,:,:)
-
-  write(500) Zatom(:),Kion(:)
-  write(500) Rion(:,:),Mass(:),Rion_eq(:,:),dRion(:,:,:)
-  write(500) occ(:,:),wk(:)
-
-
-  write(500) javt(:,:)
-  write(500) Vpsl(:),Vh(:),Vexc(:),Eexc(:),Vloc(:),Vloc_GS(:),Vloc_t(:)
-  write(500) tmass(:),tjr(:,:),tjr2(:),tmass_t(:),tjr_t(:,:),tjr2_t(:)
-  write(500) dVloc_G(:,:)
-  write(500) rho(:),rho_gs(:)
-!  real(8),allocatable :: rho_in(:,:),rho_out(:,:) !MB method
-  write(500) rhoe_G(:),rhoion_G(:)
-  write(500) force(:,:),esp(:,:),force_ion(:,:)
-  write(500) Floc(:,:),Fnl(:,:),Fion(:,:)               
-  write(500) ovlp_occ_l(:,:),ovlp_occ(:,:)
-
-
-  write(500) NBocc(:) !FS set
-  write(500) esp_vb_min(:),esp_vb_max(:) !FS set
-  write(500) esp_cb_min(:),esp_cb_max(:) !FS set
-!  write(500) Eall_GS(:),esp_var_ave(:),esp_var_max(:),dns_diff(:)
-
-! wave functions, work array
-  write(500) zu(:,:,:),zu_GS(:,:,:),zu_GS0(:,:,:)
-!  write(500) tpsi(:),htpsi(:),zwork(:,:,:),ttpsi(:)
-!  write(500) work(:,:,:)
-  write(500) esp_var(:,:)
-
-! variables for 4-times loop in Fourier transportation
-  write(500) nxyz(:,:,:)
-  write(500) rho_3D(:,:,:),Vh_3D(:,:,:)
-  write(500) rhoe_G_temp(:),rhoe_G_3D(:,:,:)
-  write(500) f1(:,:,:),f2(:,:,:),f3(:,:,:),f4(:,:,:)
-  write(500) eGx(:,:),eGy(:,:),eGz(:,:),eGxc(:,:),eGyc(:,:),eGzc(:,:)
-
-  write(500) E_ext(:,:),E_ind(:,:),E_tot(:,:)
-  write(500) kAc(:,:),kAc0(:,:)                  !k+A(t)/c (kAc)
-  write(500) Ac_ext(:,:),Ac_ind(:,:),Ac_tot(:,:) !A(t)/c (Ac)
-
-! sato
-  write(500) ekr(:,:)  
-! omp
-!  integer :: NUMBER_THWRITES
-  write(500) ekr_omp(:,:,:)
-  write(500) tpsi_omp(:,:),ttpsi_omp(:,:),htpsi_omp(:,:)
-  write(500) xk_omp(:,:),hxk_omp(:,:),gk_omp(:,:),pk_omp(:,:),pko_omp(:,:),txk_omp(:,:)
-  write(500) ik_table(:),ib_table(:)
-
-
-  write(500) tau_s_l_omp(:,:),j_s_l_omp(:,:,:)
-
-  write(500) itable_sym(:,:) ! sym
-  write(500) rho_l(:),rho_tmp1(:),rho_tmp2(:) !sym
-
-  call timelog_reentrance_write(500)
-
-!== write data ===!  
-
-  close(500)
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  time_out=MPI_WTIME()
-
-  if(myrank == 0)write(*,*)'Reentrance time write =',time_out-time_in,' sec'
-
-  return
-end subroutine prep_Reentrance_write
-
-!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine err_finalize(err_message)
   use Global_Variables
+  use communication
   implicit none
   character(*),intent(in) :: err_message
-  if (Myrank == 0) then
+  if (comm_is_root()) then
     write(*,*) err_message
   endif
-  call MPI_FINALIZE(ierr)
+  call comm_finalize
 
   stop
 End Subroutine Err_finalize

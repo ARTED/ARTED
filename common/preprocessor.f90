@@ -23,17 +23,14 @@ subroutine print_optimize_message
 #ifdef ARTED_MS
   print *, '  ARTED_MS'
 #endif
-#ifdef ARTED_DEBUG
-  print *, '  ARTED_DEBUG'
-#endif
 #ifdef ARTED_USE_TLOG
   print *, '  ARTED_USE_TLOG'
 #endif
 #ifdef ARTED_USE_PAPI
   print *, '  ARTED_USE_PAPI'
 #endif
-#ifdef ARTED_CURRENT_OPTIMIZED
-  print *, '  ARTED_CURRENT_OPTIMIZED'
+#ifdef ARTED_CURRENT_PREPROCESSING
+  print *, '  ARTED_CURRENT_PREPROCESSING'
 #endif
 #ifdef ARTED_STENCIL_ORIGIN
   print *, '  ARTED_STENCIL_ORIGIN'
@@ -41,19 +38,19 @@ subroutine print_optimize_message
 #ifdef ARTED_STENCIL_OPTIMIZED
   print *, '  ARTED_STENCIL_OPTIMIZED'
 #endif
-#ifdef ARTED_STENCIL_WITH_C
-  print *, '  ARTED_STENCIL_WITH_C'
-#endif
 #ifdef ARTED_STENCIL_PADDING
   print *, '  ARTED_STENCIL_PADDING'
 #endif
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
-  print *, '  ARTED_STENCIL_LOOP_BLOCKING'
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
+  print *, '  ARTED_STENCIL_ENABLE_LOOP_BLOCKING'
 #endif
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
   print *, '  ARTED_DOMAIN_POWER_OF_TWO'
 #endif
 #ifdef ARTED_EXPLICIT_VECTORIZATION
   print *, '  ARTED_EXPLICIT_VECTORIZATION'
+#endif
+#ifdef ARTED_ENABLE_SOFTWARE_PREFETCH
+  print *, '  ARTED_ENABLE_SOFTWARE_PREFETCH'
 #endif
 end subroutine

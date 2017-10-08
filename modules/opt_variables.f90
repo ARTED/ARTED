@@ -19,7 +19,7 @@ module opt_variables
   real(8) :: lapt(12)
 
   integer                :: PNLx,PNLy,PNLz,PNL
-  complex(8),allocatable :: ztpsi(:,:,:)
+  complex(8),allocatable :: zhtpsi(:,:,:),zttpsi(:,:)
 
   real(8),allocatable :: zrhotmp(:,:)
 
@@ -36,11 +36,22 @@ module opt_variables
   integer,allocatable :: zifdx(:,:),zifdy(:,:),zifdz(:,:)
 #endif
 
-#ifndef ARTED_STENCIL_OPTIMIZED
-  integer,allocatable :: zifdt(:,:)
-#endif
+#ifdef ARTED_LBLK
+  integer,allocatable :: t4ppt_nlma(:)    ! (PNL)
+  integer,allocatable :: t4ppt_i2vi(:)    ! (PNL)
+  integer,allocatable :: t4ppt_vi2i(:)    ! (PNL)
+  integer,allocatable :: t4ppt_ilma(:,:)  ! (PNL?,Nlma?)
+  integer,allocatable :: t4ppt_j(:,:)     ! (PNL?,Nlma?)
+  integer :: t4ppt_max_vi
 
-  integer,allocatable :: hpsi_called(:)
+  integer, parameter :: at_least_parallelism = 4*1024*1024
+  integer :: blk_nkb_hpsi
+  integer :: blk_nkb_current
+
+  real(8),allocatable :: t4cp_uVpsix(:,:)  ! (Nlma, NKB)
+  real(8),allocatable :: t4cp_uVpsiy(:,:)
+  real(8),allocatable :: t4cp_uVpsiz(:,:)
+#endif
 
 #if defined(__KNC__) || defined(__AVX512F__)
 # define MEM_ALIGNED 64
@@ -49,7 +60,7 @@ module opt_variables
 #endif
 
 !dir$ attributes align:MEM_ALIGNED :: lapt
-!dir$ attributes align:MEM_ALIGNED :: ztpsi
+!dir$ attributes align:MEM_ALIGNED :: zhtpsi,zttpsi
 !dir$ attributes align:MEM_ALIGNED :: zrhotmp
 !dir$ attributes align:MEM_ALIGNED :: zJxyz,zKxyz
 !dir$ attributes align:MEM_ALIGNED :: zcx,zcy,zcz
@@ -59,42 +70,10 @@ module opt_variables
 !dir$ attributes align:MEM_ALIGNED :: zifdx,zifdy,zifdz
 #endif
 
-#ifndef ARTED_STENCIL_OPTIMIZED
-!dir$ attributes align:MEM_ALIGNED :: zifdt
-#endif
-
 contains
-  function ceil_power_of_two(n)
-    implicit none
-    integer,intent(in) :: n
-    integer            :: ceil_power_of_two
-    integer :: x
-    x = n
-    x = ior(x, ishft(x, 1))
-    x = ior(x, ishft(x, 2))
-    x = ior(x, ishft(x, 4))
-    x = ior(x, ishft(x, 8))
-    x = ior(x, ishft(x, 16))
-    ceil_power_of_two = x - ishft(x, 1)
-  end function
-
-  function roundup_pow2(n)
-    implicit none
-    integer,intent(in) :: n
-    integer            :: roundup_pow2,k
-
-    k = n - 1
-    k = ior(k, ishft(k,-1))
-    k = ior(k, ishft(k,-2))
-    k = ior(k, ishft(k,-4))
-    k = ior(k, ishft(k,-8))
-    k = ior(k, ishft(k,-16))
-
-    roundup_pow2 = k + 1
-  end function roundup_pow2
-
   subroutine opt_vars_initialize_p1
     use global_variables
+    use misc_routines, only: ceiling_pow2
     implicit none
     integer :: tid_range
 
@@ -104,11 +83,12 @@ contains
     end select
 
 #ifdef ARTED_REDUCE_FOR_MANYCORE
-    tid_range = roundup_pow2(NUMBER_THREADS) - 1
+    tid_range = ceiling_pow2(NUMBER_THREADS) - 1
 #else
     tid_range = 0
 #endif
     allocate(zrhotmp(0:NL-1,0:tid_range))
+    zrhotmp(:,:) = 0.0d0
   end subroutine
 
   subroutine opt_vars_initialize_p2
@@ -126,7 +106,18 @@ contains
     PNLz = NLz
     PNL  = PNLx * PNLy * PNLz
 
-    allocate(ztpsi(0:PNL-1,4,0:NUMBER_THREADS-1))
+#ifndef ARTED_LBLK
+    allocate(zhtpsi(0:PNL-1,4,0:NUMBER_THREADS-1))
+#else
+    blk_nkb_hpsi = min(at_least_parallelism/PNL + 1, NKB)
+    allocate(zhtpsi(0:PNL-1, 0:blk_nkb_hpsi-1, 4))
+    !write(*,*) "blk_nkb_hpsi:", blk_nkb_hpsi
+
+    !blk_nkb_current = min(at_least_parallelism/PNL + 1, NKB)
+    blk_nkb_current = min(at_least_parallelism/(Nlma*128) + 1, NKB)
+    !write(*,*) "blk_nkb_current:", blk_nkb_current
+#endif
+    allocate(zttpsi(0:PNL-1,0:NUMBER_THREADS-1))
 
     allocate(zcx(NBoccmax,NK_s:NK_e))
     allocate(zcy(NBoccmax,NK_s:NK_e))
@@ -144,17 +135,6 @@ contains
     zifdx(-4:4,0:NL-1) = ifdx(-4:4,1:NL) - 1
     zifdy(-4:4,0:NL-1) = ifdy(-4:4,1:NL) - 1
     zifdz(-4:4,0:NL-1) = ifdz(-4:4,1:NL) - 1
-#endif
-
-#ifndef ARTED_STENCIL_OPTIMIZED
-    allocate(zifdt(24,0:NL-1))
-
-    zifdt( 1: 4, 0:NL-1) = ifdx( 1: 4, 1:NL) - 1
-    zifdt( 5: 8, 0:NL-1) = ifdy( 1: 4, 1:NL) - 1
-    zifdt( 9:12, 0:NL-1) = ifdz( 1: 4, 1:NL) - 1
-    zifdt(13:16, 0:NL-1) = ifdx(-1:-4:-1, 1:NL) - 1
-    zifdt(17:20, 0:NL-1) = ifdy(-1:-4:-1, 1:NL) - 1
-    zifdt(21:24, 0:NL-1) = ifdz(-1:-4:-1, 1:NL) - 1
 #endif
 
     allocate(zJxyz(Nps,NI))
@@ -175,14 +155,11 @@ contains
       modz(iz) = mod(iz,NLz)
     end do
 
-    allocate(hpsi_called(0:NUMBER_THREADS-1))
-    hpsi_called(:) = 0
-
 #ifdef ARTED_STENCIL_PADDING
     call init_for_padding
 #endif
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
     call auto_blocking
 #endif
   end subroutine
@@ -225,7 +202,80 @@ contains
     end do
   end subroutine
 
+#ifdef ARTED_LBLK
+  subroutine opt_vars_init_t4ppt
+    use global_variables
+    implicit none
+
+    integer    :: ilma,ia,j,i, max_nlma,n, vi,max_vi
+    ! write(*,*) "NUMBER_THREADS:", NUMBER_THREADS
+
+    allocate(t4ppt_nlma(0:PNL-1))
+    allocate(t4ppt_i2vi(0:PNL-1))
+    allocate(t4ppt_vi2i(0:PNL-1))
+
+    t4ppt_nlma(:) = 0
+    do ilma=1,Nlma
+       ia=a_tbl(ilma)
+       do j=1,Mps(ia)
+#ifdef ARTED_STENCIL_PADDING
+          i=zKxyz(j,ia)
+#else
+          i=zJxyz(j,ia)
+#endif
+          t4ppt_nlma(i) = t4ppt_nlma(i) + 1
+       enddo
+    enddo
+
+    max_nlma = 0
+    vi = 0
+    do i=0,PNL-1
+       max_nlma = max(max_nlma, t4ppt_nlma(i))
+
+       t4ppt_i2vi(i) = -1
+       if (t4ppt_nlma(i) > 0) then
+          t4ppt_i2vi( i) = vi
+          t4ppt_vi2i(vi) =  i
+          vi = vi + 1
+       endif
+    enddo
+    max_vi = vi
+    ! write(*,*) "max_nlma:", max_nlma
+    ! write(*,*) "max_vi:", max_vi
+
+    allocate(t4ppt_ilma(0:max_vi-1, max_nlma))
+    allocate(t4ppt_j   (0:max_vi-1, max_nlma))
+    t4ppt_max_vi = max_vi
+    t4ppt_nlma(:) = 0
+    do ilma=1,Nlma
+       ia=a_tbl(ilma)
+       do j=1,Mps(ia)
+#ifdef ARTED_STENCIL_PADDING
+          i=zKxyz(j,ia)
+#else
+          i=zJxyz(j,ia)
+#endif
+          vi = t4ppt_i2vi(i)
+
+          t4ppt_nlma(vi) = t4ppt_nlma(vi) + 1
+          n = t4ppt_nlma(vi)
+
+          t4ppt_ilma(vi,n) = ilma
+          t4ppt_j   (vi,n) = j
+       enddo
+    enddo
+
+!$acc enter data copyin(t4ppt_nlma,t4ppt_i2vi,t4ppt_vi2i,t4ppt_ilma,t4ppt_j)
+
+    allocate(t4cp_uVpsix(Nlma, NKB))
+    allocate(t4cp_uVpsiy(Nlma, NKB))
+    allocate(t4cp_uVpsiz(Nlma, NKB))
+
+  end subroutine
+#endif
+
   subroutine auto_blocking
+    use misc_routines, only: floor_pow2
     implicit none
     integer,parameter :: L1cache_size =  8 * 1024
     integer,parameter :: value_size   = 24
@@ -235,11 +285,11 @@ contains
     nyx = dble(L1cache_size) / (PNLz * value_size)
     sq  = int(floor(sqrt(nyx)))
 
-    STENCIL_BLOCKING_X = ceil_power_of_two(min(sq, PNLx))
-    STENCIL_BLOCKING_Y = ceil_power_of_two(min(sq, PNLy))
+    STENCIL_BLOCKING_X = floor_pow2(min(sq, PNLx))
+    STENCIL_BLOCKING_Y = floor_pow2(min(sq, PNLy))
   end subroutine
 
-  subroutine symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,Myrank,Nprocs)
+  subroutine symmetric_load_balancing(NK,NK_ave,NK_s,NK_e,NK_remainder,procid,nprocs)
     use environment
     implicit none
     integer,intent(in)    :: NK
@@ -247,8 +297,8 @@ contains
     integer,intent(inout) :: NK_s
     integer,intent(inout) :: NK_e
     integer,intent(inout) :: NK_remainder
-    integer,intent(in)    :: Myrank
-    integer,intent(in)    :: Nprocs
+    integer,intent(in)    :: procid
+    integer,intent(in)    :: nprocs
 
     integer :: NScpu,NSmic,NPcpu,NPmic,NPtotal
     integer :: np,npr,pos
@@ -257,7 +307,7 @@ contains
     NPmic   = MIC_PROCESS_PER_NODE
     NPtotal = NPcpu + NPmic
 
-    if (Myrank == 0 .and. CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE) then
+    if (procid == 0 .and. CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE) then
       call err_finalize('CPU_PROCESS_PER_NODE /= MIC_PROCESS_PER_NODE')
     end if
 
@@ -267,8 +317,8 @@ contains
 
     NK_remainder = NK - (NScpu * (Nprocs/2) + NSmic * (Nprocs/2))
 
-    np  = myrank / NPtotal * NPtotal
-    npr = mod(myrank, NPtotal)
+    np  = procid / NPtotal * NPtotal
+    npr = mod(procid, NPtotal)
     pos = (np / 2) * NScpu &
     &   + (np / 2) * NSmic
 
@@ -284,116 +334,36 @@ contains
 #else
     NK_e = pos + NScpu
 #endif
-    if (Myrank+1 == Nprocs .and. NK_remainder /= 0) then
+    if (procid+1 == nprocs .and. NK_remainder /= 0) then
       NK_e = NK_e + NK_remainder
     end if
     NK_s = NK_s + 1
 
     ! Error check
-    if(Myrank == Nprocs-1 .and. NK_e /= NK) then
+    if(procid == nprocs-1 .and. NK_e /= NK) then
       call err_finalize('prep. NK_e error')
     end if
   end subroutine
 
   function is_symmetric_mode()
     use global_variables
+    use communication
     implicit none
-    integer             :: is_symmetric_mode
-    integer             :: arch, ret, i
-    integer,allocatable :: results(:)
-
-    allocate(results(Nprocs))
+    integer :: is_symmetric_mode
+    logical :: arch, ret
 
 #ifdef __MIC__
-    arch = 1
+    arch = .TRUE.
 #else
-    arch = 2
+    arch = .FALSE.
 #endif
 
-    call MPI_Allgather(arch,1,MPI_INT,results,1,MPI_INT,MPI_COMM_WORLD,ierr)
+    call comm_logical_and(arch, ret, proc_group(1))
 
-    do i=2,Nprocs
-      if(results(1) /= results(i)) then
-        ret = 1
-        exit
-      end if
-    end do
-
-    is_symmetric_mode = ret
-  end function
-
-  subroutine print_stencil_size
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt,NUMBER_THREADS
-    implicit none
-    integer :: NK, NB
-
-    NK = NK_e - NK_s + 1
-    NB = NBoccmax
-    print *, 'NK =', NK
-    print *, 'NB =', NB
-    print *, 'NL =', NL
-    print *, 'Nt =', (Nt + 1)
-    print *, 'Number of Domain/Thread =', real(NK * NB) / NUMBER_THREADS
-  end subroutine
-
-  function get_stencil_gflops(time,chunk_size)
-    use global_variables, only: NK_s,NK_e,NBoccmax,NL,Nt
-    implicit none
-    real(8),intent(in)          :: time
-    integer,intent(in),optional :: chunk_size
-    real(8),parameter           :: FLOPS = 158
-
-    real(8) :: get_stencil_gflops
-    integer :: NK, nsize
-
-    NK = NK_e - NK_s + 1
-    if(present(chunk_size)) then
-      nsize = chunk_size*NL
+    if(ret) then
+      is_symmetric_mode = 1
     else
-      nsize = NK*NBoccmax*NL
+      is_symmetric_mode = 0
     end if
-    get_stencil_gflops = (nsize * 4*FLOPS * (Nt + 1)) / (time * (10**9))
   end function
-
-  subroutine write_threads_performance
-    use global_variables, only: directory,SYSname,NUMBER_THREADS
-    use timelog
-    implicit none
-    integer,parameter :: fd = 32
-    character(100)    :: filepath
-    real(8)           :: time, lgflops, gflops
-    integer           :: i, cnt
-    filepath = trim(directory)//trim(SYSname)//'_hpsi_perf.log'
-
-    open(fd,file=filepath,status='replace')
-    call timelog_write(fd, '### global hpsi time', LOG_HPSI)
-    call timelog_thread_write(fd, '### init time', LOG_HPSI_INIT)
-    call timelog_thread_write(fd, '### stencil time', LOG_HPSI_STENCIL)
-    call timelog_thread_write(fd, '### pseudo pt. time', LOG_HPSI_PSEUDO)
-    call timelog_thread_write(fd, '### update time', LOG_HPSI_UPDATE)
-
-    write(fd,*) '### summation time'
-    do i=0,NUMBER_THREADS-1
-      time = timelog_thread_get(LOG_HPSI_INIT, i)    &
-         & + timelog_thread_get(LOG_HPSI_STENCIL, i) &
-         & + timelog_thread_get(LOG_HPSI_PSEUDO, i)  &
-         & + timelog_thread_get(LOG_HPSI_UPDATE, i)
-      write(fd,*) 'tid =',i,':',time,'sec'
-    end do
-
-    time = timelog_get(LOG_HPSI_STENCIL)
-    write(fd,*) '### global stencil GFLOPS',get_stencil_gflops(time)
-    write(fd,*) '### stencil GFLOPS'
-    do i=0,NUMBER_THREADS-1
-      time    = timelog_thread_get(LOG_HPSI_STENCIL, i)
-      cnt     = hpsi_called(i)
-      lgflops = get_stencil_gflops(time,cnt)
-      write(fd,*) 'tid =',i,': cnt =',cnt,' GFLOPS =',lgflops
-      gflops  = gflops + lgflops
-    end do
-    write(fd,*) '### summation GFLOPS =',gflops
-    close(fd)
-
-    print *, ' - summation        :', gflops
-  end subroutine
 end module opt_variables

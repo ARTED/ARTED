@@ -19,12 +19,12 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine Hartree
   use Global_Variables
-  use timelog
+  use timer
   implicit none
   integer :: i,ix,iy,iz,n,nx,ny,nz
   real(8) :: G2
 
-  call timelog_begin(LOG_HARTREE)
+  call timer_begin(LOG_HARTREE)
 
 !$omp parallel 
 
@@ -122,35 +122,9 @@ Subroutine Hartree
 
 !$omp end parallel
 
-  call timelog_end(LOG_HARTREE)
+  call timer_end(LOG_HARTREE)
 
   return
 End Subroutine Hartree
-!--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
-Subroutine Hartree_6
-  use Global_Variables
-  implicit none
-  integer :: n,i
-  real(8) :: Gr,G2,Vh_l(NL)
-
-  Vh_l=0.d0
-  do n=NG_s,NG_e
-    G2=Gx(n)**2+Gy(n)**2+Gz(n)**2
-    rhoe_G(n)=0.d0
-    do i=1,NL
-      Gr=Gx(n)*Lx(i)*Hx+Gy(n)*Ly(i)*Hy+Gz(n)*Lz(i)*Hz
-      rhoe_G(n)=rhoe_G(n)+rho(i)*exp(-zI*Gr)
-    enddo
-    rhoe_G(n)=rhoe_G(n)*Hxyz/aLxyz
-    if(n == nGzero) cycle
-    do i=1,NL
-      Gr=Gx(n)*Lx(i)*Hx+Gy(n)*Ly(i)*Hy+Gz(n)*Lz(i)*Hz
-      Vh_l(i)=Vh_l(i)+4*Pi/G2*real(rhoe_G(n)*exp(zI*Gr))
-    enddo
-  enddo
-  call MPI_ALLREDUCE(Vh_l,Vh,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
-
-  return
-End Subroutine Hartree_6
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 

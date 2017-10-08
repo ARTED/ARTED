@@ -19,6 +19,7 @@
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
 Subroutine prep_ps_periodic(property)
   use Global_Variables
+  use communication
   implicit none
   character(11) :: property
   integer :: ik,n,i,a,j,ix,iy,iz,lma,l,m,lm,ir,intr
@@ -34,6 +35,7 @@ Subroutine prep_ps_periodic(property)
   real(8) :: udVtbl_d(Nrmax,0:Lmax),dudVtbl_d(Nrmax,0:Lmax)
   real(8),allocatable :: xn(:),yn(:),an(:),bn(:),cn(:),dn(:)  
   real(8) :: vloc_av
+  real(8) :: ratio1,ratio2,rc
   if(property == 'not_initial') then
     deallocate(a_tbl,uV,duV,iuV,Jxyz,Jxx,Jyy,Jzz)
     deallocate(ekr) ! sato
@@ -105,10 +107,10 @@ Subroutine prep_ps_periodic(property)
   enddo
 !$omp end parallel
 
-  call MPI_ALLREDUCE(Vpsl_l,Vpsl,NL,MPI_REAL8,MPI_SUM,NEW_COMM_WORLD,ierr)
+  call comm_summation(Vpsl_l,Vpsl,NL,proc_group(2))
 
 ! nonlocal potential
-  if (Myrank == 0 .and. property=='initial') then
+  if (comm_is_root() .and. property=='initial') then
     write(*,*) ''
     write(*,*) '============nonlocal grid data=============='
   endif
@@ -131,7 +133,7 @@ Subroutine prep_ps_periodic(property)
     enddo
     enddo
     Mps(a)=j
-    if (Myrank == 0 .and. property == 'initial') then
+    if (comm_is_root() .and. property == 'initial') then
       write(*,*) 'a =',a,'Mps(a) =',Mps(a)
     endif
   end do
@@ -264,6 +266,48 @@ Subroutine prep_ps_periodic(property)
     deallocate(xn,yn,an,bn,cn,dn)
   enddo
 
+! nonlinear core-correction
+  rho_nlcc = 0d0
+  tau_nlcc = 0d0
+  if(flag_nlcc)then
+    if(comm_is_root())write(*,"(A)")"Preparation: Non-linear core correction"
+    do a=1,NI
+      ik=Kion(a)
+      rc = 15d0 ! maximum
+      do i=1,Nrmax
+        if(rho_nlcc_tbl(i,ik) + tau_nlcc_tbl(i,ik) < 1d-6)then
+          rc = rad(i,ik)
+          exit
+        end if
+        if(i == Nrmax) stop"no-cut-off"
+      end do
+      
+      do ix=-2,2; do iy=-2,2; do iz=-2,2
+        do i=1,NL
+          x=Lx(i)*Hx-(Rion(1,a)+ix*aLx)
+          y=Ly(i)*Hy-(Rion(2,a)+iy*aLy)
+          z=Lz(i)*Hz-(Rion(3,a)+iz*aLz)
+          r=sqrt(x**2+y**2+z**2)
+          if(r > rc)cycle
+          
+          do ir=1,NRmax
+            if(rad(ir,ik).gt.r) exit
+          enddo
+          intr=ir-1
+          if (intr.lt.0.or.intr.ge.NRmax)stop 'bad intr at prep_ps'
+          ratio1=(r-rad(intr,ik))/(rad(intr+1,ik)-rad(intr,ik))
+          ratio2=1-ratio1
+          rho_nlcc(i) = rho_nlcc(i) &
+            +ratio1*rho_nlcc_tbl(intr+1,ik)+ratio2*rho_nlcc_tbl(intr,ik)
+          tau_nlcc(i) = tau_nlcc(i) &
+            +ratio1*tau_nlcc_tbl(intr+1,ik)+ratio2*tau_nlcc_tbl(intr,ik)
+          
+        enddo
+        
+      end do; end do; end do
+    end do
+  end if
+
   return
 End Subroutine prep_ps_periodic
 !--------10--------20--------30--------40--------50--------60--------70--------80--------90--------100-------110-------120--------130
@@ -352,7 +396,11 @@ subroutine spline(Np,xn,yn,an,bn,cn,dn)
   dn(0:Npm2) = yn(0:Npm2)
 ! for c
   do i = 0,Npm2-1
-    cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*u(i))/6d0
+    if (i==0) then
+      cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*0.d0)/6d0
+    else
+      cn(i) = dyn(i)/dxn(i) - dxn(i)*(u(i+1)+2d0*u(i))/6d0 ! OOR when i=0
+    endif
   end do
   cn(Npm2) = dyn(Npm2)/dxn(Npm2) - dxn(Npm2)*(0d0+2d0*u(Npm2))/6d0
 

@@ -13,9 +13,13 @@
 !  See the License for the specific language governing permissions and
 !  limitations under the License.
 !
-subroutine hpsi1_tuned(A,B,C,D,E,F,G)
+#if defined(__KNC__) || defined(__AVX512F__) || defined(__HPC_ACE2__)
+# define ENABLE_OPTIMIZED_LOAD
+#endif
+
+subroutine total_energy_stencil(A,C,D,E,F)
   use global_variables, only: NLx,NLy,NLz,zI
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   use opt_variables, only: LBX => STENCIL_BLOCKING_X, LBY => STENCIL_BLOCKING_Y
 #endif
 #ifndef ARTED_DOMAIN_POWER_OF_TWO
@@ -24,17 +28,15 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
   implicit none
   real(8),   intent(in)  :: A
   real(8),   intent(in)  :: C(12), D(12)
-  real(8),   intent(in)  :: B(0:NLz-1,0:NLy-1,0:NLx-1)
   complex(8),intent(in)  :: E(0:NLz-1,0:NLy-1,0:NLx-1)
-  complex(8),intent(out) :: F(0:NLz-1,0:NLy-1,0:NLx-1)
-  complex(8),intent(out) :: G(0:NLz-1,0:NLy-1,0:NLx-1)
+  complex(8),intent(out) :: F
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   integer    :: bx,by
 #endif
   integer    :: ix,iy,iz
-  complex(8) :: v,w,u
-#if defined(__KNC__) || defined(__AVX512F__)
+  complex(8) :: v,w,z
+#ifdef ENABLE_OPTIMIZED_LOAD
   complex(8) :: t(8)
 #endif
 
@@ -47,9 +49,7 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
 #   define VECTOR_SIZE 2
 # endif
 
-!dir$ assume_aligned B:MEM_ALIGN
 !dir$ assume_aligned E:MEM_ALIGN
-!dir$ assume_aligned F:MEM_ALIGN
 #endif
 
 #ifdef ARTED_DOMAIN_POWER_OF_TWO
@@ -67,8 +67,9 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
 # define IDZ(dt) modz(iz+(dt)+NLz),iy,ix
 #endif
 
+  F = 0
 
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   do bx=0,NLx-1,LBX
   do by=0,NLy-1,LBY
   do ix=bx,min(bx+LBX-1,NLx-1)
@@ -79,14 +80,15 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
 #endif
 #ifdef __INTEL_COMPILER
 !dir$ simd
-!dir$ vector nontemporal(F,G)
 #endif
 #ifdef __FUJITSU
 !OCL simd
 !OCL noalias
 #endif
   do iz=0,NLz-1
-#if defined(__KNC__) || defined(__AVX512F__)
+    z = A * E(iz,iy,ix)
+
+#ifdef ENABLE_OPTIMIZED_LOAD
     t(1) = E(IDZ( 1))
     t(2) = E(IDZ( 2))
     t(3) = E(IDZ( 3))
@@ -169,14 +171,12 @@ subroutine hpsi1_tuned(A,B,C,D,E,F,G)
     & +D( 4)*(E(IDX(4))-E(IDX(-4)))) + w
 #endif
 
-     u = A*E(iz,iy,ix) - 0.5d0 * v - zI * w
-
-     F(iz,iy,ix) = u
-     G(iz,iy,ix) = u + B(iz,iy,ix)*E(iz,iy,ix)
+    z = z - 0.5d0 * v - zI * w
+    F = F + conjg(E(iz,iy,ix)) * z
   end do
   end do
   end do
-#ifdef ARTED_STENCIL_LOOP_BLOCKING
+#ifdef ARTED_STENCIL_ENABLE_LOOP_BLOCKING
   end do
   end do
 #endif
